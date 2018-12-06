@@ -49,7 +49,8 @@ private:
     int numOfClients;
     int sizeOfMsg;
     int securityParamter;
-    int squareSize;
+    int squartSize;
+    int batchSize;
 
     vector<FieldType> bigRVec;
 
@@ -202,8 +203,9 @@ public:
      */
     void DNHonestSumOfProducts(vector<FieldType> &localSums, vector<FieldType> &sumsToFill);
 
-    int unitMsgsTest(vector<vector<FieldType>> &msgsVectors);
-    int unitVectorsTest(vector<vector<FieldType>> &vecs, vector<FieldType> &randomElements);
+    int validMsgsTest(vector<vector<FieldType>> &msgsVectors);
+    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements);
+    int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
 
     void offlineDNForMultiplication(int numOfTriples);
@@ -232,7 +234,7 @@ public:
 
     FieldType reconstructShare(vector<FieldType>& x, int d);
 
-    void openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets);
+    void openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets, int d);
 
     /**
      * Process all multiplications which are ready.
@@ -692,7 +694,7 @@ void ProtocolParty<FieldType>::batchConsistencyCheckOfShares(const vector<FieldT
 
 
         //if all the the parties share lie on the same polynomial this will not abort
-        openShare(1, v, secret);
+        openShare(1, v, secret, T);
     }
 }
 
@@ -1079,6 +1081,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     generateRandomSharesWithCheck(1, bigR);
 
     //set this random share to an entire array so we can use the semi honest multiplication
+    bigRVec.resize(batchSize*securityParamter);
     fill(bigRVec.begin(), bigRVec.end(), bigR[0]);
 
 
@@ -1563,7 +1566,157 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 }
 
 template <class FieldType>
-int ProtocolParty<FieldType>::unitMsgsTest(vector<vector<FieldType>> &msgsVectors){
+int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVectors){
+
+    //prepare the random elements for the unit vectors test
+    auto key = generateCommonKey();
+
+
+    //we use the same rendom elements for all the clients
+    vector<FieldType> randomElements(squartSize + sizeOfMsg*2 + 1 + squartSize);
+    generatePseudoRandomElements(key, randomElements, randomElements.size());
+
+    vector<FieldType> sumXandSqaure(msgsVectors.size()*sizeOfMsg*2);
+
+
+    vector<vector<FieldType>> msgsVectorsForUnitTest(msgsVectors.size());
+
+
+    //1. first check that the related index of the second part of a client message is in fact the sqaure of the
+    //related first part of the message
+
+
+
+    for(int i=0; i<msgsVectors.size(); i++){
+
+        msgsVectorsForUnitTest[i].resize(squartSize, *field->GetZero());
+        for(int k=0; k<squartSize; k++){
+
+            for(int l=0; l< sizeOfMsg; l++){
+
+                //compute the sum of all the elements of the first part for all clients
+                sumXandSqaure[i*sizeOfMsg + l] += msgsVectors[i][sizeOfMsg*k + l];
+
+                //compute the sum of all the elements of the second part for all clients - the squares
+                sumXandSqaure[msgsVectors.size()*sizeOfMsg + i*sizeOfMsg + l] += msgsVectors[i][squartSize*sizeOfMsg+sizeOfMsg*k + l];
+
+                //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
+                //and summing those with the unit vector with
+                msgsVectorsForUnitTest[i][k] += msgsVectors[i][sizeOfMsg*k + l]*randomElements[squartSize + l] +
+                                             msgsVectors[i][squartSize*sizeOfMsg+sizeOfMsg*k + l]*randomElements[squartSize + sizeOfMsg + l];
+
+
+            }
+
+            //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
+            msgsVectorsForUnitTest[i] +=  msgsVectors[i][squartSize*sizeOfMsg*2 + k] * randomElements[squartSize + 2*sizeOfMsg];
+
+        }
+
+    }
+
+    //before running the unit test for the compacted message compute the following for every client
+    //1. sumx*sumx
+    //2. sumX *bigR and sumXSqaure *bigR
+
+
+    vector<FieldType> calculatedSqaures(msgsVectors.size()*sizeOfMsg);
+
+    DNHonestMultiplication(sumXandSqaure.data(), sumXandSqaure.data(), calculatedSqaures,msgsVectors.size()*sizeOfMsg);
+
+    //concatenate the calculated sqares to multiply with bigR
+    sumXandSqaure.insert( sumXandSqaure.end(), calculatedSqaures.begin(), calculatedSqaures.end() );
+
+    //now multiply all these by R
+    //make sure that bigRVec contains enough elements (securityParameter>3*sizeOfMessage)
+    if(bigRVec.size()<3*sizeOfMsg*batchSize){ //this will happen at most once
+        int size = bigRVec.size();
+        bigRVec.resize(3*sizeOfMsg*batchSize);
+        fill(bigRVec.begin() + size, bigRVec.end(), bigR[0]);
+    }
+    vector<FieldType> RTimesSumXandSqaure(sumXandSqaure.size());
+    DNHonestMultiplication(sumXandSqaure.data(), bigRVec.data(), RTimesSumXandSqaure,sumXandSqaure.size());
+
+    //check the validity of the inputs
+    //open v1^2 - v2 and Rv1^2 - Rv2
+
+    //prepare vector for opening
+    vector<FieldType> subs(msgsVectors.size()*sizeOfMsg*2);
+    vector<FieldType> openedSubs(msgsVectors.size()*sizeOfMsg*2);
+
+
+    for(int i=0; i<msgsVectors.size();i++){
+
+        for(int l = 0; i<sizeOfMsg; l++) {
+            subs[i*sizeOfMsg + l] = sumXandSqaure[msgsVectors.size()*sizeOfMsg * 2 + i*sizeOfMsg + l] -
+                                    sumXandSqaure[i*sizeOfMsg + l];
+
+            subs[msgsVectors.size() * sizeOfMsg + i*sizeOfMsg + l] = RTimesSumXandSqaure[msgsVectors.size()*sizeOfMsg * 2 + i*sizeOfMsg + l] -
+                                                                     RTimesSumXandSqaure[i*sizeOfMsg + l];
+
+
+        }
+    }
+
+
+    int flag = -1;
+    openShare(subs.size(), subs, openedSubs, T);
+
+    //now check that all subs are zero
+    for(int i=0; i<msgsVectors.size(); i++){
+
+        for(int l = 0; l < sizeOfMsg; l++){
+
+            if(subs[i*sizeOfMsg + l] != field->GetZero() ||
+               subs[msgsVectors.size()*sizeOfMsg + i*sizeOfMsg + l] != field->GetZero()){
+
+                return i;
+            }
+
+        }
+    }
+
+
+    flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements);
+
+    //now check that the last vectors are in fact unit vectors with only one entry equals to 1
+
+
+    vector<FieldType> sumOfElementsVecs(msgsVectors.size(), *field->GetZero());
+    vector<FieldType> openedSumOfElementsVecs(msgsVectors.size(), *field->GetZero());
+
+    if(flag==-1) {//all vectors passed the test
+
+        for(int i = 0; i<msgsVectors.size(); i++) {
+
+            for (int k = 0; k < squartSize; k++) {
+
+                sumOfElementsVecs[i] += msgsVectors[i][squartSize*sizeOfMsg*2 + k] ;
+
+            }
+        }
+
+    }
+    else{
+        return flag;
+    }
+
+    //open the sums and check that they are equal to 1
+
+    openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
+
+    for(int i=0; i<msgsVectors.size(); i++){
+
+        if(openedSumOfElementsVecs[i]!= field->GetOne()){
+
+            return i;
+        }
+    }
+
+
+    return flag;
+
+
 
 
 }
@@ -1579,10 +1732,11 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
     generatePseudoRandomElements(key, randomElements, randomElements.size());
 
     //check that the vectors are all unit vectors
-    int flag = unitVectorsTest(vecs, randomElements);
+    int flag = unitVectorsTest(vecs, randomElements.data());
 
 
     vector<FieldType> sumOfElementsVecs(vecs.size(0), *field->GetZero());
+    vector<FieldType> openedSumOfElementsVecs(vecs.size(0), *field->GetZero());
 
     if(flag==-1) {//all vectors passed the test
 
@@ -1595,17 +1749,30 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
         }
 
     }
+    else{
+        return flag;
+    }
 
     //open the sums and check that they are equal to 1
 
+    openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
+
+    for(int i=0; i<i<vecs.size(); i++){
+
+        if(openedSumOfElementsVecs[i]!= field->GetOne()){
+
+            return i;
+        }
+    }
 
 
+    return flag;
 
 
 }
 
 template <class FieldType>
-int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, vector<FieldType> &randomElements) {
+int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements) {
 
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
     vector<vector<FieldType>> randomVecs(vecs.size());
@@ -1615,7 +1782,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, v
 
     //use the random elements for the bits. This is ok since the random elements were chosen after the input
     //was set.
-    long * randomBits = (long *)randomElements.data();
+    long * randomBits = (long *)randomElements;
 
     //generate msg array that is the multiplication of an element with the related random share.
     for(int i = 0; i < vecs.size(); i++){
@@ -1665,8 +1832,8 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, v
         }
     }
 
-
-    DNHonestSumOfProducts(SOPandRSOP, openedSOPandRSOP);
+    
+    openShare(SOPandRSOP.size(), SOPandRSOP, openedSOPandRSOP, 2*T);
 
     //perform the following check:
     //1. check the  SOP = 0 and that RtimesSOP = 0 for each
@@ -2005,7 +2172,7 @@ bool ProtocolParty<FieldType>::comparingViews(){
 
       getRandomShares(numOfRandomShares, randomSharesArray);
 
-      openShare(numOfRandomShares, randomSharesArray, aesArray);
+      openShare(numOfRandomShares, randomSharesArray, aesArray, T);
 
 
       //turn the aes array into bytes to get the common aes key.
@@ -2024,7 +2191,7 @@ bool ProtocolParty<FieldType>::comparingViews(){
   }
 
   template <class FieldType>
-  void ProtocolParty<FieldType>::openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets){
+  void ProtocolParty<FieldType>::openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets, int d){
 
 
       vector<vector<byte>> sendBufsBytes(N);
@@ -2067,7 +2234,7 @@ bool ProtocolParty<FieldType>::comparingViews(){
           }
 
 
-          secrets[k] = reconstructShare(x1, T);
+          secrets[k] = reconstructShare(x1, d);
 
       }
 
@@ -2119,7 +2286,7 @@ bool ProtocolParty<FieldType>::verificationBatched(FieldType *neededShares,
     vector<FieldType> u(1);
     FieldType w;
     vector<FieldType> ru(1);
-    vector<FieldType> T(1);
+    vector<FieldType> t(1);
 
 
     for(int i=0;i<numOfTriples;i++){
@@ -2132,16 +2299,16 @@ bool ProtocolParty<FieldType>::verificationBatched(FieldType *neededShares,
     //run the semi honest multiplication on u and r to get ru
     DNHonestMultiplication(u.data(), bigR.data(),ru, 1);
 
-    T[0] = w - ru[0];
+    t[0] = w - ru[0];
 
     comparingViews();
 
     //open [T]
     vector<FieldType> shareArr(1);
     vector<FieldType> secretArr(1);
-    shareArr[0] = T[0];
+    shareArr[0] = t[0];
 
-    openShare(1,shareArr,secretArr);
+    openShare(1,shareArr,secretArr, T);
 
     //check that T=0
     if(secretArr[0] != *field->GetZero()) {
