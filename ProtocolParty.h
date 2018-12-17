@@ -1832,7 +1832,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
         }
     }
 
-    
+
     openShare(SOPandRSOP.size(), SOPandRSOP, openedSOPandRSOP, 2*T);
 
     //perform the following check:
