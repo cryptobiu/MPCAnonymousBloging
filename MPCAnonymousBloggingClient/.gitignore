@@ -5,4 +5,4 @@ CMakeCache.txt
 cmake_install.cmake
 MPCAnonymousBloggingClient
 MPCAnonymousBloggingClient.cbp
-*.txt
+*inputs.txt
