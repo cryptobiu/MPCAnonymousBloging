@@ -8,111 +8,109 @@
 		<Option virtualFolders="CMake Files\;"/>
 		<Build>
 			<Target title="all">
-				<Option working_dir="/home/meital/ClionProjects/MPCAnonymousBloging"/>
+				<Option working_dir="/home/meital/MPCAnonymousBloging"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 all"/>
-					<CompileFile command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="rebuild_cache">
-				<Option working_dir="/home/meital/ClionProjects/MPCAnonymousBloging"/>
+				<Option working_dir="/home/meital/MPCAnonymousBloging"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
-					<CompileFile command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
-				</MakeCommands>
-			</Target>
-			<Target title="edit_cache">
-				<Option working_dir="/home/meital/ClionProjects/MPCAnonymousBloging"/>
-				<Option type="4"/>
-				<MakeCommands>
-					<Build command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="MPCAnonymousBloging">
-				<Option output="/home/meital/ClionProjects/MPCAnonymousBloging/MPCAnonymousBloging" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/meital/ClionProjects/MPCAnonymousBloging"/>
+				<Option output="/home/meital/MPCAnonymousBloging/MPCAnonymousBloging" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/meital/MPCAnonymousBloging"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
-					<Add directory="/home/meital/ntl-9.10.0/include"/>
 					<Add directory="/home/meital"/>
 					<Add directory="/home/meital/libscapi/install/include"/>
 					<Add directory="/home/meital/libscapi/install/include/OTExtensionBristol"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 MPCAnonymousBloging"/>
-					<CompileFile command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 MPCAnonymousBloging"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="MPCAnonymousBloging/fast">
-				<Option output="/home/meital/ClionProjects/MPCAnonymousBloging/MPCAnonymousBloging" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/meital/ClionProjects/MPCAnonymousBloging"/>
+				<Option output="/home/meital/MPCAnonymousBloging/MPCAnonymousBloging" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/meital/MPCAnonymousBloging"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
-					<Add directory="/home/meital/ntl-9.10.0/include"/>
 					<Add directory="/home/meital"/>
 					<Add directory="/home/meital/libscapi/install/include"/>
 					<Add directory="/home/meital/libscapi/install/include/OTExtensionBristol"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 MPCAnonymousBloging/fast"/>
-					<CompileFile command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -f &quot;/home/meital/ClionProjects/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 MPCAnonymousBloging/fast"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/meital/MPCAnonymousBloging"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -f &quot;/home/meital/MPCAnonymousBloging/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/HashAbstract.h">
+		<Unit filename="/home/meital/MPCAnonymousBloging/HashAbstract.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/HashEncrypt.cpp">
+		<Unit filename="/home/meital/MPCAnonymousBloging/HashEncrypt.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/HashEncrypt.h">
+		<Unit filename="/home/meital/MPCAnonymousBloging/HashEncrypt.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolParty.cpp">
+		<Unit filename="/home/meital/MPCAnonymousBloging/ProtocolParty.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolParty.h">
+		<Unit filename="/home/meital/MPCAnonymousBloging/ProtocolParty.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolTimer.cpp">
+		<Unit filename="/home/meital/MPCAnonymousBloging/ProtocolTimer.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolTimer.h">
+		<Unit filename="/home/meital/MPCAnonymousBloging/ProtocolTimer.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/TemplateField.cpp">
+		<Unit filename="/home/meital/MPCAnonymousBloging/TemplateField.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/TemplateField.h">
+		<Unit filename="/home/meital/MPCAnonymousBloging/TemplateField.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ZpKaratsubaElement.cpp">
+		<Unit filename="/home/meital/MPCAnonymousBloging/ZpKaratsubaElement.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ZpKaratsubaElement.h">
+		<Unit filename="/home/meital/MPCAnonymousBloging/ZpKaratsubaElement.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/main.cpp">
+		<Unit filename="/home/meital/MPCAnonymousBloging/main.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/CMakeLists.txt">
+		<Unit filename="/home/meital/MPCAnonymousBloging/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
 	</Project>

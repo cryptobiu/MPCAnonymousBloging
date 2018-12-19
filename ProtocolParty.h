@@ -207,6 +207,10 @@ public:
     int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
+    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>>unitVectors);
+
+    int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat);
+
 
     void offlineDNForMultiplication(int numOfTriples);
 
@@ -1856,6 +1860,76 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
     return flag;
 }
 
+template <class FieldType>
+int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>>unitVectors){
+
+    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
+    //and the second part is the addition of the sqaure of each message of that cell.
+
+    int size = msgsVectors.size();//the size of the final 2D matrix
+    int numOfCols = msgsVectors[0].size()/(2*sizeOfMsg + 1);
+    int numOfRows = unitVectors[0].size();
+
+    vector<FieldType> accMats(size*sizeOfMsg*2, * field->GetZero());
+    vector<FieldType> accFieldCountersMat(size, * field->GetZero());
+
+    vector<int> accCountersMat(size);
+
+    for(int i=0; i<msgsVectors.size(); i++){//go over each client
+
+
+        for(int row = 0; row<numOfRows; row++){ //go over each row
+
+            for(int col=0; col<numOfCols; col++){//go over each message
+
+                for(int l=0; l<sizeOfMsg; l++){
+
+                    //accume message
+                    accMats[ 2*sizeOfMsg*(row * numOfCols + col) + l] +=
+                            msgsVectors[i][(2*sizeOfMsg +1)*col + l] *  unitVectors[i][row];
+
+                    //accume the square of the message
+                    accMats[ 2*sizeOfMsg*(row * numOfCols + col) + sizeOfMsg + l] +=
+                            msgsVectors[i][(2*sizeOfMsg +1)*col + sizeOfMsg+ l] *  unitVectors[i][row];
+
+
+
+                }
+
+                accFieldCountersMat[row * numOfCols + col] +=
+                        msgsVectors[i][(2*sizeOfMsg +1)*col + 2*sizeOfMsg] *  unitVectors[i][row];
+
+
+            }
+        }
+
+    }
+
+}
+template <class FieldType>
+int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat){
+
+    //compute just the open mats for debuging purpuses
+
+    vector<FieldType> accMatOpened(accMats.size());
+    vector<FieldType> accFieldCountersMatOpened(accFieldCountersMat.size());
+
+    openShare(accMats.size(), accMats, accMatOpened, 2*T);
+
+    openShare(accFieldCountersMat.size(), accFieldCountersMat, accFieldCountersMatOpened, 2*T);
+
+
+    //for debugging print counters
+    for(int i=0; i<accFieldCountersMatOpened.size(); i++)
+    {
+        cout<<"counter num "<< i << " is " <<accFieldCountersMatOpened[i]<<endl;
+    }
+
+
+
+
+
+}
 
 template <class FieldType>
 void ProtocolParty<FieldType>::DNHonestSumOfProducts(vector<FieldType> &localSums, vector<FieldType> &sumsToFill) {
