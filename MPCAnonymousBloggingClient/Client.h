@@ -30,7 +30,7 @@ private:
 
     vector<FieldType> makeInputVector();
     vector<vector<FieldType>> createShares(vector<FieldType> & vals);
-    void writeServersFiles(vector<vector<FieldType>> & shares);
+    void writeServersFiles(vector<vector<FieldType>> & shares, int clientID);
 
     void calcPairMessages(FieldType & a, FieldType & b, int counter);
 
@@ -41,7 +41,7 @@ public:
     void run();
 
     void readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e);
-    void checkServerFiles();
+    void checkServerFiles(int clientID);
 
     void extractMessages(vector<FieldType> & messages, vector<int> & counters, int numMsgs);
     void checkExtractMsgs();
@@ -62,7 +62,9 @@ Client<FieldType>::Client(int argc, char **argv){
     string fieldType = parser.getValueByKey(arguments, "fieldType");
 
     sqrtR = sqrt(numClients);
-    T = numServers/2 - 1;
+    T = (numServers+1)/2 - 1;
+
+
 
     auto key = prg.generateKey(128);
     prg.setKey(key);
@@ -95,11 +97,15 @@ Client<FieldType>::~Client()
 template<class FieldType>
 void Client<FieldType>::run() {
 
-    auto vals = makeInputVector();
+    for(int i=0; i<numClients; i++) {
 
-    auto shares = createShares(vals);
 
-    writeServersFiles(shares);
+        auto vals = makeInputVector();
+
+        auto shares = createShares(vals);
+
+        writeServersFiles(shares, i);
+    }
 
 }
 
@@ -182,7 +188,7 @@ vector<vector<FieldType>> Client<FieldType>::createShares(vector<FieldType> & va
 }
 
 template<class FieldType>
-void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares){
+void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, int clientID){
 
     ofstream outputFile;
     int size = 2*(l*sqrtR + sqrtR) + 1;
@@ -190,7 +196,7 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares){
     for (int i=0; i<numServers; i++){
 
         long * serverShares = (long*) shares[i].data();
-        outputFile.open("server" + to_string(i) + "inputs.txt");
+        outputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
 
         for (int j=0; j<size; j++) {
             outputFile << serverShares[j]<<endl;
@@ -231,7 +237,7 @@ void Client<FieldType>::readServerFile(string fileName, vector<FieldType> & msg,
 }
 
 template<class FieldType>
-void Client<FieldType>::checkServerFiles(){
+void Client<FieldType>::checkServerFiles(int clientID){
 
 
     ifstream inputFile;
@@ -241,7 +247,7 @@ void Client<FieldType>::checkServerFiles(){
     long input;
     for (int i=0; i<numServers; i++) {
 
-        inputFile.open("server" + to_string(i) + "inputs.txt");
+        inputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
 
         for (int j = 0; j < size; j++) {
             inputFile >> input;

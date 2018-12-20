@@ -46,10 +46,11 @@ private:
 
 
     //
-    int numOfClients;
-    int sizeOfMsg;
+    int l;
+    int numClients;
+    int numServers;
     int securityParamter;
-    int squartSize;
+    int sqrtR;
     int batchSize;
 
     vector<FieldType> bigRVec;
@@ -64,7 +65,6 @@ private:
     vector<byte> h;//a string accumulated that should be hashed in the comparing views function.
 
     ProtocolTimer* protocolTimer;
-    int currentCirciutLayer = 0;
     int offset = 0;
     int randomSharesOffset = 0;
 
@@ -138,10 +138,6 @@ public:
      */
     void runOnline() override;
 
-    /**
-     * This method reads text file and inits a vector of Inputs according to the file.
-     */
-    void readMyInputs();
 
     /**
      * We describe the protocol initialization.
@@ -203,11 +199,13 @@ public:
      */
     void DNHonestSumOfProducts(vector<FieldType> &localSums, vector<FieldType> &sumsToFill);
 
+    void readclientsinputs(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
+    void readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e);
     int validMsgsTest(vector<vector<FieldType>> &msgsVectors);
     int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
-    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>>unitVectors);
+    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
 
     int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat);
 
@@ -240,22 +238,9 @@ public:
 
     void openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets, int d);
 
-    /**
-     * Process all multiplications which are ready.
-     * Return number of processed gates.
-     */
-    int processMultiplications(int lastMultGate);
 
     int processMultDN(int indexInRandomArray);
 
-    int processNotMult();
-
-    /**
-     * Walk through the circuit and evaluate the gates. Always take as many gates at once as possible,
-     * i.e., all gates whose inputs are ready.
-     * We first process all random gates, then alternately process addition and multiplication gates.
-     */
-    void computationPhase(HIM<FieldType> &m);
 
     /**
      * The cheap way: Create a HIM from the αi’s onto ZERO (this is actually a row vector), and multiply
@@ -298,18 +283,23 @@ public:
 template <class FieldType>
 ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCHonestMajorityNoTriples", argc, argv)
 {
-    string circuitFile = this->getParser().getValueByKey(arguments, "circuitFile");
-    this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
-    string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
+
+    l = stoi(this->getParser().getValueByKey(arguments, "l"));
     m_partyId = stoi(this->getParser().getValueByKey(arguments, "partyID"));
-    int n = stoi(this->getParser().getValueByKey(arguments, "partiesNumber"));
-    string outputTimerFileName = circuitFile + "Times" + to_string(m_partyId) + fieldType + ".csv";
-    ProtocolTimer p(times, outputTimerFileName);
 
-    this->protocolTimer = new ProtocolTimer(times, outputTimerFileName);
+    numServers = stoi(this->getParser().getValueByKey(arguments, "numServers"));
+    numClients = stoi(this->getParser().getValueByKey(arguments, "numClients"));
+    string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
 
-    vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
-    timer = new Measurement(*this, subTaskNames);
+    this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
+
+    //string outputTimerFileName = circuitFile + "Times" + to_string(m_partyId) + fieldType + ".csv";
+    //ProtocolTimer p(times, outputTimerFileName);
+
+    this->protocolTimer = new ProtocolTimer(times, "basa");
+
+    //vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
+    //timer = new Measurement(*this, subTaskNames);
 
     if(fieldType.compare("ZpMersenne") == 0) {
         field = new TemplateField<FieldType>(2147483647);
@@ -324,22 +314,21 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     }
 
 
-    N = n;
-    T = n/2 - 1;
-    this->inputsFile = this->getParser().getValueByKey(arguments, "inputFile");
-    this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
-    if(n%2 > 0)
-    {
-        T++;
-    }
+    N = numServers;
+    T = (numServers+1)/2 - 1;
+    //this->inputsFile = this->getParser().getValueByKey(arguments, "inputFile");
+    //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
+
+
+    sqrtR = sqrt(numClients);
 
     s = to_string(m_partyId);
-    circuit.readCircuit(circuitFile.c_str());
-    circuit.reArrangeCircuit();
-    M = circuit.getNrOfGates();
-    numOfInputGates = circuit.getNrOfInputGates();
-    numOfOutputGates = circuit.getNrOfOutputGates();
-    myInputs.resize(numOfInputGates);
+    //circuit.readCircuit(circuitFile.c_str());
+    //circuit.reArrangeCircuit();
+    //M = circuit.getNrOfGates();
+    //numOfInputGates = circuit.getNrOfInputGates();
+    //numOfOutputGates = circuit.getNrOfOutputGates();
+   // myInputs.resize(numOfInputGates);
     counter = 0;
 
 
@@ -349,6 +338,13 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
 
     MPCCommunication comm;
     string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
+
+    vector<vector<FieldType>> msgsVectors(numClients);
+    vector<vector<FieldType>> unitVectors(numClients);
+
+    readclientsinputs(msgsVectors, unitVectors);
+
+
 
     parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
 
@@ -366,8 +362,6 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     }
 
 
-    readMyInputs();
-
     auto t1 = high_resolution_clock::now();
     initializationPhase(/*matrix_him, matrix_vand, m*/);
 
@@ -379,25 +373,6 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     }
 }
 
-
-template <class FieldType>
-void ProtocolParty<FieldType>::readMyInputs()
-{
-
-    //cout<<"inputs file" << inputsFile<<endl;
-    ifstream myfile;
-    long input;
-    int i =0;
-    myfile.open(inputsFile);
-    do {
-        myfile >> input;
-        myInputs[i] = input;
-        i++;
-    } while(!(myfile.eof()));
-    myfile.close();
-
-
-}
 
 template <class FieldType>
 void ProtocolParty<FieldType>::run() {
@@ -463,7 +438,6 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("ComputePhase", iteration);
-    computationPhase(m);
     timer->endSubTask("ComputePhase", iteration);
     t2 = high_resolution_clock::now();
 
@@ -503,24 +477,6 @@ void ProtocolParty<FieldType>::runOnline() {
 
 }
 
-template <class FieldType>
-void ProtocolParty<FieldType>::computationPhase(HIM<FieldType> &m) {
-    int count = 0;
-    int countNumMult = 0;
-    int countNumMultForThisLayer = 0;
-
-    int numOfLayers = circuit.getLayers().size();
-    for(int i=0; i<numOfLayers-1;i++){
-
-        currentCirciutLayer = i;
-        count = processNotMult();
-
-        countNumMultForThisLayer = processMultiplications(countNumMult);//send the index of the current mult gate
-        countNumMult += countNumMultForThisLayer;;
-        count+=countNumMultForThisLayer;
-
-    }
-}
 
 /**
  * the function implements the second step of Input Phase:
@@ -1058,6 +1014,8 @@ void ProtocolParty<FieldType>::initializationPhase()
 
 
 
+
+
 }
 
 template <class FieldType>
@@ -1195,239 +1153,6 @@ FieldType ProtocolParty<FieldType>::reconstructShare(vector<FieldType>& x, int d
     else
         return interpolate(x);
 }
-
-
-template <class FieldType>
-int ProtocolParty<FieldType>::processNotMult(){
-    int count=0;
-    for(int k=circuit.getLayers()[currentCirciutLayer]; k < circuit.getLayers()[currentCirciutLayer+1]; k++)
-    {
-
-
-        // add gate
-        if(circuit.getGates()[k].gateType == ADD)
-        {
-            gateShareArr[circuit.getGates()[k].output*2] = gateShareArr[circuit.getGates()[k].input1*2] + gateShareArr[circuit.getGates()[k].input2*2];
-            gateShareArr[circuit.getGates()[k].output*2+1] = gateShareArr[circuit.getGates()[k].input1*2+1] + gateShareArr[circuit.getGates()[k].input2*2+1];
-            count++;
-        }
-
-        else if(circuit.getGates()[k].gateType == SUB)//sub gate
-        {
-            gateShareArr[circuit.getGates()[k].output*2] = gateShareArr[circuit.getGates()[k].input1*2] - gateShareArr[circuit.getGates()[k].input2*2];
-            gateShareArr[circuit.getGates()[k].output*2+1] = gateShareArr[circuit.getGates()[k].input1*2+1] - gateShareArr[circuit.getGates()[k].input2*2+1];
-            count++;
-        }
-        else if(circuit.getGates()[k].gateType == SCALAR)
-        {
-            long scalar(circuit.getGates()[k].input2);
-            FieldType e = field->GetElement(scalar);
-            gateShareArr[circuit.getGates()[k].output*2] = gateShareArr[circuit.getGates()[k].input1*2] * e;
-            gateShareArr[circuit.getGates()[k].output*2+1] = gateShareArr[circuit.getGates()[k].input1*2+1] * e;
-
-
-            count++;
-        }
-        else if(circuit.getGates()[k].gateType == SCALAR_ADD)
-        {
-            long scalar(circuit.getGates()[k].input2);
-            FieldType e = field->GetElement(scalar);
-            gateShareArr[circuit.getGates()[k].output*2] = gateShareArr[circuit.getGates()[k].input1*2] + e;
-            gateShareArr[circuit.getGates()[k].output*2+1] = gateShareArr[circuit.getGates()[k].input1*2+1] + e;
-
-
-            count++;
-        }
-
-         
-
-    }
-    return count;
-
-}
-
-/**
- * the Function process all multiplications which are ready.
- * @return the number of processed gates.
- */
-template <class FieldType>
-int ProtocolParty<FieldType>::processMultiplications(int lastMultGate)
-{
-
-    return processMultDN(lastMultGate);
-
-}
-
-
-template <class FieldType>
-int ProtocolParty<FieldType>::processMultDN(int indexInRandomArray) {
-
-    int index = 0;
-    int fieldByteSize = field->getElementSizeInBytes();
-    int maxNumberOfLayerMult = circuit.getLayers()[currentCirciutLayer + 1] - circuit.getLayers()[currentCirciutLayer];
-    vector<FieldType> xyMinusRShares(maxNumberOfLayerMult*2);//hold both in the same vector to send in one batch
-
-    vector<FieldType> xyMinusR;//hold both in the same vector to send in one batch
-    vector<byte> xyMinusRBytes;
-
-    vector<vector<byte>> recBufsBytes(N);
-    vector<vector<byte>> sendBufsBytes(N);
-    vector<vector<FieldType>> sendBufsElements(N);
-
-
-
-
-
-    //generate the shares for x+a and y+b. do it in the same array to send once
-    for (int k = circuit.getLayers()[currentCirciutLayer];
-         k < circuit.getLayers()[currentCirciutLayer + 1]; k++)//go over only the logit gates
-    {
-        auto gate = circuit.getGates()[k];
-
-        if (gate.gateType == MULT) {
-
-            //compute the share of xy-r
-            xyMinusRShares[index*2] = gateShareArr[gate.input1*2]*gateShareArr[gate.input2*2] - randomTAnd2TShares[2*indexInRandomArray+1];
-
-
-            indexInRandomArray++;
-
-            //compute the share of xy-r
-            xyMinusRShares[index*2+1] = gateShareArr[gate.input1*2+1]*gateShareArr[gate.input2*2] - randomTAnd2TShares[2*indexInRandomArray+1];
-
-            indexInRandomArray++;
-
-            index++;
-        }
-    }
-
-    if(index==0)
-        return 0;
-
-    //set the acctual number of mult gate proccessed in this layer
-    int acctualNumOfMultGates = index;
-    int numOfElementsForParties = acctualNumOfMultGates/N;
-    int indexForDecreasingSize = acctualNumOfMultGates - numOfElementsForParties *N;
-
-    int counter=0;
-    int currentNumOfElements;
-    for(int i=0; i<N; i++){
-
-        currentNumOfElements = numOfElementsForParties;
-        if(i<indexForDecreasingSize)
-            currentNumOfElements++;
-
-        //fill the send buf according to the number of elements to send to each party
-        sendBufsElements[i].resize(currentNumOfElements*2);
-        sendBufsBytes[i].resize(currentNumOfElements*fieldByteSize*2);
-        for(int j=0; j<currentNumOfElements*2; j++) {
-
-            sendBufsElements[i][j] = xyMinusRShares[counter];
-            counter++;
-
-        }
-        field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
-
-    }
-
-    //resize the recbuf array.
-    int myNumOfElementsToExpect = numOfElementsForParties;
-    if (m_partyId < indexForDecreasingSize) {
-        myNumOfElementsToExpect = numOfElementsForParties + 1;
-    }
-    for(int i=0;i<N;i++){
-
-        recBufsBytes[i].resize(myNumOfElementsToExpect*fieldByteSize*2);
-    }
-
-
-
-    roundFunctionSync(sendBufsBytes, recBufsBytes,20);
-
-
-    xyMinusR.resize(myNumOfElementsToExpect*2);
-    xyMinusRBytes.resize(myNumOfElementsToExpect*fieldByteSize*2);
-
-    //reconstruct the shares that I am responsible of recieved from the other parties
-    vector<FieldType> xyMinurAllShares(N);
-
-    for (int k = 0;k < myNumOfElementsToExpect*2; k++)//go over only the logit gates
-    {
-        for (int i = 0; i < N; i++) {
-
-            xyMinurAllShares[i] = field->bytesToElement(recBufsBytes[i].data() + (k * fieldByteSize));
-        }
-
-        // reconstruct the shares by P0
-        xyMinusR[k] = interpolate(xyMinurAllShares);
-
-    }
-
-    field->elementVectorToByteVector(xyMinusR, xyMinusRBytes);
-
-    //prepare the send buffers
-    for(int i=0; i<N; i++){
-        sendBufsBytes[i] = xyMinusRBytes;
-    }
-
-
-    for(int i=0; i<N; i++){
-
-        currentNumOfElements = numOfElementsForParties;
-        if(i<indexForDecreasingSize)
-            currentNumOfElements++;
-
-        recBufsBytes[i].resize(currentNumOfElements* fieldByteSize*2);
-
-    }
-
-    roundFunctionSync(sendBufsBytes, recBufsBytes,21);
-
-
-    xyMinusR.resize(acctualNumOfMultGates*2);
-    counter = 0;
-
-    for(int i=0; i<N; i++){
-
-        currentNumOfElements = numOfElementsForParties;
-        if(i<indexForDecreasingSize)
-            currentNumOfElements++;
-
-        //fill the send buf according to the number of elements to send to each party
-        for(int j=0; j<currentNumOfElements*2; j++) {
-
-            xyMinusR[counter] = field->bytesToElement(recBufsBytes[i].data() + (j * fieldByteSize));
-            counter++;
-
-        }
-
-    }
-
-
-    indexInRandomArray -= 2*index;
-    index = 0;
-
-    //after the xPlusAAndYPlusB array is filled, we are ready to fill the output of the mult gates
-    for (int k = circuit.getLayers()[currentCirciutLayer];
-         k < circuit.getLayers()[currentCirciutLayer + 1]; k++)//go over only the logit gates
-    {
-        auto gate = circuit.getGates()[k];
-
-        if (gate.gateType == MULT) {
-
-            gateShareArr[gate.output*2] = randomTAnd2TShares[2*indexInRandomArray] + xyMinusR[index*2];
-            indexInRandomArray++;
-            gateShareArr[gate.output*2+1] = randomTAnd2TShares[2*indexInRandomArray] + xyMinusR[index*2+1];
-
-            index++;
-            indexInRandomArray++;
-
-        }
-    }
-
-    return index;
-}
-
 
 
 
@@ -1569,6 +1294,55 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
 }
 
+template<class FieldType>
+void ProtocolParty<FieldType>::readclientsinputs(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors){
+
+
+
+
+    vector<FieldType> msg, unitVector;
+    FieldType e;
+
+    for(int i=0; i<numClients; i++){
+
+        readServerFile("server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
+        msgsVectors[i] = msg;
+        unitVectors[i] = unitVector;
+    }
+
+
+}
+
+template<class FieldType>
+void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e){
+
+    ifstream inputFile;
+    inputFile.open(fileName);
+
+    int msgSize = 2*l*sqrtR + sqrtR;
+    msg.resize(msgSize);
+
+    int unitSize = sqrtR;
+    unitVector.resize(unitSize);
+
+    long input;
+    for (int j=0; j<msgSize; j++) {
+        inputFile >> input;
+        msg[j] = input;
+    }
+
+    for (int j=0; j<unitSize; j++) {
+        inputFile >> input;
+        unitVector[j] = input;
+    }
+
+    inputFile >> input;
+    *e = input;
+
+    inputFile.close();
+
+}
+
 template <class FieldType>
 int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVectors){
 
@@ -1577,10 +1351,10 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
 
     //we use the same rendom elements for all the clients
-    vector<FieldType> randomElements(squartSize + sizeOfMsg*2 + 1 + squartSize);
+    vector<FieldType> randomElements(sqrtR + l*2 + 1 + sqrtR);
     generatePseudoRandomElements(key, randomElements, randomElements.size());
 
-    vector<FieldType> sumXandSqaure(msgsVectors.size()*sizeOfMsg*2);
+    vector<FieldType> sumXandSqaure(msgsVectors.size()*l*2);
 
 
     vector<vector<FieldType>> msgsVectorsForUnitTest(msgsVectors.size());
@@ -1593,27 +1367,27 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     for(int i=0; i<msgsVectors.size(); i++){
 
-        msgsVectorsForUnitTest[i].resize(squartSize, *field->GetZero());
-        for(int k=0; k<squartSize; k++){
+        msgsVectorsForUnitTest[i].resize(sqrtR, *field->GetZero());
+        for(int k=0; k<sqrtR; k++){
 
-            for(int l=0; l< sizeOfMsg; l++){
+            for(int l1=0; l1< l; l1++){
 
                 //compute the sum of all the elements of the first part for all clients
-                sumXandSqaure[i*sizeOfMsg + l] += msgsVectors[i][sizeOfMsg*k + l];
+                sumXandSqaure[i*l + l1] += msgsVectors[i][l*k + l1];
 
                 //compute the sum of all the elements of the second part for all clients - the squares
-                sumXandSqaure[msgsVectors.size()*sizeOfMsg + i*sizeOfMsg + l] += msgsVectors[i][squartSize*sizeOfMsg+sizeOfMsg*k + l];
+                sumXandSqaure[msgsVectors.size()*l + i*l + l1] += msgsVectors[i][sqrtR*l+l*k + l1];
 
                 //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
                 //and summing those with the unit vector with
-                msgsVectorsForUnitTest[i][k] += msgsVectors[i][sizeOfMsg*k + l]*randomElements[squartSize + l] +
-                                             msgsVectors[i][squartSize*sizeOfMsg+sizeOfMsg*k + l]*randomElements[squartSize + sizeOfMsg + l];
+                msgsVectorsForUnitTest[i][k] += msgsVectors[i][l*k + l1]*randomElements[sqrtR + l1] +
+                                             msgsVectors[i][sqrtR*l+l*k + l]*randomElements[sqrtR + l + l1];
 
 
             }
 
             //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
-            msgsVectorsForUnitTest[i] +=  msgsVectors[i][squartSize*sizeOfMsg*2 + k] * randomElements[squartSize + 2*sizeOfMsg];
+            msgsVectorsForUnitTest[i] +=  msgsVectors[i][sqrtR*l*2 + k] * randomElements[sqrtR + 2*l];
 
         }
 
@@ -1624,18 +1398,18 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     //2. sumX *bigR and sumXSqaure *bigR
 
 
-    vector<FieldType> calculatedSqaures(msgsVectors.size()*sizeOfMsg);
+    vector<FieldType> calculatedSqaures(msgsVectors.size()*l);
 
-    DNHonestMultiplication(sumXandSqaure.data(), sumXandSqaure.data(), calculatedSqaures,msgsVectors.size()*sizeOfMsg);
+    DNHonestMultiplication(sumXandSqaure.data(), sumXandSqaure.data(), calculatedSqaures,msgsVectors.size()*l);
 
     //concatenate the calculated sqares to multiply with bigR
     sumXandSqaure.insert( sumXandSqaure.end(), calculatedSqaures.begin(), calculatedSqaures.end() );
 
     //now multiply all these by R
     //make sure that bigRVec contains enough elements (securityParameter>3*sizeOfMessage)
-    if(bigRVec.size()<3*sizeOfMsg*batchSize){ //this will happen at most once
+    if(bigRVec.size()<3*l*batchSize){ //this will happen at most once
         int size = bigRVec.size();
-        bigRVec.resize(3*sizeOfMsg*batchSize);
+        bigRVec.resize(3*l*batchSize);
         fill(bigRVec.begin() + size, bigRVec.end(), bigR[0]);
     }
     vector<FieldType> RTimesSumXandSqaure(sumXandSqaure.size());
@@ -1645,18 +1419,18 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     //open v1^2 - v2 and Rv1^2 - Rv2
 
     //prepare vector for opening
-    vector<FieldType> subs(msgsVectors.size()*sizeOfMsg*2);
-    vector<FieldType> openedSubs(msgsVectors.size()*sizeOfMsg*2);
+    vector<FieldType> subs(msgsVectors.size()*l*2);
+    vector<FieldType> openedSubs(msgsVectors.size()*l*2);
 
 
     for(int i=0; i<msgsVectors.size();i++){
 
-        for(int l = 0; i<sizeOfMsg; l++) {
-            subs[i*sizeOfMsg + l] = sumXandSqaure[msgsVectors.size()*sizeOfMsg * 2 + i*sizeOfMsg + l] -
-                                    sumXandSqaure[i*sizeOfMsg + l];
+        for(int l1 = 0; l1<l; l1++) {
+            subs[i*l + l1] = sumXandSqaure[msgsVectors.size()*l * 2 + i*l + l1] -
+                                    sumXandSqaure[i*l + l1];
 
-            subs[msgsVectors.size() * sizeOfMsg + i*sizeOfMsg + l] = RTimesSumXandSqaure[msgsVectors.size()*sizeOfMsg * 2 + i*sizeOfMsg + l] -
-                                                                     RTimesSumXandSqaure[i*sizeOfMsg + l];
+            subs[msgsVectors.size() * l + i*l + l1] = RTimesSumXandSqaure[msgsVectors.size()*l * 2 + i*l + l1] -
+                                                                     RTimesSumXandSqaure[i*l + l1];
 
 
         }
@@ -1669,10 +1443,10 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     //now check that all subs are zero
     for(int i=0; i<msgsVectors.size(); i++){
 
-        for(int l = 0; l < sizeOfMsg; l++){
+        for(int l1 = 0; l1 < l; l1++){
 
-            if(subs[i*sizeOfMsg + l] != field->GetZero() ||
-               subs[msgsVectors.size()*sizeOfMsg + i*sizeOfMsg + l] != field->GetZero()){
+            if(subs[i*l + l1] != field->GetZero() ||
+               subs[msgsVectors.size()*l + i*l + l1] != field->GetZero()){
 
                 return i;
             }
@@ -1693,9 +1467,9 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
         for(int i = 0; i<msgsVectors.size(); i++) {
 
-            for (int k = 0; k < squartSize; k++) {
+            for (int k = 0; k < sqrtR; k++) {
 
-                sumOfElementsVecs[i] += msgsVectors[i][squartSize*sizeOfMsg*2 + k] ;
+                sumOfElementsVecs[i] += msgsVectors[i][sqrtR*l*2 + k] ;
 
             }
         }
@@ -1861,16 +1635,16 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
 }
 
 template <class FieldType>
-int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>>unitVectors){
+int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors){
 
     //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
     //and the second part is the addition of the sqaure of each message of that cell.
 
     int size = msgsVectors.size();//the size of the final 2D matrix
-    int numOfCols = msgsVectors[0].size()/(2*sizeOfMsg + 1);
+    int numOfCols = msgsVectors[0].size()/(2*l + 1);
     int numOfRows = unitVectors[0].size();
 
-    vector<FieldType> accMats(size*sizeOfMsg*2, * field->GetZero());
+    vector<FieldType> accMats(size*l*2, * field->GetZero());
     vector<FieldType> accFieldCountersMat(size, * field->GetZero());
 
     vector<int> accCountersMat(size);
@@ -1882,22 +1656,22 @@ int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &
 
             for(int col=0; col<numOfCols; col++){//go over each message
 
-                for(int l=0; l<sizeOfMsg; l++){
+                for(int l1=0; l1<l; l1++){
 
                     //accume message
-                    accMats[ 2*sizeOfMsg*(row * numOfCols + col) + l] +=
-                            msgsVectors[i][(2*sizeOfMsg +1)*col + l] *  unitVectors[i][row];
+                    accMats[ 2*l*(row * numOfCols + col) + l1] +=
+                            msgsVectors[i][(2*l +1)*col + l1] *  unitVectors[i][row];
 
                     //accume the square of the message
-                    accMats[ 2*sizeOfMsg*(row * numOfCols + col) + sizeOfMsg + l] +=
-                            msgsVectors[i][(2*sizeOfMsg +1)*col + sizeOfMsg+ l] *  unitVectors[i][row];
+                    accMats[ 2*l*(row * numOfCols + col) + l + l1] +=
+                            msgsVectors[i][(2*l +1)*col + l+ l1] *  unitVectors[i][row];
 
 
 
                 }
 
                 accFieldCountersMat[row * numOfCols + col] +=
-                        msgsVectors[i][(2*sizeOfMsg +1)*col + 2*sizeOfMsg] *  unitVectors[i][row];
+                        msgsVectors[i][(2*l +1)*col + 2*l] *  unitVectors[i][row];
 
 
             }
