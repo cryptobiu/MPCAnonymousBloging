@@ -1383,7 +1383,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
                 //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
                 //and summing those with the unit vector with
                 msgsVectorsForUnitTest[i][k] += msgsVectors[i][l*k + l1]*randomElements[sqrtR + l1] +
-                                             msgsVectors[i][sqrtR*l+l*k + l]*randomElements[sqrtR + l + l1];
+                                             msgsVectors[i][sqrtR*l+l*k + l1]*randomElements[sqrtR + l + l1];
 
 
             }
@@ -1462,7 +1462,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     vector<FieldType> sumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
     vector<FieldType> openedSumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
 
-    flag = -1;//remove after fix
+    //flag = -1;//remove after fix
     if(flag==-1) {//all vectors passed the test
 
         for(int i = 0; i<msgsVectors.size(); i++) {
