@@ -204,7 +204,7 @@ public:
 
     void readclientsinputs(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     void readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e);
-    int validMsgsTest(vector<vector<FieldType>> &msgsVectors);
+    int validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
@@ -415,7 +415,7 @@ template <class FieldType>
 void ProtocolParty<FieldType>::runOnline() {
 
 
-   auto flag =  validMsgsTest(msgsVectors);
+   auto flag =  validMsgsTest(msgsVectors, unitVectors);
 
    cout<<"flag is : "<<flag<<endl;
 
@@ -1213,25 +1213,20 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
     }
 
-    cout<<"test" <<endl;
     //resize the recbuf array.
     int myNumOfElementsToExpect = numOfElementsForParties;
     if (m_partyId < indexForDecreasingSize) {
         myNumOfElementsToExpect = numOfElementsForParties + 1;
     }
 
-    cout<<"test0.01" <<endl;
     for(int i=0;i<N;i++){
 
         recBufsBytes[i].resize(myNumOfElementsToExpect*fieldByteSize);
 
-        cout<<"iter" <<i<<endl;
     }
 
 
-    cout<<"test0.1" <<endl;
     roundFunctionSync(sendBufsBytes, recBufsBytes,20);
-    cout<<"test1" <<endl;
 
     xyMinusR.resize(myNumOfElementsToExpect);
     xyMinusRBytes.resize(myNumOfElementsToExpect*fieldByteSize);
@@ -1268,7 +1263,6 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
         recBufsBytes[i].resize(currentNumOfElements* fieldByteSize);
 
     }
-    cout<<"test2" <<endl;
     roundFunctionSync(sendBufsBytes, recBufsBytes,21);
 
 
@@ -1352,7 +1346,7 @@ void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType>
 }
 
 template <class FieldType>
-int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVectors){
+int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors){
 
     //prepare the random elements for the unit vectors test
     auto key = generateCommonKey();
@@ -1465,12 +1459,10 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements.data());
 
-    //now check that the last vectors are in fact unit vectors with only one entry equals to 1
+    vector<FieldType> sumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
+    vector<FieldType> openedSumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
 
-
-    vector<FieldType> sumOfElementsVecs(msgsVectors.size(), *field->GetZero());
-    vector<FieldType> openedSumOfElementsVecs(msgsVectors.size(), *field->GetZero());
-
+    flag = -1;//remove after fix
     if(flag==-1) {//all vectors passed the test
 
         for(int i = 0; i<msgsVectors.size(); i++) {
@@ -1484,10 +1476,35 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     }
     else{
-        return flag;
+       // return flag;
     }
 
-    //open the sums and check that they are equal to 1
+    //open the sums and check that they are equal to 1. This is the counter and should have one in the relevant entry.
+
+
+    //lastly, check that the unit vectors are indeed unit vector. We can use the same random elements that were already created
+    flag = unitVectorsTest(unitVectors, randomElements.data());
+
+
+    //do the same check for the unit vectors
+
+    if(flag==-1) {//all vectors passed the test
+
+        for(int i = 0; i<msgsVectors.size(); i++) {
+
+            for (int k = 0; k < sqrtR; k++) {
+
+                sumOfElementsVecs[i+msgsVectors.size()] += unitVectors[i][k] ;
+
+            }
+        }
+
+    }
+    else{
+        //return flag;
+    }
+
+    //open the sums and check that they are equal to 1. This is the counter and should have one in the relevant entry.
 
     openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
 
@@ -1498,7 +1515,6 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
             return i;
         }
     }
-
 
     return flag;
 
@@ -1543,7 +1559,7 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
 
     openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
 
-    for(int i=0; i<i<vecs.size(); i++){
+    for(int i=0; i<vecs.size(); i++){
 
         if(openedSumOfElementsVecs[i]!= field->GetOne()){
 
@@ -1559,6 +1575,22 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
 
 template <class FieldType>
 int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements) {
+
+
+    vector<FieldType> testOpen2T(2);
+    vector<FieldType> testOpen2Topened(2);
+
+
+    testOpen2T[0] = vecs[0][0]*vecs[0][0];
+    testOpen2T[1] = vecs[0][1]*vecs[0][1];
+
+    openShare(testOpen2T.size(), testOpen2T, testOpen2Topened, 2*T);
+
+    cout<<"test result is "<<testOpen2Topened[0]<<endl;
+    cout<<"test result is "<<testOpen2Topened[1]<<endl;
+
+
+
 
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
     vector<vector<FieldType>> randomVecs(vecs.size());
@@ -1587,9 +1619,9 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
 
                 //if related bit is zero, accume the sum in sum 0
                 if((randomBits[k] & ( 1 << j ))==0)
-                    sum0[i*securityParamter + j] +=  randomVecs[i][j];
+                    sum0[i*securityParamter + j] +=  randomVecs[i][k];
                 else //bit is 1, accume the sum in sum 1
-                    sum1[i*securityParamter + j] +=  randomVecs[i][j];
+                    sum1[i*securityParamter + j] +=  randomVecs[i][k];
             }
         }
     }
@@ -1630,12 +1662,11 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
     for(int i=0; i<vecs.size(); i++){
 
         if(!(openedSOPandRSOP[2*i]==* field->GetZero() &&
-           openedSOPandRSOP[2*i+1]==* field->GetZero()))
+           openedSOPandRSOP[2*i+1]==* field->GetZero())) {
 
             flag = i;
-
-        return flag;
-
+            return flag;
+        }
     }
 
 
