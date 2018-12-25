@@ -61,7 +61,7 @@ Client<FieldType>::Client(int argc, char **argv){
     numClients = stoi(parser.getValueByKey(arguments, "numClients"));
     string fieldType = parser.getValueByKey(arguments, "fieldType");
 
-    sqrtR = sqrt(numClients);
+    sqrtR = (int)(sqrt(2.7 * numClients))+1;
     T = (numServers+1)/2 - 1;
 
 

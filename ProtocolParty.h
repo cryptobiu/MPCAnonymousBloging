@@ -49,10 +49,13 @@ private:
     int l;
     int numClients;
     int numServers;
-    int securityParamter;
+    int securityParamter = 40;
     int sqrtR;
     int batchSize;
 
+
+    vector<vector<FieldType>> msgsVectors;
+    vector<vector<FieldType>> unitVectors;
     vector<FieldType> bigRVec;
 
     Measurement* timer;
@@ -205,7 +208,9 @@ public:
     int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
-    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
+    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+                               vector<FieldType> &accMats,
+                               vector<FieldType> &accFieldCountersMat);
 
     int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat);
 
@@ -298,8 +303,8 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
 
     this->protocolTimer = new ProtocolTimer(times, "basa");
 
-    //vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
-    //timer = new Measurement(*this, subTaskNames);
+    vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
+    timer = new Measurement(*this, subTaskNames);
 
     if(fieldType.compare("ZpMersenne") == 0) {
         field = new TemplateField<FieldType>(2147483647);
@@ -320,33 +325,19 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
 
 
-    sqrtR = sqrt(numClients);
+    sqrtR = (int)(sqrt(2.7 * numClients))+1;
 
     s = to_string(m_partyId);
-    //circuit.readCircuit(circuitFile.c_str());
-    //circuit.reArrangeCircuit();
-    //M = circuit.getNrOfGates();
-    //numOfInputGates = circuit.getNrOfInputGates();
-    //numOfOutputGates = circuit.getNrOfOutputGates();
-   // myInputs.resize(numOfInputGates);
+
     counter = 0;
 
-
-    //comm->ConnectionToServer(s);
-
-    //boost::asio::io_service io_service;
 
     MPCCommunication comm;
     string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
 
-    vector<vector<FieldType>> msgsVectors(numClients);
-    vector<vector<FieldType>> unitVectors(numClients);
-
-    readclientsinputs(msgsVectors, unitVectors);
-
-
-
     parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
+
+
 
     string tmp = "init times";
     //cout<<"before sending any data"<<endl;
@@ -422,6 +413,12 @@ void ProtocolParty<FieldType>::runOffline() {
 
 template <class FieldType>
 void ProtocolParty<FieldType>::runOnline() {
+
+
+   auto flag =  validMsgsTest(msgsVectors);
+
+   cout<<"flag is : "<<flag<<endl;
+
 
     auto t1 = high_resolution_clock::now();
     timer->startSubTask("inputPhase", iteration);
@@ -944,9 +941,13 @@ template <class FieldType>
 void ProtocolParty<FieldType>::initializationPhase()
 {
     bigR.resize(1);
+
+    msgsVectors.resize(numClients);
+    unitVectors.resize(numClients);
+
     beta.resize(1);
     y_for_interpolate.resize(N);
-    gateShareArr.resize((M - circuit.getNrOfOutputGates())*2); // my share of the gate (for all gates)
+    //gateShareArr.resize((M - circuit.getNrOfOutputGates())*2); // my share of the gate (for all gates)
     alpha.resize(N); // N distinct non-zero field elements
     vector<FieldType> alpha1(N-T);
     vector<FieldType> alpha2(T);
@@ -1013,7 +1014,14 @@ void ProtocolParty<FieldType>::initializationPhase()
     }
 
 
+    readclientsinputs(msgsVectors, unitVectors);
 
+    vector<FieldType> accMats(sqrtR*sqrtR*l*2, * field->GetZero());
+    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR, * field->GetZero());
+
+    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
+
+    generateClearMatrices(accMats, accFieldCountersMat);
 
 
 }
@@ -1035,7 +1043,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     //run offline for all the future multiplications including the multiplication of the protocol
 
     offset = 0;
-    offlineDNForMultiplication((circuit.getNrOfInputGates() + circuit.getNrOfMultiplicationGates()*2 + 1)*iterations);
+    offlineDNForMultiplication(100000);
 
 
 
@@ -1043,7 +1051,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     generateRandomSharesWithCheck(1, bigR);
 
     //set this random share to an entire array so we can use the semi honest multiplication
-    bigRVec.resize(batchSize*securityParamter);
+    bigRVec.resize(numClients*securityParamter);
     fill(bigRVec.begin(), bigRVec.end(), bigR[0]);
 
 
@@ -1387,7 +1395,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
             }
 
             //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
-            msgsVectorsForUnitTest[i] +=  msgsVectors[i][sqrtR*l*2 + k] * randomElements[sqrtR + 2*l];
+            msgsVectorsForUnitTest[i][k] +=  msgsVectors[i][sqrtR*l*2 + k] * randomElements[sqrtR + 2*l];
 
         }
 
@@ -1407,9 +1415,9 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     //now multiply all these by R
     //make sure that bigRVec contains enough elements (securityParameter>3*sizeOfMessage)
-    if(bigRVec.size()<3*l*batchSize){ //this will happen at most once
+    if(bigRVec.size()<3*l*numClients){ //this will happen at most once
         int size = bigRVec.size();
-        bigRVec.resize(3*l*batchSize);
+        bigRVec.resize(3*l*numClients);
         fill(bigRVec.begin() + size, bigRVec.end(), bigR[0]);
     }
     vector<FieldType> RTimesSumXandSqaure(sumXandSqaure.size());
@@ -1427,10 +1435,10 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
         for(int l1 = 0; l1<l; l1++) {
             subs[i*l + l1] = sumXandSqaure[msgsVectors.size()*l * 2 + i*l + l1] -
-                                    sumXandSqaure[i*l + l1];
+                                    sumXandSqaure[msgsVectors.size()*l + i*l + l1];
 
             subs[msgsVectors.size() * l + i*l + l1] = RTimesSumXandSqaure[msgsVectors.size()*l * 2 + i*l + l1] -
-                                                                     RTimesSumXandSqaure[i*l + l1];
+                                                                     RTimesSumXandSqaure[msgsVectors.size()*l + i*l + l1];
 
 
         }
@@ -1445,8 +1453,8 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
         for(int l1 = 0; l1 < l; l1++){
 
-            if(subs[i*l + l1] != field->GetZero() ||
-               subs[msgsVectors.size()*l + i*l + l1] != field->GetZero()){
+            if(openedSubs[i*l + l1] != *field->GetZero() ||
+               openedSubs[msgsVectors.size()*l + i*l + l1] != *field->GetZero()){
 
                 return i;
             }
@@ -1455,7 +1463,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     }
 
 
-    flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements);
+    flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements.data());
 
     //now check that the last vectors are in fact unit vectors with only one entry equals to 1
 
@@ -1485,7 +1493,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     for(int i=0; i<msgsVectors.size(); i++){
 
-        if(openedSumOfElementsVecs[i]!= field->GetOne()){
+        if(openedSumOfElementsVecs[i]!= *field->GetOne()){
 
             return i;
         }
@@ -1564,7 +1572,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
 
     //generate msg array that is the multiplication of an element with the related random share.
     for(int i = 0; i < vecs.size(); i++){
-        randomVecs[i].resize(vecs[0].size(0));
+        randomVecs[i].resize(vecs[0].size());
 
         for(int j=0; j<vecs[0].size() ; j++){
 
@@ -1574,7 +1582,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
 
     for(int i=0; i<vecs.size(); i++) {
         for (int j = 0; j < securityParamter; j++) {
-            for(int k = 0; k<vecs[0].size(0);k++) {
+            for(int k = 0; k<vecs[0].size();k++) {
 
 
                 //if related bit is zero, accume the sum in sum 0
@@ -1635,17 +1643,19 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
 }
 
 template <class FieldType>
-int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors){
+int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+                                                     vector<FieldType> &accMats,
+                                                     vector<FieldType> &accFieldCountersMat){
 
     //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
     //and the second part is the addition of the sqaure of each message of that cell.
 
-    int size = msgsVectors.size();//the size of the final 2D matrix
     int numOfCols = msgsVectors[0].size()/(2*l + 1);
     int numOfRows = unitVectors[0].size();
+    int size = numOfCols*numOfRows;//the size of the final 2D matrix
 
-    vector<FieldType> accMats(size*l*2, * field->GetZero());
-    vector<FieldType> accFieldCountersMat(size, * field->GetZero());
+
+
 
     vector<int> accCountersMat(size);
 
@@ -1660,22 +1670,36 @@ int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &
 
                     //accume message
                     accMats[ 2*l*(row * numOfCols + col) + l1] +=
-                            msgsVectors[i][(2*l +1)*col + l1] *  unitVectors[i][row];
+                            msgsVectors[i][l*col + l1] *  unitVectors[i][row];
 
                     //accume the square of the message
                     accMats[ 2*l*(row * numOfCols + col) + l + l1] +=
-                            msgsVectors[i][(2*l +1)*col + l+ l1] *  unitVectors[i][row];
+                            msgsVectors[i][numOfCols* l +l*col + l1] *  unitVectors[i][row];
 
 
 
                 }
 
                 accFieldCountersMat[row * numOfCols + col] +=
-                        msgsVectors[i][(2*l +1)*col + 2*l] *  unitVectors[i][row];
+                        msgsVectors[i][numOfCols* l*2 + col] *  unitVectors[i][row];
 
 
             }
         }
+
+    }
+
+    //print matrices
+
+    for(int i=0; i<size; i++){
+
+        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accFieldCountersMat[i]<<endl;
+
+    }
+
+    for(int i=0; i<size; i++){
+
+        cout<<"accMats[i] = " <<accMats[i]<<endl;
 
     }
 
@@ -1697,6 +1721,11 @@ int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, 
     for(int i=0; i<accFieldCountersMatOpened.size(); i++)
     {
         cout<<"counter num "<< i << " is " <<accFieldCountersMatOpened[i]<<endl;
+    }
+
+    for(int i=0; i<accMatOpened.size(); i++)
+    {
+        cout<<"value "<< i << " is " <<accMatOpened[i]<<endl;
     }
 
 

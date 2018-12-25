@@ -1,6 +1,6 @@
 #! /bin/bash
 for i in `seq $1 1 $2`;
 do	
-	./MPCAnonymousBloging -partyID $i -partiesNumber $3 -inputFile $4 -outputFile output.txt -circuitFile $5 -fieldType $6 -partiesFile $7 -internalIterationsNumber $8 &
+	./MPCAnonymousBloging  -l 1 -partyID $i -numServers $3 -numClients $4   -fieldType ZpMersenne61  -partiesFile Parties.txt  -internalIterationsNumber 1 &
 	echo "Running $i..."
 done
