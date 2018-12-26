@@ -20,6 +20,7 @@
 #include "HashEncrypt.h"
 #include <emmintrin.h>
 #include <thread>
+#include <libscapi/include/primitives/HashOpenSSL.hpp>
 
 #define flag_print false
 #define flag_print_timings true
@@ -212,8 +213,16 @@ public:
                                vector<FieldType> &accMats,
                                vector<FieldType> &accFieldCountersMat);
 
-    int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat);
+    int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,vector<int> &accIntCountersMat);
 
+    void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
+                                                   vector<vector<byte>> &recBufsBytes);
+
+    void extractMessages(vector<FieldType> & messages, vector<int> & counters, int numMsgs);
+
+    void calcPairMessages(FieldType & a, FieldType & b, int counter);
+
+    void printOutputMessages(vector<FieldType> &accMats, vector<int> &accIntCountersMat);
 
     void offlineDNForMultiplication(int numOfTriples);
 
@@ -243,6 +252,9 @@ public:
 
     void openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets, int d);
 
+    void openShareSetRecBuf(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets,
+                                                      int d, vector<vector<byte>> &recBufsBytes);
+
 
     int processMultDN(int indexInRandomArray);
 
@@ -268,8 +280,6 @@ public:
 
     vector<byte> generateCommonKey();
     void generatePseudoRandomElements(vector<byte> & aesKey, vector<FieldType> &randomElementsToFill, int numOfRandomElements);
-
-    bool verificationBatched(FieldType *x, FieldType *randomElements, int numOfTriples);
 
     /**
      * Walk through the circuit and reconstruct output gates.
@@ -415,14 +425,9 @@ template <class FieldType>
 void ProtocolParty<FieldType>::runOnline() {
 
 
-   auto flag =  validMsgsTest(msgsVectors, unitVectors);
-
-   cout<<"flag is : "<<flag<<endl;
-
-
     auto t1 = high_resolution_clock::now();
     timer->startSubTask("inputPhase", iteration);
-    inputPhase();
+    //inputPhase();
     timer->endSubTask("inputPhase", iteration);
     auto t2 = high_resolution_clock::now();
 
@@ -1016,12 +1021,7 @@ void ProtocolParty<FieldType>::initializationPhase()
 
     readclientsinputs(msgsVectors, unitVectors);
 
-    vector<FieldType> accMats(sqrtR*sqrtR*l*2, * field->GetZero());
-    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR, * field->GetZero());
 
-    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
-
-    generateClearMatrices(accMats, accFieldCountersMat);
 
 
 }
@@ -1156,7 +1156,7 @@ FieldType ProtocolParty<FieldType>::reconstructShare(vector<FieldType>& x, int d
         // someone cheated!
 
             cout << "cheating!!!" << '\n';
-        exit(0);
+        //exit(0);
     }
     else
         return interpolate(x);
@@ -1735,35 +1735,213 @@ int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &
     }
 
 }
+
 template <class FieldType>
-int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat){
+void ProtocolParty<FieldType>::commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
+                                               vector<vector<byte>> &recBufsBytes){
+
+
+    OpenSSLSHA256 hash;
+    vector<byte> byteVec(accMats.size()*field->getElementSizeInBytes());
+
+    field->elementVectorToByteVector(accMats, byteVec);
+
+    //hash the messsages and the counters shares
+    hash.update(byteVec, 0, byteVec.size());
+    vector<byte> out;
+    hash.hashFinal(out, 0);
+
+    byteVec.resize(accFieldCountersMat.size()*field->getElementSizeInBytes());
+
+    field->elementVectorToByteVector(accFieldCountersMat, byteVec);
+
+    hash.update(byteVec, 0, byteVec.size());
+    vector<byte> out2;
+    hash.hashFinal(out2, 0);
+
+    //concatenate the two digests
+    out.insert(out.end(), out2.begin(), out2.end());
+
+    vector<vector<byte>> sendBufsBytes(N, out);
+    recBufsBytes.resize(N);
+
+    //now ssend the hash values to all servers
+    //resize vectors
+    for(int i=0; i < N; i++)
+    {
+        recBufsBytes[i].resize(sendBufsBytes[0].size());
+    }
+
+    //call the round function to send the shares to all the users and get the other parties share
+    roundFunctionSync(sendBufsBytes, recBufsBytes,20);
+
+
+}
+
+template <class FieldType>
+int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
+                                                    vector<int> &accIntCountersMat){
+
+    vector<vector<byte>> allHashes;
+
+    commitOnMatrices(accMats, accFieldCountersMat,allHashes);
 
     //compute just the open mats for debuging purpuses
 
     vector<FieldType> accMatOpened(accMats.size());
     vector<FieldType> accFieldCountersMatOpened(accFieldCountersMat.size());
 
-    openShare(accMats.size(), accMats, accMatOpened, 2*T);
 
-    openShare(accFieldCountersMat.size(), accFieldCountersMat, accFieldCountersMatOpened, 2*T);
+    vector<vector<byte>> accMatAll(N);
+    vector<vector<byte>> accFieldCountersMatAll(N);
+    openShareSetRecBuf(accMats.size(), accMats, accMatOpened, 2*T,accMatAll);
 
+    openShareSetRecBuf(accFieldCountersMat.size(), accFieldCountersMat, accFieldCountersMatOpened, 2*T, accFieldCountersMatAll);
 
-    //for debugging print counters
-    for(int i=0; i<accFieldCountersMatOpened.size(); i++)
-    {
-        cout<<"counter num "<< i << " is " <<accFieldCountersMatOpened[i]<<endl;
+    for(int i=0; i<accFieldCountersMat.size(); i++){
+
+        accIntCountersMat[i] = accFieldCountersMatOpened[i].elem;
     }
 
-    for(int i=0; i<accMatOpened.size(); i++)
-    {
-        cout<<"value "<< i << " is " <<accMatOpened[i]<<endl;
+    accMats = move(accMatOpened);
+
+    //check that the hashes are in fact correct, that is, the servers committed on the right shares
+
+
+    OpenSSLSHA256 hash;
+     vector<byte> out;
+    vector<byte> out2;
+    for(int i=0; i<numServers; i++){
+
+           //hash the messsages and the counters shares
+        hash.update(accMatAll[i], 0, accMatAll[i].size());
+        out.resize(0);
+
+        hash.hashFinal(out, 0);
+
+        hash.update(accFieldCountersMatAll[i], 0, accFieldCountersMatAll[i].size());
+
+        out2.resize(0);
+        hash.hashFinal(out2, 0);
+
+        //concatenate the two digests
+        out.insert(out.end(), out2.begin(), out2.end());
+
+        if(out!=allHashes[i]) {
+            return i;
+        }
     }
 
-
-
-
+    return -1;
 
 }
+
+
+template<class FieldType>
+void ProtocolParty<FieldType>::printOutputMessages(vector<FieldType> &accMats,
+                                                   vector<int> &accIntCountersMat){
+
+    int counter = 0;
+
+    for(int i=0; i<accIntCountersMat.size(); i++){
+
+        if(accIntCountersMat[i]==1){
+            cout<<"\033[1;31mmessage #"<<counter<< " is "<< accMats[2*i]<<"\033[0m"<<endl;
+            counter++;
+        }
+        else if(accIntCountersMat[i]==2){
+
+            cout<<"\033[1;31mmessage #"<<counter<< " is "<< accMats[2*i]<<"\033[0m"<<endl;
+            counter++;
+
+            cout<<"\033[1;31mmessage #"<<counter<< " is "<< accMats[2*i]<<"\033[0m"<<endl;
+            counter++;
+
+        }
+        else{
+            //no messages to extract
+        }
+
+    }
+
+}
+
+template<class FieldType>
+void ProtocolParty<FieldType>::extractMessages(vector<FieldType> & messages, vector<int> & counters, int numMsgs){
+
+    int totalNumber = 0;
+    for (int i=0; i<numMsgs; i++){
+        totalNumber += counters[i];
+        for (int j=0; j<l;j++) {
+            calcPairMessages(messages[2 * i * l + j], messages[(2 * i + 1) * l + j], counters[i]);
+        }
+    }
+
+    if (totalNumber > numClients){
+        cout<<"CHEATING!!!"<<endl;
+    }
+}
+
+
+template<class FieldType>
+void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, int counter){
+
+    //If there is no element in this index, check that both values are zero.
+    if (counter == 0){
+        if (a != *(field->GetZero()) || b != *(field->GetZero())){
+            cout<<"CHEATING!!!"<<endl;
+        }
+        //If there is one element in this index, check that x = x^2.
+    } else if (counter == 1){
+        FieldType temp = a*a;
+        if (b == temp){
+            b = *(field->GetZero());
+        } else {
+            cout<<"CHEATING!!!"<<endl;
+        }
+        //If there are two elements in this index, calculate them
+    } else if (counter == 2){
+
+        FieldType eight = field->GetElement(8);
+        FieldType four = field->GetElement(4);
+        FieldType two = field->GetElement(2);
+
+        FieldType sqrt = eight*b - a*a*four; //8b-4a^2
+
+        //The algorithm for checking the squrae root of a value is as follows:
+        //We know that 2^31 and 2^61 are both divisible by 4 (the results are 2^29 and 2^59 respectively). So 2^31-1=3 mod 4 and 2^61-1=3 mod 4.
+        //So if we have b=x^2 (over Mersenne61) then we can compute x by b^{2^59}.
+        //To do this, we can make about 58 field multiplications:
+        //Set b_1 = b, then
+        //For i=2...59:
+        //compute b_i = (b_{i-1})^2.
+        //So x1=b_59 and x2=-b_59 = 2^61-1-b_59
+        //Check that x1^2 = b, if it does then output it, otherwise, it means that a cheat is detected.
+        FieldType root = sqrt;
+        for (int i=2; i<=60; i++){
+            root *= root;
+        }
+        FieldType check = root*root;
+
+        if (check != sqrt){
+            cout<<"CHEATING!!!"<<endl;
+            return;
+        }
+
+        //calculate the final messages
+        FieldType val = two*a;
+        //put the first message in b
+        a = (val + root) / four;
+
+        //put the second message in a
+        b = (val - root) / four;
+
+    } else {
+        a = *(field->GetZero());
+        b = *(field->GetZero());
+    }
+}
+
 
 template <class FieldType>
 void ProtocolParty<FieldType>::DNHonestSumOfProducts(vector<FieldType> &localSums, vector<FieldType> &sumsToFill) {
@@ -1914,87 +2092,18 @@ void ProtocolParty<FieldType>::offlineDNForMultiplication(int numOfTriples){
 template <class FieldType>
 void ProtocolParty<FieldType>::verificationPhase() {
 
-    int numOfOutputGates = circuit.getNrOfOutputGates();
-    int numOfInputGates = circuit.getNrOfInputGates();
-    int numOfMultGates = circuit.getNrOfMultiplicationGates();
-    //get the number of random elements to create
-
-    int numOfRandomelements = numOfMultGates + numOfInputGates;
-    //first generate the common aes key
-    auto key = generateCommonKey();
-
-    //print key
-    if (flag_print) {
-        for (int i = 0; i < key.size(); i++) {
-            cout << "key[" << i << "] for party :" << m_partyId << "is : " << (int) key[i] << endl;
-        }
-    }
-
-    //calc the number of times we need to run the verification -- ceiling
-    int iterations =   (5 + field->getElementSizeInBytes() - 1) / field->getElementSizeInBytes();
-
-    //preapre x,y,z for the verification sub protocol
-    vector<FieldType> neededShares(numOfRandomelements*2);
-
-
-    int index = 0;
-    for (int k = 0; k < numOfInputGates; k++) {
-
-        auto gate = circuit.getGates()[k];
-
-        if (gate.gateType == INPUT) {
-            neededShares[2*index] = gateShareArr[gate.output*2];
-            neededShares[2*index+1] = gateShareArr[gate.output*2+1];
-
-            index++;
-        }
-    }
-
-    for (int k = numOfInputGates - 1; k < M - numOfOutputGates + 1; k++) {
-
-        auto gate = circuit.getGates()[k];
-        if (gate.gateType == MULT) {
-            neededShares[index*2] = gateShareArr[gate.output*2];
-            neededShares[index*2 + 1] = gateShareArr[gate.output*2 + 1];
-            index++;
-        }
-
-
-    }
-
-
-    bool answer;
-
-
-    vector<FieldType> randomElements(numOfRandomelements*iterations);
-    generatePseudoRandomElements(key, randomElements, numOfRandomelements*iterations);
-
-
-    for(int i=0; i<iterations; i++) {
-
-        if(i!=0){
-            //we need the accumulate h from previous phases, after the first iteration we would like to clear the
-            //h in order no to compare with a bigger h than neccesary.
-            h.clear();
-        }
-        if (flag_print) {
-            cout << "verify batch for party " << m_partyId << endl;
-        }
-        //call the verification sub protocol
-        answer = verificationBatched(neededShares.data(), randomElements.data() + numOfRandomelements*i, numOfMultGates+numOfInputGates);
-        if (flag_print) {
-            cout << "answer is : " << answer << " for iteration : " << i << endl;
-        }
-    }
+    //first check that the inputs are consistent
+    //checkInputConsistency(msgsVectors, unitVectors);
 
 
 
+    auto flag =  validMsgsTest(msgsVectors, unitVectors);
 
-    if (flag_print) {
-        cout << "answer is:" << answer << endl;
-    }
+    cout<<"flag is : "<<flag<<endl;
 
   }
+
+
 
 
 template <class FieldType>
@@ -2098,12 +2207,20 @@ bool ProtocolParty<FieldType>::comparingViews(){
 
   }
 
+template <class FieldType>
+void ProtocolParty<FieldType>::openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets, int d){
+
+    vector<vector<byte>> recBufsBytes(N);
+
+    openShareSetRecBuf(numOfRandomShares, Shares, secrets, d, recBufsBytes);
+
+}
   template <class FieldType>
-  void ProtocolParty<FieldType>::openShare(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets, int d){
+  void ProtocolParty<FieldType>::openShareSetRecBuf(int numOfRandomShares, vector<FieldType> &Shares, vector<FieldType> &secrets,
+          int d, vector<vector<byte>> &recBufsBytes){
 
 
       vector<vector<byte>> sendBufsBytes(N);
-      vector<vector<byte>> recBufsBytes(N);
 
       vector<FieldType> x1(N);
       int fieldByteSize = field->getElementSizeInBytes();
@@ -2186,50 +2303,6 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
 
 }
 
-template <class FieldType>
-bool ProtocolParty<FieldType>::verificationBatched(FieldType *neededShares,
-                                  FieldType * randomElements, int numOfTriples){
-
-
-    vector<FieldType> u(1);
-    FieldType w;
-    vector<FieldType> ru(1);
-    vector<FieldType> t(1);
-
-
-    for(int i=0;i<numOfTriples;i++){
-
-        u[0] += randomElements[i]*neededShares[i*2];
-        w += randomElements[i]*neededShares[i*2+1];
-    }
-
-
-    //run the semi honest multiplication on u and r to get ru
-    DNHonestMultiplication(u.data(), bigR.data(),ru, 1);
-
-    t[0] = w - ru[0];
-
-    comparingViews();
-
-    //open [T]
-    vector<FieldType> shareArr(1);
-    vector<FieldType> secretArr(1);
-    shareArr[0] = t[0];
-
-    openShare(1,shareArr,secretArr, T);
-
-    //check that T=0
-    if(secretArr[0] != *field->GetZero()) {
-        cout<<"bassssssaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"<<endl;
-        return false;
-    }
-    else {
-
-        cout<<"yessssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"<<endl;
-        return true;
-    }
-
-}
 
 
 /**
@@ -2241,75 +2314,28 @@ bool ProtocolParty<FieldType>::verificationBatched(FieldType *neededShares,
 template <class FieldType>
 void ProtocolParty<FieldType>::outputPhase()
 {
-    int count=0;
-    vector<FieldType> x1(N); // vector for the shares of my outputs
-    vector<vector<FieldType>> sendBufsElements(N);
-    vector<vector<byte>> sendBufsBytes(N);
-    vector<vector<byte>> recBufBytes(N);
+    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
+    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
+    vector<int> accIntCountersMat(sqrtR*sqrtR);
 
-    FieldType num;
-    ofstream myfile;
-    myfile.open(outputFile);
 
-    for(int k=M-numOfOutputGates; k < M; k++)
+    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
+
+    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
+
+    if(flag==-1){
+
+        cout<<"all hashes are correct"<<endl;
+    }
+    else
     {
-        if(circuit.getGates()[k].gateType == OUTPUT)
-        {
-            // send to party (which need this gate) your share for this gate
-            sendBufsElements[circuit.getGates()[k].party].push_back(gateShareArr[circuit.getGates()[k].input1*2]);
-        }
+        cout<<"basssssssssssssssssa you " <<flag <<endl;
+
     }
 
+    extractMessages(accMats, accIntCountersMat, numClients);
 
-    int fieldByteSize = field->getElementSizeInBytes();
-    for(int i=0; i < N; i++)
-    {
-        sendBufsBytes[i].resize(sendBufsElements[i].size()*fieldByteSize);
-        recBufBytes[i].resize(sendBufsElements[m_partyId].size()*fieldByteSize);
-//        for(int j=0; j<sendBufsElements[i].size();j++) {
-//            field->elementToBytes(sendBufsBytes[i].data() + (j * fieldByteSize), sendBufsElements[i][j]);
-//        }
-
-        field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
-    }
-
-
-
-    //comm->roundfunctionI(sendBufsBytes, recBufBytes,7);
-    roundFunctionSync(sendBufsBytes, recBufBytes,7);
-
-
-
-    int counter = 0;
-    if(flag_print) {
-        cout << "endnend" << endl;}
-    for(int k=M-numOfOutputGates ; k < M; k++) {
-        if(circuit.getGates()[k].gateType == OUTPUT && circuit.getGates()[k].party == m_partyId)
-        {
-            for(int i=0; i < N; i++) {
-
-                x1[i] = field->bytesToElement(recBufBytes[i].data() + (counter*fieldByteSize));
-            }
-
-
-            // my output: reconstruct received shares
-            if (!checkConsistency(x1, T))
-            {
-                // someone cheated!
-                //if(flag_print) {
-                    cout << "cheating!!!" << '\n';//}
-                return;
-            }
-            if(flag_print_output)
-                cout << "the result for "<< circuit.getGates()[k].input1 << " is : " << field->elementToString(interpolate(x1)) << '\n';
-
-
-            counter++;
-        }
-    }
-
-    // close output file
-    myfile.close();
+    printOutputMessages(accMats, accIntCountersMat);
 }
 
 
