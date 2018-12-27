@@ -206,7 +206,7 @@ public:
     void readclientsinputs(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     void readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e);
     int validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
-    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements);
+    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
     int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
@@ -1459,7 +1459,8 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     }
 
 
-    flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements.data());
+    vector<FieldType> sumsForConsistensyTest(numClients);
+    flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements.data(), sumsForConsistensyTest);
 
     vector<FieldType> sumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
     vector<FieldType> openedSumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
@@ -1485,8 +1486,13 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
 
     //lastly, check that the unit vectors are indeed unit vector. We can use the same random elements that were already created
-    flag = unitVectorsTest(unitVectors, randomElements.data());
+    flag = unitVectorsTest(unitVectors, randomElements.data(), sumsForConsistensyTest);
 
+
+    vector<FieldType> sumsForConsistensyTestOpened(numClients);
+
+    //invoke a consistency test, need to return the index of a cheating client
+    openShare(sumsForConsistensyTest.size(), sumsForConsistensyTest, sumsForConsistensyTestOpened, T);
 
     //do the same check for the unit vectors
 
@@ -1576,7 +1582,8 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
 }
 
 template <class FieldType>
-int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements) {
+int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
+        FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest) {
 
 
     vector<FieldType> testOpen2T(2);
@@ -1643,6 +1650,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs, F
     //prepare the values for the sumo of products
     for(int i = 0; i<vecs.size(); i++){
 
+        sumsForConsistensyTest[i] += sum0[i*securityParamter ] + sum1[i*securityParamter ];
 
         for(int j = 0; j<securityParamter; j++){
 
