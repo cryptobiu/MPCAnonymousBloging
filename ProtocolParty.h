@@ -215,6 +215,8 @@ public:
 
     int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,vector<int> &accIntCountersMat);
 
+    void generateRandomShiftingindices(vector<int> &randomShiftingVec);
+
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
 
@@ -1684,35 +1686,55 @@ int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &
     int numOfCols = msgsVectors[0].size()/(2*l + 1);
     int numOfRows = unitVectors[0].size();
     int size = numOfCols*numOfRows;//the size of the final 2D matrix
-
-
-
-
     vector<int> accCountersMat(size);
+
+    vector<int> randomShiftingIndices;
+    generateRandomShiftingindices(randomShiftingIndices);
+
+
+    int posRow, posCol;
+    int shiftRow, shiftCol;
+
+
 
     for(int i=0; i<msgsVectors.size(); i++){//go over each client
 
+        //get the value for which we need to shift-rotate the row and col for this client
+        shiftRow = randomShiftingIndices[2*i];
+        shiftCol = randomShiftingIndices[2*i+1];
+
+        cout<<"shiftRow for "<<i << "is "<<shiftRow<<endl;
+        cout<<"shiftCol for "<<i << "is "<<shiftCol<<endl;
 
         for(int row = 0; row<numOfRows; row++){ //go over each row
 
+            posRow = row + shiftRow;
+            if(posRow>=numOfRows)
+                posRow-=numOfRows;
+
+
             for(int col=0; col<numOfCols; col++){//go over each message
+
+                posCol = col + shiftCol;
+                if(posCol>=numOfCols)
+                    posCol-=numOfCols;
 
                 for(int l1=0; l1<l; l1++){
 
                     //accume message
                     accMats[ 2*l*(row * numOfCols + col) + l1] +=
-                            msgsVectors[i][l*col + l1] *  unitVectors[i][row];
+                            msgsVectors[i][l*posCol + l1] *  unitVectors[i][posRow];
 
                     //accume the square of the message
                     accMats[ 2*l*(row * numOfCols + col) + l + l1] +=
-                            msgsVectors[i][numOfCols* l +l*col + l1] *  unitVectors[i][row];
+                            msgsVectors[i][numOfCols* l +l*posCol + l1] *  unitVectors[i][posRow];
 
 
 
                 }
 
                 accFieldCountersMat[row * numOfCols + col] +=
-                        msgsVectors[i][numOfCols* l*2 + col] *  unitVectors[i][row];
+                        msgsVectors[i][numOfCols* l*2 + posCol] *  unitVectors[i][posRow];
 
 
             }
@@ -1736,6 +1758,31 @@ int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &
 
 }
 
+
+template <class FieldType>
+void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &randomShiftingVec){
+
+
+    randomShiftingVec.resize(numClients);
+
+    //prepare the random elements for the unit vectors test
+    auto key = generateCommonKey();
+
+
+    //we use the same rendom elements for all the clients. A size of an int is enough and thus we use at most 4 bytes
+    vector<FieldType> randomElements((numClients*2 *4)/field->getElementSizeInBytes());
+    generatePseudoRandomElements(key, randomElements, randomElements.size());
+
+    int *randomInts = (int *)randomElements.data();
+
+    //go over each element and get the random position
+
+    for(int i=0; i<2*numClients; i++){
+
+        randomShiftingVec[i] = abs(randomInts[i]) % sqrtR;
+    }
+
+}
 template <class FieldType>
 void ProtocolParty<FieldType>::commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                vector<vector<byte>> &recBufsBytes){
@@ -1807,6 +1854,13 @@ int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, 
 
     //check that the hashes are in fact correct, that is, the servers committed on the right shares
 
+
+    for(int i=0; i<accMatOpened.size(); i++) {
+        cout << "value " << i << " is " << accMatOpened[i] << endl;
+    }
+    for(int i=0; i<accFieldCountersMatOpened.size(); i++) {
+        cout << "counter num " << i << " is " << accFieldCountersMatOpened[i] << endl;
+    }
 
     OpenSSLSHA256 hash;
      vector<byte> out;
