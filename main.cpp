@@ -1,7 +1,6 @@
 
 #include <stdlib.h>
 #include "ProtocolParty.h"
-#include "ZpKaratsubaElement.h"
 #include <smmintrin.h>
 #include <inttypes.h>
 #include <stdio.h>
