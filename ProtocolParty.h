@@ -207,18 +207,40 @@ public:
                                vector<FieldType> &accMats,
                                vector<FieldType> &accFieldCountersMat);
 
+    int generateSharedMatricesForTesting(vector<vector<FieldType>> &shiftedMsgsVectors,
+                                           vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
+                                           vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
+                                           vector<vector<FieldType>> &shiftedUnitVectors,
+                                           vector<FieldType> &accMsgsMat,
+                                           vector<FieldType> &accMsgsSquareMat,
+                                           vector<FieldType> &accCountersMat);
+
+    int generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
+                                        vector<FieldType> &accMsgsSquareMat,
+                                        vector<FieldType> &accCountersMat,
+                                        vector<int> &accIntCountersMat);
+
     int generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,vector<int> &accIntCountersMat);
 
     void generateRandomShiftingindices(vector<int> &randomShiftingVec);
 
+    void splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+                    vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter);
+
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
 
-    void extractMessages(vector<FieldType> & messages, vector<int> & counters, int numMsgs);
+    void extractMessagesForTesting(vector<FieldType> &accMsgsMat,
+                         vector<FieldType> &accMsgsSquareMat,
+                         vector<int> &accIntCountersMat, int numMsgs);
 
     void calcPairMessages(FieldType & a, FieldType & b, int counter);
 
     void printOutputMessages(vector<FieldType> &accMats, vector<int> &accIntCountersMat);
+
+    void printOutputMessagesForTesting(vector<FieldType> &accMsgsMat,
+                                                                 vector<FieldType> &accMsgsMat2,
+                                                                 vector<int> &accIntCountersMat, int numMsgs);
 
     void offlineDNForMultiplication(int numOfTriples);
 
@@ -1016,7 +1038,7 @@ FieldType ProtocolParty<FieldType>::reconstructShare(vector<FieldType>& x, int d
     {
         // someone cheated!
 
-            cout << "cheating!!!" << '\n';
+            cout << "cheating reconstruct!!!" << '\n';
         //exit(0);
     }
     else
@@ -1547,6 +1569,51 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 }
 
 template <class FieldType>
+void ProtocolParty<FieldType>::splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+                vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter){
+
+
+    msgsVectorsSquare.resize(numClients);
+    msgsVectorsCounter.resize(numClients);
+
+    //generate random shifting for all servers
+    vector<int> randomShiftingIndices;
+    generateRandomShiftingindices(randomShiftingIndices);
+
+    int shiftRow, shiftCol;
+    for(int i=0; i<msgsVectors.size(); i++){
+
+        //get the row and col shift
+        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
+        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
+
+        //generate the shifted message square
+        vector<FieldType> shiftedSquare(msgsVectors[i].begin() + sqrtR*l + shiftRow*l, msgsVectors[i].begin()  + sqrtR*2*l);
+        shiftedSquare.insert(shiftedSquare.end(), msgsVectors[i].begin()+ sqrtR*l, msgsVectors[i].begin() + sqrtR*l+ shiftRow*l);
+        msgsVectorsSquare[i] = move(shiftedSquare);
+
+        //generate the shifted counter
+        vector<FieldType> shiftedCounter(msgsVectors[i].begin() + sqrtR*2*l + shiftRow, msgsVectors[i].begin()  + sqrtR*2*l + sqrtR);
+        shiftedCounter.insert(shiftedCounter.end(), msgsVectors[i].begin()+ sqrtR*2*l, msgsVectors[i].begin() + sqrtR*2*l+ shiftRow);
+        msgsVectorsCounter[i] = move(shiftedCounter);
+
+
+        //generate the shifted unit vector, assign back to the unit vector
+        vector<FieldType> shiftedUnit(unitVectors[i].begin() + shiftCol, unitVectors[i].end());
+        shiftedUnit.insert(shiftedUnit.end(), unitVectors[i].begin(), unitVectors[i].begin() +  shiftCol);
+        unitVectors[i] = move(shiftedUnit);
+
+        //generate the shifted message and assign that back to the msgsVectors
+        vector<FieldType> shiftedX(msgsVectors[i].begin() + shiftRow*l, msgsVectors[i].begin() + sqrtR*l);
+        shiftedX.insert(shiftedX.end(), msgsVectors[i].begin(), msgsVectors[i].begin() + shiftRow*l);
+        msgsVectors[i] = move(shiftedX);
+
+
+    }
+
+}
+
+template <class FieldType>
 int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                                                      vector<FieldType> &accMats,
                                                      vector<FieldType> &accFieldCountersMat){
@@ -1631,6 +1698,75 @@ int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &
 
 
 template <class FieldType>
+int ProtocolParty<FieldType>::generateSharedMatricesForTesting(vector<vector<FieldType>> &shiftedMsgsVectors,
+                                                               vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
+                                                               vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
+                                                               vector<vector<FieldType>> &shiftedUnitVectors,
+                                                               vector<FieldType> &accMsgsMat,
+                                                               vector<FieldType> &accMsgsSquareMat,
+                                                               vector<FieldType> &accCountersMat){
+
+    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
+    //and the second part is the addition of the sqaure of each message of that cell.
+
+    int numOfCols = shiftedMsgsVectorsCounters[0].size();
+    int numOfRows = unitVectors[0].size();
+    int size = numOfCols*numOfRows;//the size of the final 2D matrix
+
+    vector<int> randomShiftingIndices;
+    generateRandomShiftingindices(randomShiftingIndices);
+
+    for(int i=0; i<msgsVectors.size(); i++){//go over each client
+
+
+         for(int row = 0; row<numOfRows; row++){ //go over each row
+
+
+
+            for(int col=0; col<numOfCols*l; col++){//go over each message
+
+
+                    //accume message
+                    accMsgsMat[ (row * numOfCols*l + col)] +=
+                            shiftedMsgsVectors[i][col] *  shiftedUnitVectors[i][row];
+
+                    //accume the square of the message
+                    accMsgsSquareMat[ (row * numOfCols*l + col)] +=
+                            shiftedMsgsVectorsSquares[i][col] *  shiftedUnitVectors[i][row];
+
+
+
+            }
+
+             for(int col=0; col<numOfCols; col++){
+                 accCountersMat[ (row * numOfCols + col)] +=
+                         shiftedMsgsVectorsCounters[i][col] *  shiftedUnitVectors[i][row];
+
+
+
+             }
+        }
+
+    }
+
+    //print matrices
+
+    for(int i=0; i<size; i++){
+
+        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
+
+    }
+
+    for(int i=0; i<size; i++){
+
+        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
+
+    }
+
+}
+
+
+template <class FieldType>
 void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &randomShiftingVec){
 
 
@@ -1695,6 +1831,81 @@ void ProtocolParty<FieldType>::commitOnMatrices(vector<FieldType> &accMats, vect
 
 
 }
+template <class FieldType>
+int ProtocolParty<FieldType>::generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
+                                    vector<FieldType> &accMsgsSquareMat,
+                                    vector<FieldType> &accCountersMat,
+                                    vector<int> &accIntCountersMat){
+
+    vector<vector<byte>> allHashes;
+
+    commitOnMatrices(accMsgsMat, accCountersMat,allHashes);
+
+    //compute just the open mats for debuging purpuses
+
+    vector<FieldType> accMsgsMatOpened(accMsgsMat.size());
+    vector<FieldType> accMsgsSquareMatOpened(accMsgsMat.size());
+
+    vector<FieldType> accCountersMatOpened(accCountersMat.size());
+
+
+    vector<vector<byte>> accMsgsMatMatAll(N);
+    vector<vector<byte>> accMsgsSquareMatAll(N);
+    vector<vector<byte>> accCountersMatAll(N);
+
+
+    openShareSetRecBuf(accMsgsMat.size(), accMsgsMat, accMsgsMatOpened, 2*T,accMsgsMatMatAll);
+    openShareSetRecBuf(accMsgsSquareMat.size(), accMsgsSquareMat, accMsgsSquareMatOpened, 2*T,accMsgsSquareMatAll);
+
+
+    openShareSetRecBuf(accCountersMat.size(), accCountersMat, accCountersMatOpened, 2*T, accCountersMatAll);
+
+    for(int i=0; i<accCountersMat.size(); i++){
+
+        accIntCountersMat[i] = accCountersMatOpened[i].elem;
+    }
+
+    accMsgsMat = move(accMsgsMatOpened);
+    accMsgsSquareMat = move(accMsgsSquareMatOpened);
+
+    //check that the hashes are in fact correct, that is, the servers committed on the right shares
+
+
+    for(int i=0; i<accMsgsMatOpened.size(); i++) {
+        cout << "value " << i << " is " << accMsgsMatOpened[i] << endl;
+    }
+    for(int i=0; i<accCountersMat.size(); i++) {
+        cout << "counter num " << i << " is " << accCountersMat[i] << endl;
+    }
+
+    OpenSSLSHA256 hash;
+    vector<byte> out;
+    vector<byte> out2;
+    for(int i=0; i<numServers; i++){
+
+        //hash the messsages and the counters shares
+        hash.update(accMsgsMatMatAll[i], 0, accMsgsMatMatAll[i].size());
+        out.resize(0);
+
+        hash.hashFinal(out, 0);
+
+        hash.update(accCountersMatAll[i], 0, accCountersMatAll[i].size());
+
+        out2.resize(0);
+        hash.hashFinal(out2, 0);
+
+        //concatenate the two digests
+        out.insert(out.end(), out2.begin(), out2.end());
+
+        if(out!=allHashes[i]) {
+            return i;
+        }
+    }
+
+    return -1;
+
+}
+
 
 template <class FieldType>
 int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
@@ -1762,6 +1973,7 @@ int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, 
 }
 
 
+
 template<class FieldType>
 void ProtocolParty<FieldType>::printOutputMessages(vector<FieldType> &accMats,
                                                    vector<int> &accIntCountersMat){
@@ -1792,13 +2004,53 @@ void ProtocolParty<FieldType>::printOutputMessages(vector<FieldType> &accMats,
 }
 
 template<class FieldType>
-void ProtocolParty<FieldType>::extractMessages(vector<FieldType> & messages, vector<int> & counters, int numMsgs){
+void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &accMsgsMat,
+                                                             vector<FieldType> &accMsgsMat2,
+                                                             vector<int> &accIntCountersMat, int numMsgs){
+
+    int counter = 0;
+
+    for(int i=0; i<accIntCountersMat.size(); i++){
+
+        cout<<"accIntCountersMat["<<i<<"]"<<accIntCountersMat[i]<<endl;
+        if(accIntCountersMat[i]==1){
+            for(int l1=0; l1<l; l1++) {
+                cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat[l * i + l1] << "\033[0m" << endl;
+            }
+            counter++;
+        }
+        else if(accIntCountersMat[i]==2){
+
+            for(int l1=0; l1<l; l1++) {
+                cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat[l * i + l1] << "\033[0m" << endl;
+            }
+            counter++;
+
+            for(int l1=0; l1<l; l1++) {
+                cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat2[l * i + l1] << "\033[0m" << endl;
+            }
+            counter++;
+
+        }
+        else{
+            //no messages to extract
+        }
+
+    }
+
+}
+
+template<class FieldType>
+void ProtocolParty<FieldType>::extractMessagesForTesting(vector<FieldType> &accMsgsMat,
+                                               vector<FieldType> &accMsgsSquareMat,
+                                               vector<int> &accIntCountersMat, int numMsgs){
+
 
     int totalNumber = 0;
     for (int i=0; i<numMsgs; i++){
-        totalNumber += counters[i];
+        totalNumber += accIntCountersMat[i];
         for (int j=0; j<l;j++) {
-            calcPairMessages(messages[2 * i * l + j], messages[(2 * i + 1) * l + j], counters[i]);
+            calcPairMessages(accMsgsMat[i * l + j], accMsgsSquareMat[i * l + j], accIntCountersMat[i]);
         }
     }
 
@@ -2170,14 +2422,56 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
 template <class FieldType>
 void ProtocolParty<FieldType>::outputPhase()
 {
-    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
-    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
+//    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
+//    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
+//    vector<int> accIntCountersMat(sqrtR*sqrtR);
+//
+
+//    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
+//
+//    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
+//
+//    if(flag==-1){
+//
+//        cout<<"all hashes are correct"<<endl;
+//    }
+//    else
+//    {
+//        cout<<"basssssssssssssssssa you " <<flag <<endl;
+//
+//    }
+//
+//    extractMessages(accMats, accIntCountersMat, numClients);
+
+    //printOutputMessages(accMats, accIntCountersMat);
+
+
+
+
+    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
+    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
+    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
+
+    vector<FieldType> accMsgsMat(sqrtR*sqrtR*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtR*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtR);
     vector<int> accIntCountersMat(sqrtR*sqrtR);
 
+    generateSharedMatricesForTesting(msgsVectors,
+                                     shiftedMsgsVectorsSquares,
+                                     shiftedMsgsVectorsCounters,
+                                     unitVectors,
+                                     accMsgsMat,
+                                     accMsgsSquareMat,
+                                     accCountersMat);
 
-    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
 
-    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
+    int flag =  generateClearMatricesForTesting(accMsgsMat,
+                                                accMsgsSquareMat,
+                                        accCountersMat,
+                                        accIntCountersMat);
+
+    cout<<"flag for clear is "<<flag<<endl;
 
     if(flag==-1){
 
@@ -2189,9 +2483,16 @@ void ProtocolParty<FieldType>::outputPhase()
 
     }
 
-    extractMessages(accMats, accIntCountersMat, numClients);
+    extractMessagesForTesting(accMsgsMat,
+                              accMsgsSquareMat,
+                    accIntCountersMat,
+                              accIntCountersMat.size());
 
-    printOutputMessages(accMats, accIntCountersMat);
+
+    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+
+
+    cout<<"passed with distinction"<<endl;
 }
 
 
@@ -2268,9 +2569,6 @@ void ProtocolParty<FieldType>::exchangeData(vector<vector<byte>> &sendBufs, vect
 
 
 }
-
-
-
 
 
 template <class FieldType>
@@ -2356,7 +2654,6 @@ ProtocolParty<FieldType>::~ProtocolParty()
     delete protocolTimer;
     delete field;
     delete timer;
-    //delete comm;
 }
 
 
