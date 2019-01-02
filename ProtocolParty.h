@@ -326,7 +326,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
     timer = new Measurement(*this, subTaskNames);
 
-    if(fieldType.compare("ZpMersenne") == 0) {
+    if(fieldType.compare("ZpMersenne31") == 0) {
         field = new TemplateField<FieldType>(2147483647);
     } else if(fieldType.compare("ZpMersenne61") == 0) {
         field = new TemplateField<FieldType>(0);
@@ -1713,9 +1713,6 @@ int ProtocolParty<FieldType>::generateSharedMatricesForTesting(vector<vector<Fie
     int numOfRows = unitVectors[0].size();
     int size = numOfCols*numOfRows;//the size of the final 2D matrix
 
-    vector<int> randomShiftingIndices;
-    generateRandomShiftingindices(randomShiftingIndices);
-
     for(int i=0; i<msgsVectors.size(); i++){//go over each client
 
 
@@ -2083,27 +2080,9 @@ void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, in
         FieldType four = field->GetElement(4);
         FieldType two = field->GetElement(2);
 
-        FieldType sqrt = eight*b - a*a*four; //8b-4a^2
+        FieldType insideSqrt = eight*b - a*a*four; //8b-4a^2
 
-        //The algorithm for checking the squrae root of a value is as follows:
-        //We know that 2^31 and 2^61 are both divisible by 4 (the results are 2^29 and 2^59 respectively). So 2^31-1=3 mod 4 and 2^61-1=3 mod 4.
-        //So if we have b=x^2 (over Mersenne61) then we can compute x by b^{2^59}.
-        //To do this, we can make about 58 field multiplications:
-        //Set b_1 = b, then
-        //For i=2...59:
-        //compute b_i = (b_{i-1})^2.
-        //So x1=b_59 and x2=-b_59 = 2^61-1-b_59
-        //Check that x1^2 = b, if it does then output it, otherwise, it means that a cheat is detected.
-        FieldType root = sqrt;
-        for (int i=2; i<=60; i++){
-            root *= root;
-        }
-        FieldType check = root*root;
-
-        if (check != sqrt){
-            cout<<"CHEATING!!!"<<endl;
-            return;
-        }
+        FieldType root = insideSqrt.sqrt();
 
         //calculate the final messages
         FieldType val = two*a;
