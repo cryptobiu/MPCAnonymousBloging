@@ -915,7 +915,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     int iterations =   (5 + field->getElementSizeInBytes() - 1) / field->getElementSizeInBytes();
     int keysize = 16/field->getElementSizeInBytes() + 1;
 
-    int numOfRandomShares = 2*keysize;
+    int numOfRandomShares = 10*keysize + 1;
     randomSharesArray.resize(numOfRandomShares);
 
     randomSharesOffset = 0;

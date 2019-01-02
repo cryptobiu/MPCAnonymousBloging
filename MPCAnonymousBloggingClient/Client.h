@@ -394,6 +394,7 @@ void Client<FieldType>::checkExtractMsgs() {
     cout<<"first element = "<<first<<endl;
     for (int i=0; i<l; i++) {
         messages[2*l + i] = first;
+
         messages[3*l + i] = first * first;
     }
     counters[1] = 1;
