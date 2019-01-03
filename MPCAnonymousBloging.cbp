@@ -74,15 +74,6 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/HashAbstract.h">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/HashEncrypt.cpp">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/HashEncrypt.h">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolParty.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
@@ -93,18 +84,6 @@
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolTimer.h">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/TemplateField.cpp">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/TemplateField.h">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ZpKaratsubaElement.cpp">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ZpKaratsubaElement.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/main.cpp">

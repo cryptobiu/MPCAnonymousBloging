@@ -69,7 +69,7 @@ Client<FieldType>::Client(int argc, char **argv){
     auto key = prg.generateKey(128);
     prg.setKey(key);
 
-    if(fieldType.compare("ZpMersenne") == 0) {
+    if(fieldType.compare("ZpMersenne31") == 0) {
         field = new TemplateField<FieldType>(2147483647);
     } else if(fieldType.compare("ZpMersenne61") == 0) {
         field = new TemplateField<FieldType>(0);
@@ -83,7 +83,7 @@ Client<FieldType>::Client(int argc, char **argv){
 
     matrix_vand.allocate(numServers,numServers,field);
     matrix_vand.InitVDM();
-
+cout<<"end ctor"<<endl;
 
 }
 
@@ -195,11 +195,21 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
 
     for (int i=0; i<numServers; i++){
 
-        long * serverShares = (long*) shares[i].data();
-        outputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
+        if (field->getElementSizeInBytes() == 8) {
+            long *serverShares = (long *) shares[i].data();
+            outputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
 
-        for (int j=0; j<size; j++) {
-            outputFile << serverShares[j]<<endl;
+            for (int j = 0; j < size; j++) {
+                outputFile << serverShares[j] << endl;
+            }
+        }
+        if (field->getElementSizeInBytes() == 4) {
+            int *serverShares = (int *) shares[i].data();
+            outputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
+
+            for (int j = 0; j < size; j++) {
+                outputFile << serverShares[j] << endl;
+            }
         }
         outputFile.close();
     }
@@ -304,6 +314,8 @@ void Client<FieldType>::extractMessages(vector<FieldType> & messages, vector<int
         }
     }
 
+    cout<<"total number = "<<totalNumber<<endl;
+    cout<<"numClients = "<<numClients<<endl;
     if (totalNumber > numClients){
         cout<<"CHEATING!!!"<<endl;
     }
@@ -332,7 +344,7 @@ void Client<FieldType>::calcPairMessages(FieldType & a, FieldType & b, int count
         FieldType four = field->GetElement(4);
         FieldType two = field->GetElement(2);
 
-        FieldType sqrt = eight*b - a*a*four; //8b-4a^2
+        FieldType insideSqrt = eight*b - a*a*four; //8b-4a^2
 
         //The algorithm for checking the squrae root of a value is as follows:
         //We know that 2^31 and 2^61 are both divisible by 4 (the results are 2^29 and 2^59 respectively). So 2^31-1=3 mod 4 and 2^61-1=3 mod 4.
@@ -343,16 +355,17 @@ void Client<FieldType>::calcPairMessages(FieldType & a, FieldType & b, int count
                 //compute b_i = (b_{i-1})^2.
             //So x1=b_59 and x2=-b_59 = 2^61-1-b_59
             //Check that x1^2 = b, if it does then output it, otherwise, it means that a cheat is detected.
-        FieldType root = sqrt;
-        for (int i=2; i<=60; i++){
-            root *= root;
-        }
-        FieldType check = root*root;
-
-        if (check != sqrt){
-            cout<<"CHEATING!!!"<<endl;
-            return;
-        }
+//        FieldType root = sqrt;
+//        for (int i=2; i<=60; i++){
+//            root *= root;
+//        }
+//        FieldType check = root*root;
+//
+//        if (check != sqrt){
+//            cout<<"CHEATING!!!"<<endl;
+//            return;
+//        }
+        FieldType root = insideSqrt.sqrt();
 
         //calculate the final messages
         FieldType val = two*a;
@@ -371,8 +384,8 @@ void Client<FieldType>::calcPairMessages(FieldType & a, FieldType & b, int count
 
 template<class FieldType>
 void Client<FieldType>::checkExtractMsgs() {
-    int numMsgs = 3;
-    vector<ZpMersenneLongElement> messages(2*l*numMsgs, *field->GetZero());
+    int numMsgs = sqrtR;
+    vector<FieldType> messages(2*l*numMsgs, *field->GetZero());
     vector<int> counters(numMsgs);
 
     counters[0] = 0;
@@ -381,6 +394,7 @@ void Client<FieldType>::checkExtractMsgs() {
     cout<<"first element = "<<first<<endl;
     for (int i=0; i<l; i++) {
         messages[2*l + i] = first;
+
         messages[3*l + i] = first * first;
     }
     counters[1] = 1;
