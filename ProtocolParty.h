@@ -215,7 +215,22 @@ public:
                                            vector<FieldType> &accMsgsSquareMat,
                                            vector<FieldType> &accCountersMat);
 
-    int generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
+    int generateSharedMatricesOptimized(vector<vector<FieldType>> &shiftedMsgsVectors,
+                                         vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
+                                         vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
+                                         vector<vector<FieldType>> &shiftedUnitVectors,
+                                         vector<FieldType> &accMsgsMat,
+                                         vector<FieldType> &accMsgsSquareMat,
+                                         vector<FieldType> &accCountersMat);
+
+    void multiplyVectors(vector<vector<FieldType>> & input,
+                            vector<vector<FieldType>> & unitVectors,
+                            vector<FieldType> & output,
+                            int numOfRows,
+                            int numOfCols);
+
+
+        int generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat,
                                         vector<int> &accIntCountersMat);
@@ -915,7 +930,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     int iterations =   (5 + field->getElementSizeInBytes() - 1) / field->getElementSizeInBytes();
     int keysize = 16/field->getElementSizeInBytes() + 1;
 
-    int numOfRandomShares = 10*keysize + 1;
+    int numOfRandomShares = 2*keysize;
     randomSharesArray.resize(numOfRandomShares);
 
     randomSharesOffset = 0;
@@ -1764,6 +1779,416 @@ int ProtocolParty<FieldType>::generateSharedMatricesForTesting(vector<vector<Fie
 
 
 template <class FieldType>
+int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<FieldType>> &shiftedMsgsVectors,
+                                                               vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
+                                                               vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
+                                                               vector<vector<FieldType>> &shiftedUnitVectors,
+                                                               vector<FieldType> &accMsgsMat,
+                                                               vector<FieldType> &accMsgsSquareMat,
+                                                               vector<FieldType> &accCountersMat){
+
+    cout<<"in optimized multiplication"<<endl;
+    int numOfCols = shiftedMsgsVectorsCounters[0].size();
+    cout<<"numOfCols = "<<numOfCols<<endl;
+    int numOfRows = unitVectors[0].size();
+    cout<<"numOfRows = "<<numOfRows<<endl;
+    int size = numOfCols*numOfRows;//the size of the final 2D matrix
+    cout<<"size = "<<size<<endl;
+
+    multiplyVectors(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
+    cout<<"after multiply msgs"<<endl;
+    multiplyVectors(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
+    cout<<"after multiply squares"<<endl;
+    multiplyVectors(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
+    cout<<"after multiply counters"<<endl;
+
+    //print matrices
+
+    for(int i=0; i<size; i++){
+
+        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
+
+    }
+
+    for(int i=0; i<size; i++){
+
+        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
+
+    }
+
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
+                                                vector<FieldType> & output, int numOfRows, int numOfCols){
+
+    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
+    //and the second part is the addition of the sqaure of each message of that cell.
+
+    int toReduce = 0; //Every 4 multiplications there is need to reduce all table
+    __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+
+//    cout<<"unit vector 0:"<<endl;
+//    for (int j=0; j<unitVectors[0].size(); j++){
+//        cout<<unitVectors[0][j]<< " ";
+//    }
+//    cout<<endl;
+//
+//    cout<<"input 0:"<<endl;
+//    for (int j=0; j<input[0].size(); j++){
+//        cout<<input[0][j]<< " ";
+//    }
+//    cout<<endl;
+
+    int newNumRows = numOfRows;
+    if (numOfRows % 8 != 0) {
+        newNumRows = (numOfRows / 8)*8 + 8;
+        for( int i=0; i<unitVectors.size(); i++) {
+            unitVectors[i].resize(newNumRows);
+
+            cout << "unit vector " << i << ":" << endl;
+            for (int j = 0; j < unitVectors[i].size(); j++) {
+                cout << unitVectors[i][j] << " ";
+            }
+            cout << endl;
+        }
+    }
+
+    int newNumCols = numOfCols;
+    if (numOfCols % 64 != 0) {
+        newNumCols = (numOfCols / 64)*64 + 64;
+        for( int i=0; i<input.size(); i++){
+            input[i].resize(newNumCols);
+
+            cout << "input " << i << ":" << endl;
+            for (int j = 0; j < input[i].size(); j++) {
+                cout << input[i][j] << " ";
+            }
+            cout << endl;
+        }
+    }
+    cout<<"newNumRows = "<<newNumRows<<endl;
+    cout<<"newNumCols = "<<newNumCols<<endl;
+    vector<long> outputDouble(newNumRows*newNumCols);
+    for(int i=0; i<input.size(); i++){//go over each client
+
+        for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++){ //go over each row
+
+            __m256i row = _mm256_maskload_epi32((int*)unitVectors[i].data() + rowIndex*8, mask);
+            auto int0 = _mm256_extract_epi32(row, 0);
+            auto int1 = _mm256_extract_epi32(row, 1);
+            auto int2 = _mm256_extract_epi32(row, 2);
+            auto int3 = _mm256_extract_epi32(row, 3);
+            auto int4 = _mm256_extract_epi32(row, 4);
+            auto int5 = _mm256_extract_epi32(row, 5);
+            auto int6 = _mm256_extract_epi32(row, 6);
+            auto int7 = _mm256_extract_epi32(row, 7);
+
+//            cout<<"party "<< i<<"row "<<i<<" = "<<int0 << " "<< int1 << " "<<int2 << " "<<int3 << " "<<int4 << " "<<int5 << " "<<int6 << " "<<int7 << endl;
+            __m256i row0 = _mm256_set1_epi32(int0);
+            __m256i row1 = _mm256_set1_epi32(int1);
+            __m256i row2 = _mm256_set1_epi32(int2);
+            __m256i row3 = _mm256_set1_epi32(int3);
+            __m256i row4 = _mm256_set1_epi32(int4);
+            __m256i row5 = _mm256_set1_epi32(int5);
+            __m256i row6 = _mm256_set1_epi32(int6);
+            __m256i row7 = _mm256_set1_epi32(int7);
+
+            for(int colIndex=0; colIndex<newNumCols / 64; colIndex++){//go over each message
+
+                //load 8 vectors for 8 small matrices
+                auto start = (int*) input[i].data() + colIndex * 64;
+                __m256i col0 = _mm256_maskload_epi32(start, mask);
+                __m256i col1 = _mm256_maskload_epi32(start + 8, mask);
+                __m256i col2 = _mm256_maskload_epi32(start + 16, mask);
+                __m256i col3 = _mm256_maskload_epi32(start + 24, mask);
+                __m256i col4 = _mm256_maskload_epi32(start + 32, mask);
+                __m256i col5 = _mm256_maskload_epi32(start + 40, mask);
+                __m256i col6 = _mm256_maskload_epi32(start + 48, mask);
+                __m256i col7 = _mm256_maskload_epi32(start + 56, mask);
+
+                __m256i colHigh0 = _mm256_srli_epi64(col0, 32);
+                __m256i colHigh1 = _mm256_srli_epi64(col1, 32);
+                __m256i colHigh2 = _mm256_srli_epi64(col2, 32);
+                __m256i colHigh3 = _mm256_srli_epi64(col3, 32);
+                __m256i colHigh4 = _mm256_srli_epi64(col4, 32);
+                __m256i colHigh5 = _mm256_srli_epi64(col5, 32);
+                __m256i colHigh6 = _mm256_srli_epi64(col6, 32);
+                __m256i colHigh7 = _mm256_srli_epi64(col7, 32);
+
+//                cout<<"party "<< i<<"col 0 = "<<_mm256_extract_epi32(col0, 0) << " "<< _mm256_extract_epi32(col0, 1) <<" "<<_mm256_extract_epi32(col0, 2) <<" "<<_mm256_extract_epi32(col0, 3) <<
+//                                   " "<<_mm256_extract_epi32(col0, 4) <<" "<<_mm256_extract_epi32(col0, 5) <<" "<<_mm256_extract_epi32(col0, 6) <<" "<<_mm256_extract_epi32(col0, 7) <<endl;
+//                cout<<"party "<< i<<"col 7 = "<<_mm256_extract_epi32(col7, 0) << " "<<_mm256_extract_epi32(col7, 1) <<" "<<_mm256_extract_epi32(col7, 2) <<" "<<_mm256_extract_epi32(col7, 3) <<
+//                    " "<<_mm256_extract_epi32(col7, 4) <<" "<<_mm256_extract_epi32(col7, 5) <<" "<<_mm256_extract_epi32(col7, 6) <<" "<<_mm256_extract_epi32(col7, 7) <<endl;
+//
+//                cout<<"output table i = "<<i<<":"<<endl;
+//                for (int kk=0; kk<2; kk++) {
+//                    for (int t = 0; t < 8; t++) {
+//                        cout << outputDouble[kk * 8 + t] << " ";
+//                    }
+//                    cout << endl;
+//                }
+
+                //fill each row in every small matrix
+                for (int j = 0; j < 8; j++) {
+
+                    //load 8 vectors for 8 small matrices
+
+                    long* startD = (long*)outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
+                    __m256i outputLow0 = _mm256_maskload_epi64((long long int*)startD, mask);
+//                    cout<<"outputLow0 j = "<< j<<": "<<_mm256_extract_epi64(outputLow0, 0) << " "<<_mm256_extract_epi64(outputLow0, 1) <<" "
+//                                    <<_mm256_extract_epi64(outputLow0, 2) <<" "<<_mm256_extract_epi64(outputLow0, 3) << endl;
+
+                    __m256i outputHigh0 = _mm256_maskload_epi64((long long int*)startD + 4, mask);
+//                    cout<<"outputHigh0 j = "<< j<<": "<<_mm256_extract_epi64(outputHigh0, 0) << " "<<_mm256_extract_epi64(outputHigh0, 1) <<" "
+//                        <<_mm256_extract_epi64(outputHigh0, 2) <<" "<<_mm256_extract_epi64(outputHigh0, 3) << endl;
+                    __m256i outputLow1 = _mm256_maskload_epi64((long long int*)startD + 8, mask);
+                    __m256i outputHigh1 = _mm256_maskload_epi64((long long int*)startD + 12, mask);
+                    __m256i outputLow2 = _mm256_maskload_epi64((long long int*)startD + 16, mask);
+                    __m256i outputHigh2 = _mm256_maskload_epi64((long long int*)startD + 20, mask);
+                    __m256i outputLow3 = _mm256_maskload_epi64((long long int*)startD + 24, mask);
+                    __m256i outputHigh3 = _mm256_maskload_epi64((long long int*)startD + 28, mask);
+                    __m256i outputLow4 = _mm256_maskload_epi64((long long int*)startD + 32, mask);
+                    __m256i outputHigh4 = _mm256_maskload_epi64((long long int*)startD + 36, mask);
+                    __m256i outputLow5 = _mm256_maskload_epi64((long long int*)startD + 40, mask);
+                    __m256i outputHigh5 = _mm256_maskload_epi64((long long int*)startD + 44, mask);
+                    __m256i outputLow6 = _mm256_maskload_epi64((long long int*)startD + 48, mask);
+                    __m256i outputHigh6 = _mm256_maskload_epi64((long long int*)startD + 52, mask);
+                    __m256i outputLow7 = _mm256_maskload_epi64((long long int*)startD + 56, mask);
+                    __m256i outputHigh7 = _mm256_maskload_epi64((long long int*)startD + 60, mask);
+
+                    __m256i rowI;
+                    if (j == 0) rowI = row0;
+                    else if (j == 1) rowI = row1;
+                    else if (j == 2) rowI = row2;
+                    else if (j == 3) rowI = row3;
+                    else if (j == 4) rowI = row4;
+                    else if (j == 5) rowI = row5;
+                    else if (j == 6) rowI = row6;
+                    else if (j == 7) rowI = row7;
+
+                    //calc 8 first rows
+                    __m256i c0 = _mm256_mul_epi32(rowI, col0);
+                    __m256i c1 = _mm256_mul_epi32(rowI, col1);
+                    __m256i c2 = _mm256_mul_epi32(rowI, col2);
+                    __m256i c3 = _mm256_mul_epi32(rowI, col3);
+                    __m256i c4 = _mm256_mul_epi32(rowI, col4);
+                    __m256i c5 = _mm256_mul_epi32(rowI, col5);
+                    __m256i c6 = _mm256_mul_epi32(rowI, col6);
+                    __m256i c7 = _mm256_mul_epi32(rowI, col7);
+                    outputLow0 = _mm256_add_epi64(outputLow0, c0);
+//                    cout<<"c0 j = "<< j<<": "<<_mm256_extract_epi32(c0, 0) << " "<<_mm256_extract_epi32(c0, 1) <<" "<<_mm256_extract_epi32(c0, 2) <<" "<<_mm256_extract_epi32(c0, 3) <<
+//                        " "<<_mm256_extract_epi32(c0, 4) <<" "<<_mm256_extract_epi32(c0, 5) <<" "<<_mm256_extract_epi32(c0, 6) <<" "<<_mm256_extract_epi32(c0, 7) <<endl;
+
+//                    cout<<"outputLow0 j = "<< j<<": "<<_mm256_extract_epi64(outputLow0, 0) << " "<<_mm256_extract_epi64(outputLow0, 1) <<" "
+//                        <<_mm256_extract_epi64(outputLow0, 2) <<" "<<_mm256_extract_epi64(outputLow0, 3) << endl;
+
+                    outputLow1 = _mm256_add_epi64(outputLow1, c1);
+                    outputLow2 = _mm256_add_epi64(outputLow2, c2);
+                    outputLow3 = _mm256_add_epi64(outputLow3, c3);
+                    outputLow4 = _mm256_add_epi64(outputLow4, c4);
+                    outputLow5 = _mm256_add_epi64(outputLow5, c5);
+                    outputLow6 = _mm256_add_epi64(outputLow6, c6);
+                    outputLow7 = _mm256_add_epi64(outputLow7, c7);
+
+                    c0 = _mm256_mul_epi32(rowI, colHigh0);
+                    c1 = _mm256_mul_epi32(rowI, colHigh1);
+                    c2 = _mm256_mul_epi32(rowI, colHigh2);
+                    c3 = _mm256_mul_epi32(rowI, colHigh3);
+                    c4 = _mm256_mul_epi32(rowI, colHigh4);
+                    c5 = _mm256_mul_epi32(rowI, colHigh5);
+                    c6 = _mm256_mul_epi32(rowI, colHigh6);
+                    c7 = _mm256_mul_epi32(rowI, colHigh7);
+
+                    outputHigh0 = _mm256_add_epi64(outputHigh0, c0);
+//                    cout<<"c0 high j = "<< j<<": "<<_mm256_extract_epi32(c0, 0) << " "<<_mm256_extract_epi32(c0, 1) <<" "<<_mm256_extract_epi32(c0, 2) <<" "<<_mm256_extract_epi32(c0, 3) <<
+//                        " "<<_mm256_extract_epi32(c0, 4) <<" "<<_mm256_extract_epi32(c0, 5) <<" "<<_mm256_extract_epi32(c0, 6) <<" "<<_mm256_extract_epi32(c0, 7) <<endl;
+
+//                    cout<<"outputhigh0 j = "<< j<<": "<<_mm256_extract_epi64(outputHigh0, 0) << " "<<_mm256_extract_epi64(outputHigh0, 1) <<" "
+//                                                      <<_mm256_extract_epi64(outputHigh0, 2) <<" "<<_mm256_extract_epi64(outputHigh0, 3) <<endl;
+
+                    outputHigh1 = _mm256_add_epi64(outputHigh1, c1);
+                    outputHigh2 = _mm256_add_epi64(outputHigh2, c2);
+                    outputHigh3 = _mm256_add_epi64(outputHigh3, c3);
+                    outputHigh4 = _mm256_add_epi64(outputHigh4, c4);
+                    outputHigh5 = _mm256_add_epi64(outputHigh5, c5);
+                    outputHigh6 = _mm256_add_epi64(outputHigh6, c6);
+                    outputHigh7 = _mm256_add_epi64(outputHigh7, c7);
+
+                    _mm256_maskstore_epi64((long long int*)startD, mask, outputLow0);
+                    _mm256_maskstore_epi64((long long int*)startD + 4, mask, outputHigh0);
+                    _mm256_maskstore_epi64((long long int*)startD + 8, mask, outputLow1);
+                    _mm256_maskstore_epi64((long long int*)startD + 12, mask, outputHigh1);
+                    _mm256_maskstore_epi64((long long int*)startD + 16, mask, outputLow2);
+                    _mm256_maskstore_epi64((long long int*)startD + 20, mask, outputHigh2);
+                    _mm256_maskstore_epi64((long long int*)startD + 24, mask, outputLow3);
+                    _mm256_maskstore_epi64((long long int*)startD + 28, mask, outputHigh3);
+                    _mm256_maskstore_epi64((long long int*)startD + 32, mask, outputLow4);
+                    _mm256_maskstore_epi64((long long int*)startD + 36, mask, outputHigh4);
+                    _mm256_maskstore_epi64((long long int*)startD + 40, mask, outputLow5);
+                    _mm256_maskstore_epi64((long long int*)startD + 44, mask, outputHigh5);
+                    _mm256_maskstore_epi64((long long int*)startD + 48, mask, outputLow6);
+                    _mm256_maskstore_epi64((long long int*)startD + 52, mask, outputHigh6);
+                    _mm256_maskstore_epi64((long long int*)startD + 56, mask, outputLow7);
+                    _mm256_maskstore_epi64((long long int*)startD + 60, mask, outputHigh7);
+
+//                    cout<<"output table i = "<<i<<":"<<endl;
+//                    for (int kk=0; kk<2; kk++) {
+//                        for (int t = 0; t < 8; t++) {
+//                            cout << outputDouble[kk * 8 + t] << " ";
+//                        }
+//                        cout << endl;
+//                    }
+                }
+
+            }
+        }
+        cout<<"output table i = "<<i<<":"<<endl;
+        for (int kk=0; kk<2; kk++) {
+            for (int t = 0; t < 8; t++) {
+                cout << outputDouble[kk * 8 + t] << " ";
+            }
+            cout << endl;
+        }
+
+        toReduce += 2;
+
+        if (toReduce == 4 || i == input.size()){
+            cout<<"in reduce"<<endl;
+            __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
+            //reduce all matrix
+//            cout<<"after p"<<endl;
+            for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++){ //go over each row
+
+                for(int colIndex=0; colIndex<newNumCols / 32; colIndex++){//go over each message
+
+                    //load 8 vectors for 8 small matrices
+                    auto startD = (long*) outputDouble.data() + rowIndex * newNumCols + colIndex * 32;
+
+                    __m256i output0 = _mm256_maskload_epi64((long long int*)startD, mask);
+//                    cout<<"rowindex = "<<rowIndex<<" colIndex = "<<colIndex<< "  output0 = "<< _mm256_extract_epi64(output0, 0) << " "<<_mm256_extract_epi64(output0, 1) <<" "
+//                        <<_mm256_extract_epi64(output0, 2) <<" "<<_mm256_extract_epi64(output0, 3) << endl;
+
+                    __m256i output1 = _mm256_maskload_epi64((long long int*)startD + 4, mask);
+                    __m256i output2 = _mm256_maskload_epi64((long long int*)startD + 8, mask);
+                    __m256i output3 = _mm256_maskload_epi64((long long int*)startD + 12, mask);
+                    __m256i output4 = _mm256_maskload_epi64((long long int*)startD + 16, mask);
+                    __m256i output5 = _mm256_maskload_epi64((long long int*)startD + 20, mask);
+                    __m256i output6 = _mm256_maskload_epi64((long long int*)startD + 24, mask);
+                    __m256i output7 = _mm256_maskload_epi64((long long int*)startD + 28, mask);
+
+
+                    //get the bottom 31 bit
+                    __m256i bottom0 = _mm256_and_si256(output0, p);
+                    __m256i bottom1 = _mm256_and_si256(output1, p);
+                    __m256i bottom2 = _mm256_and_si256(output2, p);
+                    __m256i bottom3 = _mm256_and_si256(output3, p);
+                    __m256i bottom4 = _mm256_and_si256(output4, p);
+                    __m256i bottom5 = _mm256_and_si256(output5, p);
+                    __m256i bottom6 = _mm256_and_si256(output6, p);
+                    __m256i bottom7 = _mm256_and_si256(output7, p);
+//                    unsigned int bottom = multLong & p;
+
+                    //get the top 31 bits
+
+                    __m256i top0 = _mm256_srli_epi64(output0, 31);
+                    __m256i top1 = _mm256_srli_epi64(output1, 31);
+                    __m256i top2 = _mm256_srli_epi64(output2, 31);
+                    __m256i top3 = _mm256_srli_epi64(output3, 31);
+                    __m256i top4 = _mm256_srli_epi64(output4, 31);
+                    __m256i top5 = _mm256_srli_epi64(output5, 31);
+                    __m256i top6 = _mm256_srli_epi64(output6, 31);
+                    __m256i top7 = _mm256_srli_epi64(output7, 31);
+
+
+                    __m256i mask1 = _mm256_set_epi32(0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF);
+                    top0 = _mm256_and_si256(top0, mask1);
+                    top1 = _mm256_and_si256(top1, mask1);
+                    top2 = _mm256_and_si256(top2, mask1);
+                    top3 = _mm256_and_si256(top3, mask1);
+                    top4 = _mm256_and_si256(top4, mask1);
+                    top5 = _mm256_and_si256(top5, mask1);
+                    top6 = _mm256_and_si256(top6, mask1);
+                    top7 = _mm256_and_si256(top7, mask1);
+//                    unsigned int top = (multLong>>31);
+
+                    __m256i res0 = _mm256_add_epi64(bottom0, top0);
+                    __m256i res1 = _mm256_add_epi64(bottom1, top1);
+                    __m256i res2 = _mm256_add_epi64(bottom2, top2);
+                    __m256i res3 = _mm256_add_epi64(bottom3, top3);
+                    __m256i res4 = _mm256_add_epi64(bottom4, top4);
+                    __m256i res5 = _mm256_add_epi64(bottom5, top5);
+                    __m256i res6 = _mm256_add_epi64(bottom6, top6);
+                    __m256i res7 = _mm256_add_epi64(bottom7, top7);
+
+//                    cout<<"res0 = "<<": "<<_mm256_extract_epi32(res0, 0) << " "<<_mm256_extract_epi32(res0, 1) <<" "<<_mm256_extract_epi32(res0, 2) <<" "<<_mm256_extract_epi32(res0, 3) <<
+//                                                " "<<_mm256_extract_epi32(res0, 4) <<" "<<_mm256_extract_epi32(res0, 5) <<" "<<_mm256_extract_epi32(res0, 6) <<" "<<_mm256_extract_epi32(res0, 7) <<endl;
+
+                    _mm256_maskstore_epi64((long long int*)startD, mask, res0);
+                    _mm256_maskstore_epi64((long long int*)startD + 4, mask, res1);
+                    _mm256_maskstore_epi64((long long int*)startD + 8, mask, res2);
+                    _mm256_maskstore_epi64((long long int*)startD + 12, mask, res3);
+                    _mm256_maskstore_epi64((long long int*)startD + 16, mask, res4);
+                    _mm256_maskstore_epi64((long long int*)startD + 20, mask, res5);
+                    _mm256_maskstore_epi64((long long int*)startD + 24, mask, res6);
+                    _mm256_maskstore_epi64((long long int*)startD + 28, mask, res7);
+
+//                    answer.elem = bottom + top;
+
+                    //maximim the value of 2p-2
+//                    if(answer.elem>=p)
+//                        answer.elem-=p;
+//
+//                    }
+
+                }
+            }
+
+            toReduce = 0;
+        }
+
+    }
+    cout<<"output double:"<<endl;
+    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++) { //go over each row
+
+        for (int colIndex = 0; colIndex < newNumCols; colIndex++) {//go over each message
+            cout<<outputDouble[rowIndex * newNumCols  + colIndex] << " ";
+        }
+        cout<<endl;
+    }
+
+    cout<<"after multiplication. copy to int output"<<endl;
+    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++){ //go over each row
+
+        for(int colIndex=0; colIndex<numOfCols; colIndex++){//go over each message
+
+            for (int k=0; k<8 && k<numOfCols; k++) {
+                if (k % 2 != 0) {
+                    //get the high int
+//                    cout<<"output double = "<<outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2]<< " ";
+                    output[rowIndex * numOfCols + colIndex * numOfCols + k] = (int)outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2];
+//                    cout<<"output = "<<output[rowIndex * numOfCols + colIndex * 8 + k/2]<< endl;
+                } else {
+//                    cout<<"output double = "<<outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2]<< " ";
+                    //get the low int
+                    output[rowIndex * numOfCols + colIndex * numOfCols + k] = (int)outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2];
+//                    cout<<"output = "<<output[rowIndex * numOfCols + colIndex * 8 + k/2]<< endl;
+                }
+            }
+        }
+    }
+    cout<<"output:"<<endl;
+    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++) { //go over each row
+
+        for (int colIndex = 0; colIndex < numOfCols; colIndex++) {//go over each message
+            cout<<output[rowIndex * numOfCols  + colIndex] << " ";
+        }
+        cout<<endl;
+    }
+    cout<<"end multiplication function"<<endl;
+}
+
+template <class FieldType>
 void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &randomShiftingVec){
 
 
@@ -1874,7 +2299,7 @@ int ProtocolParty<FieldType>::generateClearMatricesForTesting(vector<FieldType> 
     for(int i=0; i<accCountersMat.size(); i++) {
         cout << "counter num " << i << " is " << accCountersMat[i] << endl;
     }
-
+cout<<"here"<<endl;
     OpenSSLSHA256 hash;
     vector<byte> out;
     vector<byte> out2;
