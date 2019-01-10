@@ -40,7 +40,6 @@
 
 int main(int argc, char* argv[])
 {
-
     CmdParser parser;
     auto parameters = parser.parseArguments("", argc, argv);
     int times = stoi(parser.getValueByKey(parameters, "internalIterationsNumber"));

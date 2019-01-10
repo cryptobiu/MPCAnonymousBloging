@@ -930,7 +930,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     int iterations =   (5 + field->getElementSizeInBytes() - 1) / field->getElementSizeInBytes();
     int keysize = 16/field->getElementSizeInBytes() + 1;
 
-    int numOfRandomShares = 2*keysize;
+    int numOfRandomShares = 10*keysize + 1;
     randomSharesArray.resize(numOfRandomShares);
 
     randomSharesOffset = 0;
@@ -941,7 +941,7 @@ bool ProtocolParty<FieldType>::preparationPhase()
     //run offline for all the future multiplications including the multiplication of the protocol
 
     offset = 0;
-    offlineDNForMultiplication(numClients*(3*l + securityParamter*2));
+    offlineDNForMultiplication(numClients*(4*l + securityParamter*2));
 
 
 
@@ -1787,34 +1787,27 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<Fiel
                                                                vector<FieldType> &accMsgsSquareMat,
                                                                vector<FieldType> &accCountersMat){
 
-    cout<<"in optimized multiplication"<<endl;
     int numOfCols = shiftedMsgsVectorsCounters[0].size();
-    cout<<"numOfCols = "<<numOfCols<<endl;
     int numOfRows = unitVectors[0].size();
-    cout<<"numOfRows = "<<numOfRows<<endl;
     int size = numOfCols*numOfRows;//the size of the final 2D matrix
-    cout<<"size = "<<size<<endl;
 
     multiplyVectors(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
-    cout<<"after multiply msgs"<<endl;
     multiplyVectors(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
-    cout<<"after multiply squares"<<endl;
     multiplyVectors(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
-    cout<<"after multiply counters"<<endl;
 
     //print matrices
 
-    for(int i=0; i<size; i++){
-
-        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
-
-    }
-
-    for(int i=0; i<size; i++){
-
-        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
-
-    }
+//    for(int i=0; i<size; i++){
+//
+//        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
+//
+//    }
+//
+//    for(int i=0; i<size; i++){
+//
+//        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
+//
+//    }
 
 }
 
@@ -1822,35 +1815,15 @@ template <class FieldType>
 void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
                                                 vector<FieldType> & output, int numOfRows, int numOfCols){
 
-    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
-    //and the second part is the addition of the sqaure of each message of that cell.
-
     int toReduce = 0; //Every 4 multiplications there is need to reduce all table
     __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
 
-//    cout<<"unit vector 0:"<<endl;
-//    for (int j=0; j<unitVectors[0].size(); j++){
-//        cout<<unitVectors[0][j]<< " ";
-//    }
-//    cout<<endl;
-//
-//    cout<<"input 0:"<<endl;
-//    for (int j=0; j<input[0].size(); j++){
-//        cout<<input[0][j]<< " ";
-//    }
-//    cout<<endl;
 
     int newNumRows = numOfRows;
     if (numOfRows % 8 != 0) {
         newNumRows = (numOfRows / 8)*8 + 8;
         for( int i=0; i<unitVectors.size(); i++) {
             unitVectors[i].resize(newNumRows);
-
-            cout << "unit vector " << i << ":" << endl;
-            for (int j = 0; j < unitVectors[i].size(); j++) {
-                cout << unitVectors[i][j] << " ";
-            }
-            cout << endl;
         }
     }
 
@@ -1859,16 +1832,8 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
         newNumCols = (numOfCols / 64)*64 + 64;
         for( int i=0; i<input.size(); i++){
             input[i].resize(newNumCols);
-
-            cout << "input " << i << ":" << endl;
-            for (int j = 0; j < input[i].size(); j++) {
-                cout << input[i][j] << " ";
-            }
-            cout << endl;
         }
     }
-    cout<<"newNumRows = "<<newNumRows<<endl;
-    cout<<"newNumCols = "<<newNumCols<<endl;
     vector<long> outputDouble(newNumRows*newNumCols);
     for(int i=0; i<input.size(); i++){//go over each client
 
@@ -1884,7 +1849,6 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
             auto int6 = _mm256_extract_epi32(row, 6);
             auto int7 = _mm256_extract_epi32(row, 7);
 
-//            cout<<"party "<< i<<"row "<<i<<" = "<<int0 << " "<< int1 << " "<<int2 << " "<<int3 << " "<<int4 << " "<<int5 << " "<<int6 << " "<<int7 << endl;
             __m256i row0 = _mm256_set1_epi32(int0);
             __m256i row1 = _mm256_set1_epi32(int1);
             __m256i row2 = _mm256_set1_epi32(int2);
@@ -1916,19 +1880,6 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
                 __m256i colHigh6 = _mm256_srli_epi64(col6, 32);
                 __m256i colHigh7 = _mm256_srli_epi64(col7, 32);
 
-//                cout<<"party "<< i<<"col 0 = "<<_mm256_extract_epi32(col0, 0) << " "<< _mm256_extract_epi32(col0, 1) <<" "<<_mm256_extract_epi32(col0, 2) <<" "<<_mm256_extract_epi32(col0, 3) <<
-//                                   " "<<_mm256_extract_epi32(col0, 4) <<" "<<_mm256_extract_epi32(col0, 5) <<" "<<_mm256_extract_epi32(col0, 6) <<" "<<_mm256_extract_epi32(col0, 7) <<endl;
-//                cout<<"party "<< i<<"col 7 = "<<_mm256_extract_epi32(col7, 0) << " "<<_mm256_extract_epi32(col7, 1) <<" "<<_mm256_extract_epi32(col7, 2) <<" "<<_mm256_extract_epi32(col7, 3) <<
-//                    " "<<_mm256_extract_epi32(col7, 4) <<" "<<_mm256_extract_epi32(col7, 5) <<" "<<_mm256_extract_epi32(col7, 6) <<" "<<_mm256_extract_epi32(col7, 7) <<endl;
-//
-//                cout<<"output table i = "<<i<<":"<<endl;
-//                for (int kk=0; kk<2; kk++) {
-//                    for (int t = 0; t < 8; t++) {
-//                        cout << outputDouble[kk * 8 + t] << " ";
-//                    }
-//                    cout << endl;
-//                }
-
                 //fill each row in every small matrix
                 for (int j = 0; j < 8; j++) {
 
@@ -1936,12 +1887,7 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
 
                     long* startD = (long*)outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
                     __m256i outputLow0 = _mm256_maskload_epi64((long long int*)startD, mask);
-//                    cout<<"outputLow0 j = "<< j<<": "<<_mm256_extract_epi64(outputLow0, 0) << " "<<_mm256_extract_epi64(outputLow0, 1) <<" "
-//                                    <<_mm256_extract_epi64(outputLow0, 2) <<" "<<_mm256_extract_epi64(outputLow0, 3) << endl;
-
                     __m256i outputHigh0 = _mm256_maskload_epi64((long long int*)startD + 4, mask);
-//                    cout<<"outputHigh0 j = "<< j<<": "<<_mm256_extract_epi64(outputHigh0, 0) << " "<<_mm256_extract_epi64(outputHigh0, 1) <<" "
-//                        <<_mm256_extract_epi64(outputHigh0, 2) <<" "<<_mm256_extract_epi64(outputHigh0, 3) << endl;
                     __m256i outputLow1 = _mm256_maskload_epi64((long long int*)startD + 8, mask);
                     __m256i outputHigh1 = _mm256_maskload_epi64((long long int*)startD + 12, mask);
                     __m256i outputLow2 = _mm256_maskload_epi64((long long int*)startD + 16, mask);
@@ -1977,12 +1923,6 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
                     __m256i c6 = _mm256_mul_epi32(rowI, col6);
                     __m256i c7 = _mm256_mul_epi32(rowI, col7);
                     outputLow0 = _mm256_add_epi64(outputLow0, c0);
-//                    cout<<"c0 j = "<< j<<": "<<_mm256_extract_epi32(c0, 0) << " "<<_mm256_extract_epi32(c0, 1) <<" "<<_mm256_extract_epi32(c0, 2) <<" "<<_mm256_extract_epi32(c0, 3) <<
-//                        " "<<_mm256_extract_epi32(c0, 4) <<" "<<_mm256_extract_epi32(c0, 5) <<" "<<_mm256_extract_epi32(c0, 6) <<" "<<_mm256_extract_epi32(c0, 7) <<endl;
-
-//                    cout<<"outputLow0 j = "<< j<<": "<<_mm256_extract_epi64(outputLow0, 0) << " "<<_mm256_extract_epi64(outputLow0, 1) <<" "
-//                        <<_mm256_extract_epi64(outputLow0, 2) <<" "<<_mm256_extract_epi64(outputLow0, 3) << endl;
-
                     outputLow1 = _mm256_add_epi64(outputLow1, c1);
                     outputLow2 = _mm256_add_epi64(outputLow2, c2);
                     outputLow3 = _mm256_add_epi64(outputLow3, c3);
@@ -2001,12 +1941,6 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
                     c7 = _mm256_mul_epi32(rowI, colHigh7);
 
                     outputHigh0 = _mm256_add_epi64(outputHigh0, c0);
-//                    cout<<"c0 high j = "<< j<<": "<<_mm256_extract_epi32(c0, 0) << " "<<_mm256_extract_epi32(c0, 1) <<" "<<_mm256_extract_epi32(c0, 2) <<" "<<_mm256_extract_epi32(c0, 3) <<
-//                        " "<<_mm256_extract_epi32(c0, 4) <<" "<<_mm256_extract_epi32(c0, 5) <<" "<<_mm256_extract_epi32(c0, 6) <<" "<<_mm256_extract_epi32(c0, 7) <<endl;
-
-//                    cout<<"outputhigh0 j = "<< j<<": "<<_mm256_extract_epi64(outputHigh0, 0) << " "<<_mm256_extract_epi64(outputHigh0, 1) <<" "
-//                                                      <<_mm256_extract_epi64(outputHigh0, 2) <<" "<<_mm256_extract_epi64(outputHigh0, 3) <<endl;
-
                     outputHigh1 = _mm256_add_epi64(outputHigh1, c1);
                     outputHigh2 = _mm256_add_epi64(outputHigh2, c2);
                     outputHigh3 = _mm256_add_epi64(outputHigh3, c3);
@@ -2032,29 +1966,16 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
                     _mm256_maskstore_epi64((long long int*)startD + 56, mask, outputLow7);
                     _mm256_maskstore_epi64((long long int*)startD + 60, mask, outputHigh7);
 
-//                    cout<<"output table i = "<<i<<":"<<endl;
-//                    for (int kk=0; kk<2; kk++) {
-//                        for (int t = 0; t < 8; t++) {
-//                            cout << outputDouble[kk * 8 + t] << " ";
-//                        }
-//                        cout << endl;
-//                    }
                 }
 
             }
         }
-        cout<<"output table i = "<<i<<":"<<endl;
-        for (int kk=0; kk<2; kk++) {
-            for (int t = 0; t < 8; t++) {
-                cout << outputDouble[kk * 8 + t] << " ";
-            }
-            cout << endl;
-        }
 
         toReduce += 2;
 
-        if (toReduce == 4 || i == input.size()){
-            cout<<"in reduce"<<endl;
+//        if (toReduce >0){
+        if (toReduce == 4 || i == input.size()-1){
+//            cout<<"in reduce. toReduce ="<<toReduce<<" i="<<i<<endl;
             __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
             //reduce all matrix
 //            cout<<"after p"<<endl;
@@ -2101,15 +2022,14 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
                     __m256i top7 = _mm256_srli_epi64(output7, 31);
 
 
-                    __m256i mask1 = _mm256_set_epi32(0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF, 0, 0xFFFFFFFF);
-                    top0 = _mm256_and_si256(top0, mask1);
-                    top1 = _mm256_and_si256(top1, mask1);
-                    top2 = _mm256_and_si256(top2, mask1);
-                    top3 = _mm256_and_si256(top3, mask1);
-                    top4 = _mm256_and_si256(top4, mask1);
-                    top5 = _mm256_and_si256(top5, mask1);
-                    top6 = _mm256_and_si256(top6, mask1);
-                    top7 = _mm256_and_si256(top7, mask1);
+                    top0 = _mm256_and_si256(top0, p);
+                    top1 = _mm256_and_si256(top1, p);
+                    top2 = _mm256_and_si256(top2, p);
+                    top3 = _mm256_and_si256(top3, p);
+                    top4 = _mm256_and_si256(top4, p);
+                    top5 = _mm256_and_si256(top5, p);
+                    top6 = _mm256_and_si256(top6, p);
+                    top7 = _mm256_and_si256(top7, p);
 //                    unsigned int top = (multLong>>31);
 
                     __m256i res0 = _mm256_add_epi64(bottom0, top0);
@@ -2121,8 +2041,68 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
                     __m256i res6 = _mm256_add_epi64(bottom6, top6);
                     __m256i res7 = _mm256_add_epi64(bottom7, top7);
 
-//                    cout<<"res0 = "<<": "<<_mm256_extract_epi32(res0, 0) << " "<<_mm256_extract_epi32(res0, 1) <<" "<<_mm256_extract_epi32(res0, 2) <<" "<<_mm256_extract_epi32(res0, 3) <<
-//                                                " "<<_mm256_extract_epi32(res0, 4) <<" "<<_mm256_extract_epi32(res0, 5) <<" "<<_mm256_extract_epi32(res0, 6) <<" "<<_mm256_extract_epi32(res0, 7) <<endl;
+                    //test!!
+                     top0 = _mm256_srli_epi64(output0, 62);
+                     top1 = _mm256_srli_epi64(output1, 62);
+                     top2 = _mm256_srli_epi64(output2, 62);
+                     top3 = _mm256_srli_epi64(output3, 62);
+                     top4 = _mm256_srli_epi64(output4, 62);
+                     top5 = _mm256_srli_epi64(output5, 62);
+                     top6 = _mm256_srli_epi64(output6, 62);
+                     top7 = _mm256_srli_epi64(output7, 62);
+
+
+                    top0 = _mm256_and_si256(top0, p);
+                    top1 = _mm256_and_si256(top1, p);
+                    top2 = _mm256_and_si256(top2, p);
+                    top3 = _mm256_and_si256(top3, p);
+                    top4 = _mm256_and_si256(top4, p);
+                    top5 = _mm256_and_si256(top5, p);
+                    top6 = _mm256_and_si256(top6, p);
+                    top7 = _mm256_and_si256(top7, p);
+//                    unsigned int top = (multLong>>31);
+
+                     res0 = _mm256_add_epi64(res0, top0);
+                     res1 = _mm256_add_epi64(res1, top1);
+                     res2 = _mm256_add_epi64(res2, top2);
+                     res3 = _mm256_add_epi64(res3, top3);
+                     res4 = _mm256_add_epi64(res4, top4);
+                     res5 = _mm256_add_epi64(res5, top5);
+                     res6 = _mm256_add_epi64(res6, top6);
+                     res7 = _mm256_add_epi64(res7, top7);
+
+                    //maximim the value of 2p-2
+//                    if(answer.elem>=p)
+//                        answer.elem-=p;
+//
+////                    }
+                    __m256i test0 = _mm256_cmpgt_epi32(res0, p);
+                    __m256i test1 = _mm256_cmpgt_epi32(res1, p);
+                    __m256i test2 = _mm256_cmpgt_epi32(res2, p);
+                    __m256i test3 = _mm256_cmpgt_epi32(res3, p);
+                    __m256i test4 = _mm256_cmpgt_epi32(res4, p);
+                    __m256i test5 = _mm256_cmpgt_epi32(res5, p);
+                    __m256i test6 = _mm256_cmpgt_epi32(res6, p);
+                    __m256i test7 = _mm256_cmpgt_epi32(res7, p);
+
+                    __m256i sub0 = _mm256_and_si256(test0, p);
+                    __m256i sub1 = _mm256_and_si256(test1, p);
+                    __m256i sub2 = _mm256_and_si256(test2, p);
+                    __m256i sub3 = _mm256_and_si256(test3, p);
+                    __m256i sub4 = _mm256_and_si256(test4, p);
+                    __m256i sub5 = _mm256_and_si256(test5, p);
+                    __m256i sub6 = _mm256_and_si256(test6, p);
+                    __m256i sub7 = _mm256_and_si256(test7, p);
+
+                    res0 = _mm256_sub_epi32(res0, sub0);
+                    res1 = _mm256_sub_epi32(res1, sub1);
+                    res2 = _mm256_sub_epi32(res2, sub2);
+                    res3 = _mm256_sub_epi32(res3, sub3);
+                    res4 = _mm256_sub_epi32(res4, sub4);
+                    res5 = _mm256_sub_epi32(res5, sub5);
+                    res6 = _mm256_sub_epi32(res6, sub6);
+                    res7 = _mm256_sub_epi32(res7, sub7);
+
 
                     _mm256_maskstore_epi64((long long int*)startD, mask, res0);
                     _mm256_maskstore_epi64((long long int*)startD + 4, mask, res1);
@@ -2135,11 +2115,7 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
 
 //                    answer.elem = bottom + top;
 
-                    //maximim the value of 2p-2
-//                    if(answer.elem>=p)
-//                        answer.elem-=p;
-//
-//                    }
+
 
                 }
             }
@@ -2148,51 +2124,47 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
         }
 
     }
-    cout<<"output double:"<<endl;
-    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++) { //go over each row
+//    cout<<"output double:"<<endl;
+//    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++) { //go over each row
+//        for (int colIndex = 0; colIndex < newNumCols; colIndex++) {//go over each message
+//            cout<<outputDouble[rowIndex * newNumCols  + colIndex] << " ";
+//        }
+//        cout<<endl;
+//    }
 
-        for (int colIndex = 0; colIndex < newNumCols; colIndex++) {//go over each message
-            cout<<outputDouble[rowIndex * newNumCols  + colIndex] << " ";
-        }
-        cout<<endl;
-    }
-
-    cout<<"after multiplication. copy to int output"<<endl;
+    int numBlocks = (numOfCols % 8 == 0) ? numOfCols/8 : numOfCols/8 + 1;
+    int remain = numOfCols%8;
     for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++){ //go over each row
 
-        for(int colIndex=0; colIndex<numOfCols; colIndex++){//go over each message
+        for(int colIndex=0; colIndex<numBlocks; colIndex++){//go over each message
 
-            for (int k=0; k<8 && k<numOfCols; k++) {
+            for (int k=0; (colIndex < numBlocks-1 && k<8) || (colIndex == numBlocks-1 && k<remain); k++) {
+
                 if (k % 2 != 0) {
                     //get the high int
-//                    cout<<"output double = "<<outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2]<< " ";
-                    output[rowIndex * numOfCols + colIndex * numOfCols + k] = (int)outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2];
-//                    cout<<"output = "<<output[rowIndex * numOfCols + colIndex * 8 + k/2]<< endl;
+                    output[rowIndex * numOfCols + colIndex * 8 + k] = (int)outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2];
                 } else {
-//                    cout<<"output double = "<<outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2]<< " ";
                     //get the low int
-                    output[rowIndex * numOfCols + colIndex * numOfCols + k] = (int)outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2];
-//                    cout<<"output = "<<output[rowIndex * numOfCols + colIndex * 8 + k/2]<< endl;
+                    output[rowIndex * numOfCols + colIndex * 8 + k] = (int)outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2];
                 }
             }
         }
     }
-    cout<<"output:"<<endl;
-    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++) { //go over each row
-
-        for (int colIndex = 0; colIndex < numOfCols; colIndex++) {//go over each message
-            cout<<output[rowIndex * numOfCols  + colIndex] << " ";
-        }
-        cout<<endl;
-    }
-    cout<<"end multiplication function"<<endl;
+//    cout<<"output:"<<endl;
+//    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++) { //go over each row
+//
+//        for (int colIndex = 0; colIndex < numOfCols; colIndex++) {//go over each message
+//            cout<<output[rowIndex * numOfCols  + colIndex] << " ";
+//        }
+//        cout<<endl;
+//    }
 }
 
 template <class FieldType>
 void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &randomShiftingVec){
 
 
-    randomShiftingVec.resize(numClients);
+    randomShiftingVec.resize(2*numClients);
 
     //prepare the random elements for the unit vectors test
     auto key = generateCommonKey();
@@ -2293,13 +2265,13 @@ int ProtocolParty<FieldType>::generateClearMatricesForTesting(vector<FieldType> 
     //check that the hashes are in fact correct, that is, the servers committed on the right shares
 
 
-    for(int i=0; i<accMsgsMatOpened.size(); i++) {
-        cout << "value " << i << " is " << accMsgsMatOpened[i] << endl;
-    }
-    for(int i=0; i<accCountersMat.size(); i++) {
-        cout << "counter num " << i << " is " << accCountersMat[i] << endl;
-    }
-cout<<"here"<<endl;
+//    for(int i=0; i<accMsgsMatOpened.size(); i++) {
+//        cout << "value " << i << " is " << accMsgsMatOpened[i] << endl;
+//    }
+//    for(int i=0; i<accCountersMat.size(); i++) {
+//        cout << "counter num " << i << " is " << accCountersMat[i] << endl;
+//    }
+
     OpenSSLSHA256 hash;
     vector<byte> out;
     vector<byte> out2;
@@ -2477,7 +2449,7 @@ void ProtocolParty<FieldType>::extractMessagesForTesting(vector<FieldType> &accM
     }
 
     if (totalNumber > numClients){
-        cout<<"CHEATING!!!"<<endl;
+        cout<<"CHEATING total counter number!!!"<<endl;
     }
 }
 
@@ -2488,7 +2460,9 @@ void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, in
     //If there is no element in this index, check that both values are zero.
     if (counter == 0){
         if (a != *(field->GetZero()) || b != *(field->GetZero())){
-            cout<<"CHEATING!!!"<<endl;
+            cout<<"CHEATING counter == 0!!!"<<endl;
+            cout<<"a = "<<a<<endl;
+            cout<<"b = "<<b<<endl;
         }
         //If there is one element in this index, check that x = x^2.
     } else if (counter == 1){
@@ -2496,11 +2470,10 @@ void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, in
         if (b == temp){
             b = *(field->GetZero());
         } else {
-            cout<<"CHEATING!!!"<<endl;
+            cout<<"CHEATING counter == 1!!!"<<endl;
         }
         //If there are two elements in this index, calculate them
     } else if (counter == 2){
-
         FieldType eight = field->GetElement(8);
         FieldType four = field->GetElement(4);
         FieldType two = field->GetElement(2);
@@ -2861,7 +2834,7 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<FieldType> accCountersMat(sqrtR*sqrtR);
     vector<int> accIntCountersMat(sqrtR*sqrtR);
 
-    generateSharedMatricesForTesting(msgsVectors,
+    generateSharedMatricesOptimized(msgsVectors,
                                      shiftedMsgsVectorsSquares,
                                      shiftedMsgsVectorsCounters,
                                      unitVectors,
@@ -2893,7 +2866,7 @@ void ProtocolParty<FieldType>::outputPhase()
                               accIntCountersMat.size());
 
 
-    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
 
     cout<<"passed with distinction"<<endl;
