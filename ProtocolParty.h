@@ -51,6 +51,7 @@ private:
     int numServers;
     int securityParamter = 40;
     int sqrtR;
+    int sqrtU;
 
 
     vector<vector<FieldType>> msgsVectors;
@@ -350,7 +351,8 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
 
 
-    sqrtR = (int)(sqrt(2.7 * numClients))+1;
+    sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
+    sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
 
     s = to_string(m_partyId);
 
@@ -1142,7 +1144,7 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<vector<FieldType>> &msgs
 
     for(int i=0; i<numClients; i++){
 
-        readServerFile("server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
+        readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
         msgsVectors[i] = msg;
         unitVectors[i] = unitVector;
     }
@@ -1158,7 +1160,7 @@ void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType>
     int msgSize = 2*l*sqrtR + sqrtR;
     msg.resize(msgSize);
 
-    int unitSize = sqrtR;
+    int unitSize = sqrtU;
     unitVector.resize(unitSize);
 
     long input;
@@ -1188,7 +1190,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     //the number of elements we need to produce for the random bits as well, and thus this depends on the security
     //parameter and the size of the field. If the security parameter is larger than the field size, we need to generate
     //more random elements
-    int numOfRandomElements = (sqrtR + l*2 + 1 + sqrtR)*(securityParamter + field->getElementSizeInBits()  + 1)/field->getElementSizeInBits() ;
+    int numOfRandomElements = (sqrtR + l*2 + 1 + sqrtU)*(securityParamter + field->getElementSizeInBits()  + 1)/field->getElementSizeInBits() ;
 
     //we use the same rendom elements for all the clients
     vector<FieldType> randomElements(numOfRandomElements);
@@ -1336,7 +1338,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
         for(int i = 0; i<msgsVectors.size(); i++) {
 
-            for (int k = 0; k < sqrtR; k++) {
+            for (int k = 0; k < sqrtU; k++) {
 
                 sumOfElementsVecs[i+msgsVectors.size()] += unitVectors[i][k] ;
 
@@ -2114,9 +2116,10 @@ void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &random
 
     //go over each element and get the random position
 
-    for(int i=0; i<2*numClients; i++){
+    for(int i=0; i<numClients; i++){
 
-        randomShiftingVec[i] = abs(randomInts[i]) % sqrtR;
+        randomShiftingVec[2*i] = abs(randomInts[i]) % sqrtR;
+        randomShiftingVec[2*i+1] = abs(randomInts[i]) % sqrtU;
     }
 
 }
@@ -2626,10 +2629,10 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<vector<FieldType>> shiftedMsgsVectorsCounters;
     splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
 
-    vector<FieldType> accMsgsMat(sqrtR*sqrtR*l);
-    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtR*l);
-    vector<FieldType> accCountersMat(sqrtR*sqrtR);
-    vector<int> accIntCountersMat(sqrtR*sqrtR);
+    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+    vector<int> accIntCountersMat(sqrtR*sqrtU);
 
     generateSharedMatricesOptimized(msgsVectors,
                                      shiftedMsgsVectorsSquares,
