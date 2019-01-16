@@ -18,7 +18,7 @@ class Client {
 
 private:
     int l;
-    int numClients, sqrtR;
+    int numClients, sqrtR, sqrtU;
     int numServers;
     int T; //number of malicious servers
 
@@ -61,7 +61,8 @@ Client<FieldType>::Client(int argc, char **argv){
     numClients = stoi(parser.getValueByKey(arguments, "numClients"));
     string fieldType = parser.getValueByKey(arguments, "fieldType");
 
-    sqrtR = (int)(sqrt(2.7 * numClients))+1;
+    sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
+    sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
     T = (numServers+1)/2 - 1;
 
 
@@ -121,11 +122,11 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
 
     //Choose random indices i,j
     int i = getRandomInRange(0, sqrtR-1, &prg);
-    int j = getRandomInRange(0, sqrtR-1, &prg);
+    int j = getRandomInRange(0, sqrtU-1, &prg);
 
     cout<<"i = "<<i<< " j = "<<j<<endl;
 
-    vector<FieldType> vals(2*(l*sqrtR + sqrtR) + 1, *field->GetZero());
+    vector<FieldType> vals(2*(l*sqrtR) + sqrtR + sqrtU + 1, *field->GetZero());
 
     //Set the vector [0, 0, ..., msg, 0, ..., 0]
     for (int m=0; m<l; m++){
@@ -143,10 +144,10 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
     //Set the one in the second [0, 0, ..., 1, 0, ..., 0] vector
     vals[2*l*sqrtR + sqrtR + j] = *field->GetOne();
 
-    vals[2*(l*sqrtR + sqrtR)] = field->Random();
+    vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->Random();
 
     cout<<"original values:"<<endl;
-    for (int i=0; i<2*(l*sqrtR + sqrtR) + 1; i++){
+    for (int i=0; i<vals.size(); i++){
         cout<<(long) vals[i].elem<<endl;
     }
     return vals;
@@ -191,13 +192,14 @@ template<class FieldType>
 void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, int clientID){
 
     ofstream outputFile;
-    int size = 2*(l*sqrtR + sqrtR) + 1;
+
+    int size = 2*(l*sqrtR) + sqrtR + sqrtU + 1;
 
     for (int i=0; i<numServers; i++){
 
         if (field->getElementSizeInBytes() == 8) {
             long *serverShares = (long *) shares[i].data();
-            outputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
+            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
 
             for (int j = 0; j < size; j++) {
                 outputFile << serverShares[j] << endl;
@@ -205,7 +207,7 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
         }
         if (field->getElementSizeInBytes() == 4) {
             int *serverShares = (int *) shares[i].data();
-            outputFile.open("server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
+            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
 
             for (int j = 0; j < size; j++) {
                 outputFile << serverShares[j] << endl;
@@ -225,7 +227,7 @@ void Client<FieldType>::readServerFile(string fileName, vector<FieldType> & msg,
     int msgSize = 2*l*sqrtR + sqrtR;
     msg.resize(msgSize);
 
-    int unitSize = sqrtR;
+    int unitSize = sqrtU;
     unitVector.resize(unitSize);
 
     long input;
@@ -251,7 +253,7 @@ void Client<FieldType>::checkServerFiles(int clientID){
 
 
     ifstream inputFile;
-    int size = 2*(l*sqrtR + sqrtR) + 1;
+    int size = 2*(l*sqrtR) + sqrtR + sqrtU + 1;
     vector<vector<FieldType>> shares(numServers, vector<FieldType>(size));
 
     long input;

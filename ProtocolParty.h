@@ -51,6 +51,7 @@ private:
     int numServers;
     int securityParamter = 40;
     int sqrtR;
+    int sqrtU;
 
 
     vector<vector<FieldType>> msgsVectors;
@@ -99,6 +100,11 @@ public:
     void exchangeData(vector<vector<byte>> &sendBufs,vector<vector<byte>> &recBufs, int first, int last);
     void roundFunctionSyncBroadcast(vector<byte> &message, vector<vector<byte>> &recBufs);
     void recData(vector<byte> &message, vector<vector<byte>> &recBufs, int first, int last);
+
+    void roundFunctionSyncElements(vector<vector<FieldType>> &sendBufs, vector<vector<FieldType>> &recBufs, int round);
+    void exchangeDataElements(vector<vector<FieldType>> &sendBufs,vector<vector<FieldType>> &recBufs, int first, int last);
+
+
 
     int counter = 0;
 
@@ -187,15 +193,6 @@ public:
      * This protocol is secure only in the presence of a semi-honest adversary.
      */
     void DNHonestMultiplication(FieldType *a, FieldType *b, vector<FieldType> &cToFill, int numOfTrupples);
-
-    /**
-     *
-     * @param localSums - a vector that contains sums of products that were computed locally and thus have degree 2t
-     *                    the size of the vector is the number of sum of products we do. That is, each entry contains
-     *                    a different sum of products.
-     * @param sumsToFill - the degree t sums of products after reducing degree via communication.
-     */
-    void DNHonestSumOfProducts(vector<FieldType> &localSums, vector<FieldType> &sumsToFill);
 
     void readclientsinputs(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     void readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e);
@@ -359,7 +356,8 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCH
     //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
 
 
-    sqrtR = (int)(sqrt(2.7 * numClients))+1;
+    sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
+    sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
 
     s = to_string(m_partyId);
 
@@ -577,15 +575,13 @@ void ProtocolParty<FieldType>::generateRandomSharesWithCheck(int numOfRandoms, v
 template <class FieldType>
 void ProtocolParty<FieldType>::generateRandomShares(int numOfRandoms, vector<FieldType> &randomElementsToFill) {
     int index = 0;
-    vector<vector<byte>> recBufsBytes(N);
     int robin = 0;
     int no_random = numOfRandoms;
 
-    vector<FieldType> x1(N),y1(N), x2(N),y2(N), t1(N), r1(N), t2(N), r2(
-            N);;
+    vector<FieldType> x1(N),y1(N), x2(N),y2(N), t1(N), r1(N), t2(N), r2(N);
 
     vector<vector<FieldType>> sendBufsElements(N);
-    vector<vector<byte>> sendBufsBytes(N);
+    vector<vector<FieldType>> recBufsElements(N);
 
     // the number of buckets (each bucket requires one double-sharing
     // from each party and gives N-2T random double-sharings)
@@ -601,8 +597,7 @@ void ProtocolParty<FieldType>::generateRandomShares(int numOfRandoms, vector<Fie
     for(int i=0; i < N; i++)
     {
         sendBufsElements[i].resize(no_buckets);
-        sendBufsBytes[i].resize(no_buckets * field->getElementSizeInBytes());
-        recBufsBytes[i].resize(no_buckets * field->getElementSizeInBytes());
+        recBufsElements[i].resize(no_buckets);
     }
 
     /**
@@ -643,36 +638,12 @@ void ProtocolParty<FieldType>::generateRandomShares(int numOfRandoms, vector<Fie
         cout << "T" << T << endl;
     }
 
-    int fieldByteSize = field->getElementSizeInBytes();
-    for(int i=0; i < N; i++)
-    {
-//        for(int j=0; j<sendBufsElements[i].size();j++) {
-//            field->elementToBytes(sendBufsBytes[i].data() + (j * fieldByteSize), sendBufsElements[i][j]);
-//        }
+    roundFunctionSyncElements(sendBufsElements, recBufsElements, 4);
 
-        field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
-    }
-
-    roundFunctionSync(sendBufsBytes, recBufsBytes, 4);
-
-
-    if(flag_print) {
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < sendBufsBytes[0].size(); k++) {
-
-                cout << "roundfunction4 send to " <<i <<" element: "<< k << " " << (int)sendBufsBytes[i][k] << endl;
-            }
-        }
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < recBufsBytes[0].size(); k++) {
-                cout << "roundfunction4 receive from " <<i <<" element: "<< k << " " << (int) recBufsBytes[i][k] << endl;
-            }
-        }
-    }
 
     for(int k=0; k < no_buckets; k++) {
         for (int i = 0; i < N; i++) {
-            t1[i] = field->bytesToElement(recBufsBytes[i].data() + (k * fieldByteSize));
+            t1[i] = recBufsElements[i][k];
 
         }
         matrix_vand_transpose.MatrixMult(t1, r1, N - T);
@@ -701,14 +672,13 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
 
 
     int index = 0;
-    vector<vector<byte>> recBufsBytes(N);
     int robin = 0;
     int no_random = numOfRandomPairs;
 
     vector<FieldType> x1(N),y1(N), x2(N),y2(N), t1(N), r1(N), t2(N), r2(N);;
 
     vector<vector<FieldType>> sendBufsElements(N);
-    vector<vector<byte>> sendBufsBytes(N);
+    vector<vector<FieldType>> recBufsElements(N);
 
     // the number of buckets (each bucket requires one double-sharing
     // from each party and gives N-2T random double-sharings)
@@ -725,8 +695,7 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     for(int i=0; i < N; i++)
     {
         sendBufsElements[i].resize(no_buckets*2);
-        sendBufsBytes[i].resize(no_buckets*field->getElementSizeInBytes()*2);
-        recBufsBytes[i].resize(no_buckets*field->getElementSizeInBytes()*2);
+        recBufsElements[i].resize(no_buckets*2);
     }
 
     /**
@@ -767,49 +736,15 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
         }
     }
 
-    if(flag_print) {
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < sendBufsElements[0].size(); k++) {
 
-                // cout << "before roundfunction4 send to " <<i <<" element: "<< k << " " << sendBufsElements[i][k] << endl;
-            }
-        }
-        cout << "sendBufs" << endl;
-        cout << "N" << N << endl;
-        cout << "T" << T << endl;
-    }
-
-    int fieldByteSize = field->getElementSizeInBytes();
-    for(int i=0; i < N; i++)
-    {
-//        for(int j=0; j<sendBufsElements[i].size();j++) {
-//            field->elementToBytes(sendBufsBytes[i].data() + (j * fieldByteSize), sendBufsElements[i][j]);
-//        }
-
-        field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
-    }
-
-    roundFunctionSync(sendBufsBytes, recBufsBytes,4);
-
-
-    if(flag_print) {
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < sendBufsBytes[0].size(); k++) {
-
-                cout << "roundfunction4 send to " <<i <<" element: "<< k << " " << (int)sendBufsBytes[i][k] << endl;
-            }
-        }
-        for (int i = 0; i < N; i++) {
-            for (int k = 0; k < recBufsBytes[0].size(); k++) {
-                cout << "roundfunction4 receive from " <<i <<" element: "<< k << " " << (int) recBufsBytes[i][k] << endl;
-            }
-        }
-    }
+    roundFunctionSyncElements(sendBufsElements, recBufsElements,4);
 
     for(int k=0; k < no_buckets; k++) {
         for (int i = 0; i < N; i++) {
-            t1[i] = field->bytesToElement(recBufsBytes[i].data() + (2*k * fieldByteSize));
-            t2[i] = field->bytesToElement(recBufsBytes[i].data() + ((2*k +1) * fieldByteSize));
+
+            t1[i] = recBufsElements[i][2*k];
+            t2[i] = recBufsElements[i][(2*k +1)];
+
 
         }
         matrix_vand_transpose.MatrixMult(t1, r1,N-T);
@@ -1077,9 +1012,10 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
     vector<FieldType> xyMinusR;//hold both in the same vector to send in one batch
     vector<byte> xyMinusRBytes;
 
-    vector<vector<byte>> recBufsBytes(N);
+    //vector<vector<byte>> recBufsBytes(N);
+    vector<vector<FieldType>> recBufsElements(N);
     vector<vector<FieldType>> sendBufsElements(N);
-    vector<vector<byte>> sendBufsBytes(N);
+    //vector<vector<byte>> sendBufsBytes(N);
 
 
     //generate the shares for x+a and y+b. do it in the same array to send once
@@ -1105,14 +1041,14 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
         //fill the send buf according to the number of elements to send to each party
         sendBufsElements[i].resize(currentNumOfElements);
-        sendBufsBytes[i].resize(currentNumOfElements*fieldByteSize);
+        //sendBufsBytes[i].resize(currentNumOfElements*fieldByteSize);
         for(int j=0; j<currentNumOfElements; j++) {
 
             sendBufsElements[i][j] = xyMinusRShares[counter];
             counter++;
 
         }
-        field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
+        //field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
 
     }
 
@@ -1124,12 +1060,13 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
     for(int i=0;i<N;i++){
 
-        recBufsBytes[i].resize(myNumOfElementsToExpect*fieldByteSize);
+        //recBufsBytes[i].resize(myNumOfElementsToExpect*fieldByteSize);
+        recBufsElements[i].resize(myNumOfElementsToExpect);
 
     }
 
 
-    roundFunctionSync(sendBufsBytes, recBufsBytes,20);
+    roundFunctionSyncElements(sendBufsElements, recBufsElements,20);
 
     xyMinusR.resize(myNumOfElementsToExpect);
     xyMinusRBytes.resize(myNumOfElementsToExpect*fieldByteSize);
@@ -1141,7 +1078,8 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
     {
         for (int i = 0; i < N; i++) {
 
-            xyMinurAllShares[i] = field->bytesToElement(recBufsBytes[i].data() + (k * fieldByteSize));
+            //xyMinurAllShares[i] = field->bytesToElement(recBufsBytes[i].data() + (k * fieldByteSize));
+            xyMinurAllShares[i] = recBufsElements[i][k];
         }
 
         // reconstruct the shares by P0
@@ -1149,11 +1087,12 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
     }
 
-    field->elementVectorToByteVector(xyMinusR, xyMinusRBytes);
+    //field->elementVectorToByteVector(xyMinusR, xyMinusRBytes);
 
     //prepare the send buffers
     for(int i=0; i<N; i++){
-        sendBufsBytes[i] = xyMinusRBytes;
+        //sendBufsBytes[i] = xyMinusRBytes;
+        sendBufsElements[i] = xyMinusR;
     }
 
 
@@ -1163,10 +1102,11 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
         if(i<indexForDecreasingSize)
             currentNumOfElements++;
 
-        recBufsBytes[i].resize(currentNumOfElements* fieldByteSize);
+        //recBufsBytes[i].resize(currentNumOfElements* fieldByteSize);
+        recBufsElements[i].resize(currentNumOfElements);
 
     }
-    roundFunctionSync(sendBufsBytes, recBufsBytes,21);
+    roundFunctionSyncElements(sendBufsElements, recBufsElements,21);
 
 
     xyMinusR.resize(acctualNumOfMultGates);
@@ -1181,7 +1121,9 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
         //fill the send buf according to the number of elements to send to each party
         for(int j=0; j<currentNumOfElements; j++) {
 
-            xyMinusR[counter] = field->bytesToElement(recBufsBytes[i].data() + (j * fieldByteSize));
+            //xyMinusR[counter] = field->bytesToElement(recBufsBytes[i].data() + (j * fieldByteSize));
+            xyMinusR[counter] = recBufsElements[i][j];
+
             counter++;
 
         }
@@ -1196,13 +1138,10 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
     offset+=numOfTrupples*2;
 
-
 }
 
 template<class FieldType>
 void ProtocolParty<FieldType>::readclientsinputs(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors){
-
-
 
 
     vector<FieldType> msg, unitVector;
@@ -1210,11 +1149,10 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<vector<FieldType>> &msgs
 
     for(int i=0; i<numClients; i++){
 
-        readServerFile("server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
+        readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
         msgsVectors[i] = msg;
         unitVectors[i] = unitVector;
     }
-
 
 }
 
@@ -1227,7 +1165,7 @@ void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType>
     int msgSize = 2*l*sqrtR + sqrtR;
     msg.resize(msgSize);
 
-    int unitSize = sqrtR;
+    int unitSize = sqrtU;
     unitVector.resize(unitSize);
 
     long input;
@@ -1257,7 +1195,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     //the number of elements we need to produce for the random bits as well, and thus this depends on the security
     //parameter and the size of the field. If the security parameter is larger than the field size, we need to generate
     //more random elements
-    int numOfRandomElements = (sqrtR + l*2 + 1 + sqrtR)*(securityParamter + field->getElementSizeInBits()  + 1)/field->getElementSizeInBits() ;
+    int numOfRandomElements = (sqrtR + l*2 + 1 + sqrtU)*(securityParamter + field->getElementSizeInBits()  + 1)/field->getElementSizeInBits() ;
 
     //we use the same rendom elements for all the clients
     vector<FieldType> randomElements(numOfRandomElements);
@@ -1405,7 +1343,7 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
         for(int i = 0; i<msgsVectors.size(); i++) {
 
-            for (int k = 0; k < sqrtR; k++) {
+            for (int k = 0; k < sqrtU; k++) {
 
                 sumOfElementsVecs[i+msgsVectors.size()] += unitVectors[i][k] ;
 
@@ -2511,9 +2449,10 @@ void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &random
 
     //go over each element and get the random position
 
-    for(int i=0; i<2*numClients; i++){
+    for(int i=0; i<numClients; i++){
 
-        randomShiftingVec[i] = abs(randomInts[i]) % sqrtR;
+        randomShiftingVec[2*i] = abs(randomInts[i]) % sqrtR;
+        randomShiftingVec[2*i+1] = abs(randomInts[i]) % sqrtU;
     }
 
 }
@@ -2831,145 +2770,6 @@ void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, in
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::DNHonestSumOfProducts(vector<FieldType> &localSums, vector<FieldType> &sumsToFill) {
-
-    int fieldByteSize = field->getElementSizeInBytes();
-    vector<FieldType> xyMinusRShares(localSums.size());//hold both in the same vector to send in one batch
-    vector<byte> xyMinusRSharesBytes(localSums.size() *fieldByteSize);//hold both in the same vector to send in one batch
-
-    vector<FieldType> xyMinusR;//hold both in the same vector to send in one batch
-    vector<byte> xyMinusRBytes;
-
-    vector<vector<byte>> recBufsBytes(N);
-    vector<vector<FieldType>> sendBufsElements(N);
-    vector<vector<byte>> sendBufsBytes(N);
-
-
-    //subtract a 2t degree random
-    for (int k = 0; k < localSums.size(); k++)
-    {
-        //compute the share of xy-r
-        xyMinusRShares[k] = localSums[k] - randomTAnd2TShares[offset + 2*k+1];
-
-    }
-
-    //set the acctual number of mult gate proccessed in this layer
-    int numOfElementsForParties = localSums.size()/N;
-    int indexForDecreasingSize = localSums.size() - numOfElementsForParties *N;
-
-    int counter=0;
-    int currentNumOfElements;
-    for(int i=0; i<N; i++){
-
-        currentNumOfElements = numOfElementsForParties;
-        if(i<indexForDecreasingSize)
-            currentNumOfElements++;
-
-        //fill the send buf according to the number of elements to send to each party
-        sendBufsElements[i].resize(currentNumOfElements);
-        sendBufsBytes[i].resize(currentNumOfElements*fieldByteSize);
-        for(int j=0; j<currentNumOfElements; j++) {
-
-            sendBufsElements[i][j] = xyMinusRShares[counter];
-            counter++;
-
-        }
-        field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
-
-    }
-
-
-    //resize the recbuf array.
-    int myNumOfElementsToExpect = numOfElementsForParties;
-    if (m_partyId < indexForDecreasingSize) {
-        myNumOfElementsToExpect = numOfElementsForParties + 1;
-    }
-
-
-    for(int i=0;i<N;i++){
-
-        recBufsBytes[i].resize(myNumOfElementsToExpect*fieldByteSize);
-
-
-    }
-
-
-
-    roundFunctionSync(sendBufsBytes, recBufsBytes,20);
-
-
-    xyMinusR.resize(myNumOfElementsToExpect);
-    xyMinusRBytes.resize(myNumOfElementsToExpect*fieldByteSize);
-
-    //reconstruct the shares that I am responsible of recieved from the other parties
-    vector<FieldType> xyMinurAllShares(N);
-
-    for (int k = 0;k < myNumOfElementsToExpect; k++)//go over only the logit gates
-    {
-        for (int i = 0; i < N; i++) {
-
-            xyMinurAllShares[i] = field->bytesToElement(recBufsBytes[i].data() + (k * fieldByteSize));
-        }
-
-        // reconstruct the shares by P0
-        xyMinusR[k] = interpolate(xyMinurAllShares);
-
-    }
-
-    field->elementVectorToByteVector(xyMinusR, xyMinusRBytes);
-
-    //prepare the send buffers
-    for(int i=0; i<N; i++){
-        sendBufsBytes[i] = xyMinusRBytes;
-    }
-
-
-    for(int i=0; i<N; i++){
-
-        currentNumOfElements = numOfElementsForParties;
-        if(i<indexForDecreasingSize)
-            currentNumOfElements++;
-
-        recBufsBytes[i].resize(currentNumOfElements* fieldByteSize);
-
-    }
-
-    roundFunctionSync(sendBufsBytes, recBufsBytes,21);
-
-
-    xyMinusR.resize(localSums.size());
-    counter = 0;
-
-    for(int i=0; i<N; i++){
-
-        currentNumOfElements = numOfElementsForParties;
-        if(i<indexForDecreasingSize)
-            currentNumOfElements++;
-
-        //fill the send buf according to the number of elements to send to each party
-        for(int j=0; j<currentNumOfElements; j++) {
-
-            xyMinusR[counter] = field->bytesToElement(recBufsBytes[i].data() + (j * fieldByteSize));
-            counter++;
-
-        }
-
-    }
-
-
-    for (int k = 0; k < localSums.size(); k++)
-    {
-        sumsToFill[k] = randomTAnd2TShares[offset + 2*k] + xyMinusR[k];
-    }
-
-    offset+=localSums.size()*2;
-
-
-}
-
-
-
-template <class FieldType>
 void ProtocolParty<FieldType>::offlineDNForMultiplication(int numOfTriples){
 
     generateRandom2TAndTShares(numOfTriples,randomTAnd2TShares);
@@ -3153,7 +2953,7 @@ void ProtocolParty<FieldType>::outputPhase()
 //
 //    extractMessages(accMats, accIntCountersMat, numClients);
 
-    //printOutputMessages(accMats, accIntCountersMat);
+//    printOutputMessages(accMats, accIntCountersMat);
 
 
 
@@ -3162,10 +2962,10 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<vector<FieldType>> shiftedMsgsVectorsCounters;
     splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
 
-    vector<FieldType> accMsgsMat(sqrtR*sqrtR*l);
-    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtR*l);
-    vector<FieldType> accCountersMat(sqrtR*sqrtR);
-    vector<int> accIntCountersMat(sqrtR*sqrtR);
+    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+    vector<int> accIntCountersMat(sqrtR*sqrtU);
 
     generateSharedMatricesOptimized(msgsVectors,
                                      shiftedMsgsVectorsSquares,
@@ -3207,7 +3007,7 @@ void ProtocolParty<FieldType>::outputPhase()
                               accIntCountersMat.size());
 
 
-//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     cout<<"passed with distinction"<<endl;
 }
@@ -3286,6 +3086,89 @@ void ProtocolParty<FieldType>::exchangeData(vector<vector<byte>> &sendBufs, vect
 
 
 }
+
+
+template <class FieldType>
+void ProtocolParty<FieldType>::roundFunctionSyncElements(vector<vector<FieldType>> &sendBufs, vector<vector<FieldType>> &recBufs, int round) {
+
+    //cout<<"in roundFunctionSync "<< round<< endl;
+
+    int numThreads = 10;//parties.size();
+    int numPartiesForEachThread;
+
+    if (parties.size() <= numThreads){
+        numThreads = parties.size();
+        numPartiesForEachThread = 1;
+    } else{
+        numPartiesForEachThread = (parties.size() + numThreads - 1)/ numThreads;
+    }
+
+
+    recBufs[m_partyId] = move(sendBufs[m_partyId]);
+    //recieve the data using threads
+    vector<thread> threads(numThreads);
+    for (int t=0; t<numThreads; t++) {
+        if ((t + 1) * numPartiesForEachThread <= parties.size()) {
+            threads[t] = thread(&ProtocolParty::exchangeDataElements, this, ref(sendBufs), ref(recBufs),
+                                t * numPartiesForEachThread, (t + 1) * numPartiesForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::exchangeDataElements, this, ref(sendBufs), ref(recBufs), t * numPartiesForEachThread, parties.size());
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+
+}
+
+
+template <class FieldType>
+void ProtocolParty<FieldType>::exchangeDataElements(vector<vector<FieldType>> &sendBufs, vector<vector<FieldType>> &recBufs, int first, int last) {
+
+
+    //cout<<"in exchangeData";
+    for (int i = first; i < last; i++) {
+
+        if ((m_partyId) < parties[i]->getID()) {
+
+
+            if (sendBufs[parties[i]->getID()].size() > 0) {
+                //send shares to my input bits
+                parties[i]->getChannel()->write((byte *) sendBufs[parties[i]->getID()].data(),
+                                                sendBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+                //cout<<"write the data:: my Id = " << m_partyId - 1<< "other ID = "<< parties[i]->getID() <<endl;
+            }
+
+            if (recBufs[parties[i]->getID()].size() > 0) {
+                //receive shares from the other party and set them in the shares array
+                parties[i]->getChannel()->read((byte *) recBufs[parties[i]->getID()].data(),
+                                               recBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+                //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
+            }
+
+        } else {
+
+            if (recBufs[parties[i]->getID()].size() > 0) {
+                //receive shares from the other party and set them in the shares array
+                parties[i]->getChannel()->read((byte *) recBufs[parties[i]->getID()].data(),
+                                               recBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+                //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
+            }
+
+            if (sendBufs[parties[i]->getID()].size() > 0) {
+
+                //send shares to my input bits
+                parties[i]->getChannel()->write((byte *) sendBufs[parties[i]->getID()].data(),
+                                                sendBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+                //cout<<"write the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID() <<endl;
+            }
+
+        }
+
+    }
+}
+
+
 
 
 template <class FieldType>
