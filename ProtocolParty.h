@@ -2114,7 +2114,8 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
 
     auto t1 = high_resolution_clock::now();
     int numBlocks = (numOfCols % 8 == 0) ? numOfCols/8 : numOfCols/8 + 1;
-    int remain = numOfCols%8;
+    int remain = (numOfCols % 8 == 0) ? 8 : numOfCols%8;
+
     for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++){ //go over each row
 
         for(int colIndex=0; colIndex<numBlocks; colIndex++){//go over each message
