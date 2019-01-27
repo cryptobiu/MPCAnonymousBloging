@@ -210,6 +210,19 @@ public:
                                          vector<FieldType> &accMsgsSquareMat,
                                          vector<FieldType> &accCountersMat);
 
+
+    int generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
+                                        vector<FieldType> &shiftedMsgsVectorsSquares,
+                                        vector<FieldType> &shiftedMsgsVectorsCounters,
+                                        vector<FieldType> &shiftedUnitVectors,
+                                        vector<FieldType> &accMsgsMat,
+                                        vector<FieldType> &accMsgsSquareMat,
+                                        vector<FieldType> &accCountersMat);
+
+
+    void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
+
+
     void multiplyVectors(vector<vector<FieldType>> & input,
                             vector<vector<FieldType>> & unitVectors,
                             vector<FieldType> & output,
@@ -233,6 +246,10 @@ public:
 
     void splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                     vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter);
+
+    void splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+                                                    vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
+                                                    vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter);
 
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
@@ -1513,6 +1530,56 @@ void ProtocolParty<FieldType>::splitShift(vector<vector<FieldType>> &msgsVectors
 
 }
 
+
+template <class FieldType>
+void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+                                                vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
+                                          vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter){
+
+
+    //msgsVectorsSquare.resize(msgsVectors.size()*sqrtR*l);
+    //msgsVectorsCounter.resize(msgsVectors.size()*sqrtR);
+    //msgsVectorsVec.resize(msgsVectors.size()*sqrtR*l);
+    //unitVectorsVec.resize(msgsVectors.size()*sqrtU);
+
+
+    //generate random shifting for all servers
+    vector<int> randomShiftingIndices;
+    generateRandomShiftingindices(randomShiftingIndices);
+
+    int shiftRow, shiftCol;
+    for(int i=0; i<msgsVectors.size(); i++){
+
+        //get the row and col shift
+        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
+        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
+
+        //generate the shifted message square
+        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin() + sqrtR*l + shiftRow*l, msgsVectors[i].begin()  + sqrtR*2*l);
+        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin()+ sqrtR*l, msgsVectors[i].begin() + sqrtR*l+ shiftRow*l);
+
+        //generate the shifted counter
+        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin() + sqrtR*2*l + shiftRow, msgsVectors[i].begin()  + sqrtR*2*l + sqrtR);
+        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin()+ sqrtR*2*l, msgsVectors[i].begin() + sqrtR*2*l+ shiftRow);
+
+
+        //generate the shifted unit vector, assign back to the unit vector
+        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin() + shiftCol, unitVectors[i].end());
+        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin(), unitVectors[i].begin() +  shiftCol);
+        unitVectors[i].resize(0);
+
+        //generate the shifted message and assign that back to the msgsVectors
+        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin() + shiftRow*l, msgsVectors[i].begin() + sqrtR*l);
+        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin(), msgsVectors[i].begin() + shiftRow*l);
+        msgsVectors[i].resize(0);
+
+    }
+
+}
+
+
+
+
 template <class FieldType>
 int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                                                      vector<FieldType> &accMats,
@@ -1694,6 +1761,55 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<Fiel
 //
 //    }
 
+}
+
+template <class FieldType>
+int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
+                                 vector<FieldType> &shiftedMsgsVectorsSquares,
+                                 vector<FieldType> &shiftedMsgsVectorsCounters,
+                                 vector<FieldType> &shiftedUnitVectors,
+                                 vector<FieldType> &accMsgsMat,
+                                 vector<FieldType> &accMsgsSquareMat,
+                                 vector<FieldType> &accCountersMat){
+
+
+    matrixMulTN(accMsgsMat.data(), 0, shiftedUnitVectors.data(), sqrtU, shiftedMsgsVectors.data(), l*sqrtR,
+            numClients, sqrtU, l*sqrtR);
+
+    matrixMulTN(accMsgsSquareMat.data(), 0, shiftedUnitVectors.data(), sqrtU, shiftedMsgsVectorsSquares.data(), l*sqrtR,
+            numClients, sqrtU, l*sqrtR);
+
+
+    matrixMulTN(accCountersMat.data(), 0, shiftedUnitVectors.data(), sqrtU, shiftedMsgsVectorsCounters.data(), sqrtR,
+            numClients, sqrtU, sqrtR);
+
+
+
+
+}
+
+
+template <class FieldType>
+void ProtocolParty<FieldType>::matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB)
+{
+
+    FieldType sum = *field->GetZero();
+
+	for (int i = 0; i < wA; ++i)
+		for (int j = 0; j < wB; ++j)
+		{
+			sum = *field->GetZero();
+
+			for (int k = 0; k < hA; ++k)
+			{
+				FieldType a = A[i + k * lda];
+				FieldType b = B[j + k * ldb];
+				sum += a * b;
+			}
+
+			//C[i + j * ldc] = sum;
+			C[j+ i*wB] = sum;//need the transpose
+		}
 }
 
 template <class FieldType>
@@ -2901,19 +3017,30 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
-    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
-    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
+    vector<FieldType> shiftedMsgsVectorsSquares;
+    vector<FieldType> shiftedMsgsVectorsCounters;
+    vector<FieldType> shiftedMsgsVec;
+    vector<FieldType> shiftedMsgsUnits;
+
+//    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
+//    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
+//    vector<vector<FieldType>> shiftedMsgsVec;
+//    vector<vector<FieldType>> shiftedMsgsUnits;
+//
+    splitShiftForGPU(msgsVectors, unitVectors,
+                     shiftedMsgsVec, shiftedMsgsUnits,
+                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
+
 
     vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
     vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
     vector<FieldType> accCountersMat(sqrtR*sqrtU);
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
-    generateSharedMatricesOptimized(msgsVectors,
+    generateSharedMatricesForGPU(shiftedMsgsVec,
                                      shiftedMsgsVectorsSquares,
                                      shiftedMsgsVectorsCounters,
-                                     unitVectors,
+                                 shiftedMsgsUnits,
                                      accMsgsMat,
                                      accMsgsSquareMat,
                                      accCountersMat);
@@ -2925,6 +3052,9 @@ void ProtocolParty<FieldType>::outputPhase()
 //                                     accMsgsMat,
 //                                     accMsgsSquareMat,
 //                                     accCountersMat);
+
+
+
 
 
     int flag =  generateClearMatricesForTesting(accMsgsMat,
