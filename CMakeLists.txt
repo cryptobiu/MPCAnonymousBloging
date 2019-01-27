@@ -7,8 +7,7 @@ INCLUDE_DIRECTORIES($ENV{HOME} $ENV{HOME}/libscapi/install/include
         $ENV{HOME}/libscapi/install/include/OTExtensionBristol)
 
 set(SOURCE_FILES main.cpp
-        ProtocolParty.cpp ProtocolParty.h ProtocolTimer.cpp ProtocolTimer.h
-        )
+        ProtocolParty.cpp ProtocolParty.h )
 
 
 link_directories(/usr/ssl/lib/ $ENV{HOME}/libscapi/install/lib )
