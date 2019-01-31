@@ -1108,7 +1108,7 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<vector<FieldType>> &msgs
 
     for(int i=0; i<numClients; i++){
 
-        readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
+        readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msg, unitVector, &e);
         msgsVectors[i] = msg;
         unitVectors[i] = unitVector;
     }
@@ -1119,7 +1119,7 @@ template<class FieldType>
 void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e){
 
     ifstream inputFile;
-    inputFile.open(fileName);
+    inputFile.open(fileName, std::ios::in | std::ios::binary);
 
     int msgSize = 2*l*sqrtR + sqrtR;
     msg.resize(msgSize);
@@ -1127,19 +1127,11 @@ void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType>
     int unitSize = sqrtU;
     unitVector.resize(unitSize);
 
-    long input;
-    for (int j=0; j<msgSize; j++) {
-        inputFile >> input;
-        msg[j] = input;
-    }
+    inputFile.read((char*)msg.data(), msgSize*4);
 
-    for (int j=0; j<unitSize; j++) {
-        inputFile >> input;
-        unitVector[j] = input;
-    }
+    inputFile.read((char*)unitVector.data(), unitSize*4);
 
-    inputFile >> input;
-    *e = input;
+    inputFile.read((char*)&e, 4);
 
     inputFile.close();
 
