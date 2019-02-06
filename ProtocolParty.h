@@ -226,6 +226,9 @@ public:
 
     void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
 
+    void regMatrixMulTN(FieldType *C, FieldType *A, int rowa, int cola, FieldType *B, int rowb,  int colb);
+
+
 
     void multiplyVectors(vector<vector<FieldType>> & input,
                             vector<vector<FieldType>> & unitVectors,
@@ -1127,7 +1130,7 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<vector<FieldType>> &msgs
 
     for(int i=0; i<numClients; i++){
 
-        readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.txt", msg, unitVector, &e);
+        readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msg, unitVector, &e);
         msgsVectors[i] = msg;
         unitVectors[i] = unitVector;
     }
@@ -1138,7 +1141,7 @@ template<class FieldType>
 void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType> & msg, vector<FieldType> & unitVector, FieldType * e){
 
     ifstream inputFile;
-    inputFile.open(fileName);
+    inputFile.open(fileName, std::ios::in | std::ios::binary);
 
     int msgSize = 2*l*sqrtR + sqrtR;
     msg.resize(msgSize);
@@ -1146,19 +1149,11 @@ void ProtocolParty<FieldType>::readServerFile(string fileName, vector<FieldType>
     int unitSize = sqrtU;
     unitVector.resize(unitSize);
 
-    long input;
-    for (int j=0; j<msgSize; j++) {
-        inputFile >> input;
-        msg[j] = input;
-    }
+    inputFile.read((char*)msg.data(), msgSize*4);
 
-    for (int j=0; j<unitSize; j++) {
-        inputFile >> input;
-        unitVector[j] = input;
-    }
+    inputFile.read((char*)unitVector.data(), unitSize*4);
 
-    inputFile >> input;
-    *e = input;
+    inputFile.read((char*)&e, 4);
 
     inputFile.close();
 
@@ -1460,6 +1455,18 @@ template <class FieldType>
 int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest) {
 
+    vector<FieldType> flattenVec;
+
+    //turn to one vector for the gpu multiplication. NOTE make sure to pass the flatten vector after testing.
+    for(int i=0; i<vecs.size(); i++){
+
+        //generate the shifted message and assign that back to the msgsVectors
+
+        flattenVec.insert(flattenVec.end(), vecs[i].begin() , vecs[i].end());
+        //msgsVectors[i].resize(0);
+
+    }
+
 
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
     vector<vector<FieldType>> randomVecs(vecs.size());
@@ -1472,8 +1479,14 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
     //was set.
     long * randomBits = (long *)randomElements;
 
-    vector<byte> constRandomBits(vecs[0].size()*securityParamter);//we do not use bit set since this is
+    vector<FieldType> constRandomBitsFor1(vecs[0].size()*securityParamter);//we do not use bit set since this is
                                                                             //better performance wise rather than memory wise
+
+
+    vector<FieldType> constRandomBitsFor0(vecs[0].size()*securityParamter);//we do not use bit set since this is
+    //better performance wise rather than memory wise
+
+    vector<byte> constRandomBits(vecs[0].size()*securityParamter);
 
 
     byte **constRandomBitsMat = new byte*[securityParamter];
@@ -1484,7 +1497,9 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         constRandomBitsMat[j] = new byte[vecs[0].size()];
         for (int k = 0; k < vecs[0].size(); k++) {
 
-            constRandomBits[vecs[0].size()*j + k] = (randomBits[k] >> j)&1;
+            constRandomBitsFor1[vecs[0].size()*j + k] = ((randomBits[k] >> j)&1);
+            constRandomBits[vecs[0].size()*j + k] = ((randomBits[k] >> j)&1);
+            constRandomBitsFor0[vecs[0].size()*j + k] = (1 - (randomBits[k] >> j)&1);
             constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
         }
     }
@@ -1509,31 +1524,31 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         cout << "time in mult by randoms: " << duration << endl;
     }
 
-    int shiftBits;
-    int secTimesI;
-    t1 = high_resolution_clock::now();
-    int counter;
-    for(int i=0; i<vecs.size(); i++) {
-        secTimesI = i*securityParamter;
-        //counter = 0;
-        for (int j = 0; j < securityParamter; j++) {
-            shiftBits = vecs[0].size()*j;
-
-            auto temp = &constRandomBitsPrim[shiftBits];
-            for(int k = 0; k<vecs[0].size();k++) {
-
-
-                //if related bit is zero, accume the sum in sum 0
-                if((temp[k])==0)/*if((randomBits[k] & 1)==0)*//*if(k%2==0)*//*if((randomBits[k] & ( shiftbyOne[j] ))==0)*/ /*if(((randomBits[k] >> j) & 1)==0)*/
-                    sum0[secTimesI + j] +=  randomVecs[i][k];
-                else //bit is 1, accume the sum in sum 1
-                    sum1[secTimesI + j] +=  randomVecs[i][k];
-
-                //counter++;
-            }
-        }
-    }
-    t2 = high_resolution_clock::now();
+//    int shiftBits;
+//    int secTimesI;
+//    t1 = high_resolution_clock::now();
+//    int counter;
+//    for(int i=0; i<vecs.size(); i++) {
+//        secTimesI = i*securityParamter;
+//        //counter = 0;
+//        for (int j = 0; j < securityParamter; j++) {
+//            shiftBits = vecs[0].size()*j;
+//
+//            auto temp = &constRandomBitsPrim[shiftBits];
+//            for(int k = 0; k<vecs[0].size();k++) {
+//
+//
+//                //if related bit is zero, accume the sum in sum 0
+//                if((temp[k])==0)/*if((randomBits[k] & 1)==0)*//*if(k%2==0)*//*if((randomBits[k] & ( shiftbyOne[j] ))==0)*/ /*if(((randomBits[k] >> j) & 1)==0)*/
+//                    sum0[secTimesI + j] +=  randomVecs[i][k];
+//                else //bit is 1, accume the sum in sum 1
+//                    sum1[secTimesI + j] +=  randomVecs[i][k];
+//
+//                //counter++;
+//            }
+//        }
+//    }
+//    t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
@@ -1541,23 +1556,30 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
     }
 
     t1 = high_resolution_clock::now();
-    for(int i=0; i<vecs.size(); i++) {
-        secTimesI = i*securityParamter;
-        //counter = 0;
-        for (int j = 0; j < securityParamter; j++) {
-            shiftBits = vecs[0].size()*j;
-            for(int k = 0; k<vecs[0].size();k++) {
+    regMatrixMulTN(sum1.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor1.data(), vecs[0].size(), securityParamter);
+
+    regMatrixMulTN(sum0.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor0.data(), vecs[0].size(), securityParamter);
 
 
-                //if related bit is zero, accume the sum in sum 0
 
-                    sum01[2*(secTimesI + j) + constRandomBitsPrim[k]] +=  randomVecs[i][k].elem;
-
-
-                //counter++;
-            }
-        }
-    }
+//    t1 = high_resolution_clock::now();
+//    for(int i=0; i<vecs.size(); i++) {
+//        secTimesI = i*securityParamter;
+//        //counter = 0;
+//        for (int j = 0; j < securityParamter; j++) {
+//            shiftBits = vecs[0].size()*j;
+//            for(int k = 0; k<vecs[0].size();k++) {
+//
+//
+//                //if related bit is zero, accume the sum in sum 0
+//
+//                    sum01[2*(secTimesI + j) + constRandomBitsPrim[k]] +=  randomVecs[i][k].elem;
+//
+//
+//                //counter++;
+//            }
+//        }
+//    }
 
     cout<<sum01[2 + constRandomBitsPrim[10]];
 
@@ -1954,6 +1976,26 @@ void ProtocolParty<FieldType>::matrixMulTN(FieldType *C, int ldc, const FieldTyp
 			C[i + j * ldc] = sum;
 			//C[j+ i*wB] = sum;//need the transpose
 		}
+}
+template <class FieldType>
+void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int rowa, int cola, FieldType *B, int rowb,  int colb)
+{
+
+    FieldType sum = *field->GetZero();
+
+    for (int i = 0; i < rowa; i++)
+    {
+        for (int j = 0; j < colb; j++)
+        {
+            sum = 0;
+            for (int k = 0; k < rowb; k++)
+            {
+                sum += A[i*cola + k] * B[k*colb + j];
+            }
+
+            C[i*colb + j] = sum;
+        }
+    }
 }
 
 template <class FieldType>

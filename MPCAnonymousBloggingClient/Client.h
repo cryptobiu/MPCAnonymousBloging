@@ -126,7 +126,9 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
 
     //cout<<"i = "<<i<< " j = "<<j<<endl;
 
+
     vector<FieldType> vals(2*(l*sqrtR) + sqrtR + sqrtU + 1, *field->GetZero());
+
 
     //Set the vector [0, 0, ..., msg, 0, ..., 0]
     for (int m=0; m<l; m++){
@@ -192,14 +194,13 @@ template<class FieldType>
 void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, int clientID){
 
     ofstream outputFile;
-
-    int size = 2*(l*sqrtR) + sqrtR + sqrtU + 1;
+     int size = 2*(l*sqrtR) + sqrtR + sqrtU + 1;
 
     for (int i=0; i<numServers; i++){
 
         if (field->getElementSizeInBytes() == 8) {
             long *serverShares = (long *) shares[i].data();
-            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
+            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
 
             for (int j = 0; j < size; j++) {
                 outputFile << serverShares[j] << endl;
@@ -207,11 +208,10 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
         }
         if (field->getElementSizeInBytes() == 4) {
             int *serverShares = (int *) shares[i].data();
-            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.txt");
+            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
 
-            for (int j = 0; j < size; j++) {
-                outputFile << serverShares[j] << endl;
-            }
+            outputFile.write((char*)serverShares, 4*size);
+
         }
         outputFile.close();
     }
