@@ -96,12 +96,6 @@
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolParty.h">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolTimer.cpp">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
-		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolTimer.h">
-			<Option target="MPCAnonymousBloging"/>
-		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/main.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>

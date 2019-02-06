@@ -44,6 +44,10 @@ private:
     int iteration; //number of the current iteration
 
 
+    vector<long> shiftbyOne;
+
+
+
     //
     int l;
     int numClients;
@@ -392,6 +396,12 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     auto duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in milliseconds initializationPhase: " << duration << endl;
+    }
+
+
+    shiftbyOne.resize(securityParamter);
+    for(int i=0; i<securityParamter; i++){
+        shiftbyOne[i] = 1 << i;
     }
 }
 
@@ -816,9 +826,18 @@ void ProtocolParty<FieldType>::initializationPhase()
     }
 
 
+
+
+    auto t1 = high_resolution_clock::now();
     readclientsinputs(msgsVectors, unitVectors);
 
 
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds read clients inputs: " << duration << endl;
+    }
 
 
 }
@@ -1156,10 +1175,17 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     //more random elements
     int numOfRandomElements = (sqrtR + l*2 + 1 + sqrtU)*(securityParamter + field->getElementSizeInBits()  + 1)/field->getElementSizeInBits() ;
 
+    auto t1 = high_resolution_clock::now();
+
     //we use the same rendom elements for all the clients
     vector<FieldType> randomElements(numOfRandomElements);
     generatePseudoRandomElements(key, randomElements, randomElements.size());
+    auto t2 = high_resolution_clock::now();
 
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds generatePseudoRandomElements: " << duration << endl;
+    }
     vector<FieldType> sumXandSqaure(msgsVectors.size()*l*2);
 
 
@@ -1168,6 +1194,8 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     //1. first check that the related index of the second part of a client message is in fact the sqaure of the
     //related first part of the message
+
+    t1 = high_resolution_clock::now();
 
 
 
@@ -1199,6 +1227,12 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     }
 
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds preparing for unit test: " << duration << endl;
+    }
     //before running the unit test for the compacted message compute the following for every client
     //1. sumx*sumx
     //2. sumX *bigR and sumXSqaure *bigR
@@ -1206,20 +1240,42 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
     vector<FieldType> calculatedSqaures(msgsVectors.size()*l);
 
+    t1 = high_resolution_clock::now();
+
+    cout<< "size of mult in validate is : "<<msgsVectors.size()*l<<endl;
+
     DNHonestMultiplication(sumXandSqaure.data(), sumXandSqaure.data(), calculatedSqaures,msgsVectors.size()*l);
 
+    t2 = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds DNHonestMultiplication sumXandSqaure: " << duration << endl;
+    }
     //concatenate the calculated sqares to multiply with bigR
     sumXandSqaure.insert( sumXandSqaure.end(), calculatedSqaures.begin(), calculatedSqaures.end() );
 
     //now multiply all these by R
     //make sure that bigRVec contains enough elements (securityParameter>3*sizeOfMessage)
-    if(bigRVec.size()<3*l*numClients){ //this will happen at most once
+    if(bigRVec.size()<3*l*msgsVectors.size()){ //this will happen at most once
         int size = bigRVec.size();
-        bigRVec.resize(3*l*numClients);
+        bigRVec.resize(3*l*msgsVectors.size());
         fill(bigRVec.begin() + size, bigRVec.end(), bigR[0]);
     }
     vector<FieldType> RTimesSumXandSqaure(sumXandSqaure.size());
+
+    t1 = high_resolution_clock::now();
+
+    cout<< "size of mult in validate is : "<<sumXandSqaure.size()<<endl;
+
+
     DNHonestMultiplication(sumXandSqaure.data(), bigRVec.data(), RTimesSumXandSqaure,sumXandSqaure.size());
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds DNHonestMultiplication RTimesSumXandSqaure: " << duration << endl;
+    }
+
 
     //check the validity of the inputs
     //open v1^2 - v2 and Rv1^2 - Rv2
@@ -1261,8 +1317,17 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     }
 
 
-    vector<FieldType> sumsForConsistensyTest(numClients);
+    vector<FieldType> sumsForConsistensyTest(msgsVectors.size());
+    t1 = high_resolution_clock::now();
+
+
     flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements.data(), sumsForConsistensyTest);
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds unitVectorsTest 1: " << duration << endl;
+    }
 
     vector<FieldType> sumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
     vector<FieldType> openedSumOfElementsVecs(msgsVectors.size()*2, *field->GetZero());
@@ -1288,10 +1353,21 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
 
 
     //lastly, check that the unit vectors are indeed unit vector. We can use the same random elements that were already created
+
+    //vector<FieldType> sumsForConsistensyTest(msgsVectors.size());
+    t1 = high_resolution_clock::now();
+
+
     flag = unitVectorsTest(unitVectors, randomElements.data(), sumsForConsistensyTest);
 
+    t2 = high_resolution_clock::now();
 
-    vector<FieldType> sumsForConsistensyTestOpened(numClients);
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds unitVectorsTest 2: " << duration << endl;
+    }
+
+    vector<FieldType> sumsForConsistensyTestOpened(msgsVectors.size());
 
     //invoke a consistency test, need to return the index of a cheating client
     openShare(sumsForConsistensyTest.size(), sumsForConsistensyTest, sumsForConsistensyTestOpened, T);
@@ -1327,9 +1403,6 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     }
 
     return flag;
-
-
-
 
 }
 
@@ -1388,31 +1461,37 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest) {
 
 
-    vector<FieldType> testOpen2T(2);
-    vector<FieldType> testOpen2Topened(2);
-
-
-    testOpen2T[0] = vecs[0][0]*vecs[0][0];
-    testOpen2T[1] = vecs[0][1]*vecs[0][1];
-
-    openShare(testOpen2T.size(), testOpen2T, testOpen2Topened, 2*T);
-
-    cout<<"test result is "<<testOpen2Topened[0]<<endl;
-    cout<<"test result is "<<testOpen2Topened[1]<<endl;
-
-
-
-
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
     vector<vector<FieldType>> randomVecs(vecs.size());
 
     vector<FieldType> sum1(vecs.size()*securityParamter);
     vector<FieldType> sum0(vecs.size()*securityParamter);//do in a 1 dimension array for multiplication
+    vector<long> sum01(2*vecs.size()*securityParamter);//do in a 1 dimension array for multiplication
 
     //use the random elements for the bits. This is ok since the random elements were chosen after the input
     //was set.
     long * randomBits = (long *)randomElements;
 
+    vector<byte> constRandomBits(vecs[0].size()*securityParamter);//we do not use bit set since this is
+                                                                            //better performance wise rather than memory wise
+
+
+    byte **constRandomBitsMat = new byte*[securityParamter];
+
+    //fill the random bits once and use it without shifting for every client
+    for (int j = 0; j < securityParamter; j++) {
+
+        constRandomBitsMat[j] = new byte[vecs[0].size()];
+        for (int k = 0; k < vecs[0].size(); k++) {
+
+            constRandomBits[vecs[0].size()*j + k] = (randomBits[k] >> j)&1;
+            constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
+        }
+    }
+
+    byte *constRandomBitsPrim = constRandomBits.data();
+
+    auto t1 = high_resolution_clock::now();
     //generate msg array that is the multiplication of an element with the related random share.
     for(int i = 0; i < vecs.size(); i++){
         randomVecs[i].resize(vecs[0].size());
@@ -1423,33 +1502,92 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         }
     }
 
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in mult by randoms: " << duration << endl;
+    }
+
+    int shiftBits;
+    int secTimesI;
+    t1 = high_resolution_clock::now();
+    int counter;
     for(int i=0; i<vecs.size(); i++) {
+        secTimesI = i*securityParamter;
+        //counter = 0;
         for (int j = 0; j < securityParamter; j++) {
+            shiftBits = vecs[0].size()*j;
+
+            auto temp = &constRandomBitsPrim[shiftBits];
             for(int k = 0; k<vecs[0].size();k++) {
 
 
                 //if related bit is zero, accume the sum in sum 0
-                if((randomBits[k] & ( 1 << j ))==0)
-                    sum0[i*securityParamter + j] +=  randomVecs[i][k];
+                if((temp[k])==0)/*if((randomBits[k] & 1)==0)*//*if(k%2==0)*//*if((randomBits[k] & ( shiftbyOne[j] ))==0)*/ /*if(((randomBits[k] >> j) & 1)==0)*/
+                    sum0[secTimesI + j] +=  randomVecs[i][k];
                 else //bit is 1, accume the sum in sum 1
-                    sum1[i*securityParamter + j] +=  randomVecs[i][k];
+                    sum1[secTimesI + j] +=  randomVecs[i][k];
+
+                //counter++;
+            }
+        }
+    }
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time for add to sum0 and sum 1: " << duration << endl;
+    }
+
+    t1 = high_resolution_clock::now();
+    for(int i=0; i<vecs.size(); i++) {
+        secTimesI = i*securityParamter;
+        //counter = 0;
+        for (int j = 0; j < securityParamter; j++) {
+            shiftBits = vecs[0].size()*j;
+            for(int k = 0; k<vecs[0].size();k++) {
+
+
+                //if related bit is zero, accume the sum in sum 0
+
+                    sum01[2*(secTimesI + j) + constRandomBitsPrim[k]] +=  randomVecs[i][k].elem;
+
+
+                //counter++;
             }
         }
     }
 
+    cout<<sum01[2 + constRandomBitsPrim[10]];
+
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time for add to sums01: " << duration << endl;
+    }
     //perform BigR * sum0
 
 
-
+    t1 = high_resolution_clock::now();
     vector<FieldType> Rsum0Vec(sum0.size());
+    vector<FieldType> Rsum01Vec(sum01.size());
     //run the semi honest multiplication to get the second part of each share
     DNHonestMultiplication(sum0.data(), bigRVec.data(),Rsum0Vec, sum0.size());
+    //DNHonestMultiplication(sum01.data(), bigRVec.data(),Rsum01Vec, sum01.size());
 
+    t2 = high_resolution_clock::now();
 
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time for DNHonestMultiplication in unittest: " << duration << endl;
+    }
 
     vector<FieldType> SOPandRSOP(vecs.size()*2);
     vector<FieldType> openedSOPandRSOP(vecs.size()*2);
     //prepare the values for the sumo of products
+    t1 = high_resolution_clock::now();
     for(int i = 0; i<vecs.size(); i++){
 
         sumsForConsistensyTest[i] += sum0[i*securityParamter ] + sum1[i*securityParamter ];
@@ -1462,6 +1600,12 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         }
     }
 
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time for SOPandRSOP in unittest: " << duration << endl;
+    }
 
     openShare(SOPandRSOP.size(), SOPandRSOP, openedSOPandRSOP, 2*T);
 
@@ -1773,15 +1917,15 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
                                  vector<FieldType> &accCountersMat){
 
 
-    matrixMulTN(accMsgsMat.data(), 0, shiftedUnitVectors.data(), sqrtU, shiftedMsgsVectors.data(), l*sqrtR,
-            numClients, sqrtU, l*sqrtR);
+    matrixMulTN(accMsgsMat.data(), l*sqrtR,  shiftedMsgsVectors.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
+            numClients,  l*sqrtR, sqrtU);
 
-    matrixMulTN(accMsgsSquareMat.data(), 0, shiftedUnitVectors.data(), sqrtU, shiftedMsgsVectorsSquares.data(), l*sqrtR,
-            numClients, sqrtU, l*sqrtR);
+    matrixMulTN(accMsgsSquareMat.data(), l*sqrtR,  shiftedMsgsVectorsSquares.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
+            numClients, l*sqrtR, sqrtU);
 
 
-    matrixMulTN(accCountersMat.data(), 0, shiftedUnitVectors.data(), sqrtU, shiftedMsgsVectorsCounters.data(), sqrtR,
-            numClients, sqrtU, sqrtR);
+    matrixMulTN(accCountersMat.data(), sqrtR,  shiftedMsgsVectorsCounters.data(), sqrtR,shiftedUnitVectors.data(), sqrtU,
+            numClients, sqrtR, sqrtU);
 
 
 
@@ -1807,8 +1951,8 @@ void ProtocolParty<FieldType>::matrixMulTN(FieldType *C, int ldc, const FieldTyp
 				sum += a * b;
 			}
 
-			//C[i + j * ldc] = sum;
-			C[j+ i*wB] = sum;//need the transpose
+			C[i + j * ldc] = sum;
+			//C[j+ i*wB] = sum;//need the transpose
 		}
 }
 
@@ -3080,7 +3224,7 @@ void ProtocolParty<FieldType>::outputPhase()
                               accIntCountersMat.size());
 
 
-    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+    //printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     cout<<"passed with distinction"<<endl;
 }

@@ -124,7 +124,7 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
     int i = getRandomInRange(0, sqrtR-1, &prg);
     int j = getRandomInRange(0, sqrtU-1, &prg);
 
-    cout<<"i = "<<i<< " j = "<<j<<endl;
+    //cout<<"i = "<<i<< " j = "<<j<<endl;
 
     vector<FieldType> vals(2*(l*sqrtR) + sqrtR + sqrtU + 1, *field->GetZero());
 
@@ -146,10 +146,10 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
 
     vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->Random();
 
-    cout<<"original values:"<<endl;
-    for (int i=0; i<vals.size(); i++){
-        cout<<(long) vals[i].elem<<endl;
-    }
+//    cout<<"original values:"<<endl;
+//    for (int i=0; i<vals.size(); i++){
+//        cout<<(long) vals[i].elem<<endl;
+//    }
     return vals;
 }
 
@@ -298,10 +298,10 @@ void Client<FieldType>::checkServerFiles(int clientID){
 
     }
 
-    cout<<"opened values:"<<endl;
-    for (int i=0; i<size; i++){
-        cout<<(long) secrets[i].elem<<endl;
-    }
+//    cout<<"opened values:"<<endl;
+//    for (int i=0; i<size; i++){
+//        cout<<(long) secrets[i].elem<<endl;
+//    }
 
 }
 
