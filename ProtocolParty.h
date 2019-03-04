@@ -2022,7 +2022,7 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
         }
     }
 
-    int numThreads = 1;
+    int numThreads = 2;
     vector<thread> threads(numThreads);
 
     int numRowsForEachThread;
@@ -3177,6 +3177,9 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
 template <class FieldType>
 void ProtocolParty<FieldType>::outputPhase()
 {
+
+    //cpu not optimized version
+    //------------------------------------------------------------//
 //    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
 //    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
 //    vector<int> accIntCountersMat(sqrtR*sqrtR);
@@ -3200,19 +3203,19 @@ void ProtocolParty<FieldType>::outputPhase()
 
 //    printOutputMessages(accMats, accIntCountersMat);
 
+//---------------------------------------------------------------------//
 
 
 
+
+//gpu version
+//-----------------------------------------------------//
     vector<FieldType> shiftedMsgsVectorsSquares;
     vector<FieldType> shiftedMsgsVectorsCounters;
     vector<FieldType> shiftedMsgsVec;
     vector<FieldType> shiftedMsgsUnits;
 
-//    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
-//    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
-//    vector<vector<FieldType>> shiftedMsgsVec;
-//    vector<vector<FieldType>> shiftedMsgsUnits;
-//
+
     splitShiftForGPU(msgsVectors, unitVectors,
                      shiftedMsgsVec, shiftedMsgsUnits,
                      shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
@@ -3231,14 +3234,31 @@ void ProtocolParty<FieldType>::outputPhase()
                                      accMsgsSquareMat,
                                      accCountersMat);
 
-//    generateSharedMatricesForTesting(msgsVectors,
-//                                     shiftedMsgsVectorsSquares,
-//                                     shiftedMsgsVectorsCounters,
-//                                     unitVectors,
-//                                     accMsgsMat,
-//                                     accMsgsSquareMat,
-//                                     accCountersMat);
+//----------------------------------------------------------//
 
+
+
+
+////cpu optimed version
+////-------------------------------------------------------//
+//    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
+//    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
+//    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
+//
+//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+//    vector<int> accIntCountersMat(sqrtR*sqrtU);
+//
+//    generateSharedMatricesOptimized(msgsVectors,
+//                                    shiftedMsgsVectorsSquares,
+//                                    shiftedMsgsVectorsCounters,
+//                                    unitVectors,
+//                                    accMsgsMat,
+//                                    accMsgsSquareMat,
+//                                    accCountersMat);
+//
+//    //-----------------------------------------------------//
 
 
 
@@ -3262,7 +3282,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
     extractMessagesForTesting(accMsgsMat,
                               accMsgsSquareMat,
-                    accIntCountersMat,
+                            accIntCountersMat,
                               accIntCountersMat.size());
 
 
