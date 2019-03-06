@@ -44,14 +44,13 @@ write some hardcodre tests with data generation on device?!
 #include "cutlass/gemm/sgemm_traits.h"
 #include "cutlass/gemm/dgemm_traits.h"
 #include "cutlass/gemm/gemm_config.h"
-#include "MersseneTypes.h"
 #include "utils.h"
 #include "DeviceMat.h"
+#include "cudaGemm.h"
 
 // SUint32 SMersenne31Naive SMersenne31Classic merssene31_tUint32Mixed SMersenne31HiLo
 
-typedef SMersenne31Classic merssene31_t;
-typedef SMersenne61Gpu merssene61_t;
+
 
 
 template <

@@ -5,6 +5,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <x86intrin.h>
+#include "cudaGemm.h"
 
 
 
