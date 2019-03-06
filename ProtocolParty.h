@@ -1945,7 +1945,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
             devices.push_back(device);
     }
 
-    size_t tile_size = std::min(16384ULL, accMsgsMat.size() / devices.size());
+    size_t tile_size = std::min(16384ULL, (unsigned long long) accMsgsMat.size() / devices.size());
 
     GemmTNTiles31((merssene31_t *) accMsgsMat.data(), l*sqrtR,
                   (merssene31_t *) shiftedMsgsVectors.data(), l*sqrtR,
