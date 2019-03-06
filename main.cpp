@@ -5,7 +5,9 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <x86intrin.h>
+#ifdef __CUDA_ARCH__
 #include "cudaGemm.h"
+#endif
 
 
 

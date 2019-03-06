@@ -19,7 +19,9 @@
 #include <emmintrin.h>
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
+#ifdef __CUDA_ARCH__
 #include "cudaGemm.h"
+#endif
 #include <algorithm>
 
 
@@ -217,7 +219,7 @@ public:
                                          vector<FieldType> &accMsgsSquareMat,
                                          vector<FieldType> &accCountersMat);
 
-
+#ifdef __CUDA_ARCH__
     int generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                         vector<FieldType> &shiftedMsgsVectorsSquares,
                                         vector<FieldType> &shiftedMsgsVectorsCounters,
@@ -225,7 +227,7 @@ public:
                                         vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
-
+#endif
 
     void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
 
@@ -257,9 +259,11 @@ public:
     void splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                     vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter);
 
+#ifdef __CUDA_ARCH__
     void splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                                                     vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
                                                     vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter);
+#endif
 
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
@@ -1688,7 +1692,7 @@ void ProtocolParty<FieldType>::splitShift(vector<vector<FieldType>> &msgsVectors
 
 }
 
-
+#ifdef __CUDA_ARCH__
 template <class FieldType>
 void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                                                 vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
@@ -1735,7 +1739,7 @@ void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsV
 
 }
 
-
+#endif
 
 
 template <class FieldType>
@@ -1921,6 +1925,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<Fiel
 
 }
 
+#ifdef __CUDA_ARCH__
 template <class FieldType>
 int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                  vector<FieldType> &shiftedMsgsVectorsSquares,
@@ -1964,6 +1969,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
 
 }
+#endif
 
 
 template <class FieldType>
@@ -3218,7 +3224,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-
+#ifdef __CUDA_ARCH__
 //gpu version
 //-----------------------------------------------------//
     vector<FieldType> shiftedMsgsVectorsSquares;
@@ -3237,40 +3243,41 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<FieldType> accCountersMat(sqrtR*sqrtU);
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
+
     generateSharedMatricesForGPU(shiftedMsgsVec,
-                                     shiftedMsgsVectorsSquares,
-                                     shiftedMsgsVectorsCounters,
+                                 shiftedMsgsVectorsSquares,
+                                 shiftedMsgsVectorsCounters,
                                  shiftedMsgsUnits,
-                                     accMsgsMat,
-                                     accMsgsSquareMat,
-                                     accCountersMat);
+                                 accMsgsMat,
+                                 accMsgsSquareMat,
+                                 accCountersMat);
 
 //----------------------------------------------------------//
 
 
 
+#else
+//cpu optimed version
+//-------------------------------------------------------//
+    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
+    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
+    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
 
-////cpu optimed version
-////-------------------------------------------------------//
-//    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
-//    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
-//    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//    generateSharedMatricesOptimized(msgsVectors,
-//                                    shiftedMsgsVectorsSquares,
-//                                    shiftedMsgsVectorsCounters,
-//                                    unitVectors,
-//                                    accMsgsMat,
-//                                    accMsgsSquareMat,
-//                                    accCountersMat);
-//
-//    //-----------------------------------------------------//
+    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+    vector<int> accIntCountersMat(sqrtR*sqrtU);
 
+    generateSharedMatricesOptimized(msgsVectors,
+                                    shiftedMsgsVectorsSquares,
+                                    shiftedMsgsVectorsCounters,
+                                    unitVectors,
+                                    accMsgsMat,
+                                    accMsgsSquareMat,
+                                    accCountersMat);
+
+    //-----------------------------------------------------//
+#endif
 
 
 
@@ -3297,7 +3304,7 @@ void ProtocolParty<FieldType>::outputPhase()
                               accIntCountersMat.size());
 
 
-    //printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     cout<<"passed with distinction"<<endl;
 }
