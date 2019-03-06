@@ -20,6 +20,7 @@
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
 #include "cudaGemm.h"
+#include <algorithm>
 
 
 #define flag_print false
