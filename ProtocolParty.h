@@ -241,11 +241,17 @@ public:
                             int numOfRows,
                             int numOfCols);
 
+    void multMatrices(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
+                      vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask);
 
-    void multiplyVectorsPerThread(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
-                                  vector<long> & outputDouble, int newNumCols, int i, int start, int end);
 
-    void reduceMatrixWithThreads(vector<long> & outputDouble, int newNumCols, int i, int start, int end);
+    void reduceMatrix(vector<long> & outputDouble, int newNumRows, int newNumCols, __m256i mask, __m256i p);
+
+    void multiplyVectorsWithThreads(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
+                                    vector<FieldType> & output, int numOfRows, int numOfCols);
+
+    void multiplyVectorsPerThread(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors, vector<long> & outputDouble,
+                                                            int newNumRows, int newNumCols, int start, int end);
 
     int generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
@@ -1903,24 +1909,27 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<Fiel
 
     int numOfCols = shiftedMsgsVectorsCounters[0].size();
     int numOfRows = unitVectors[0].size();
-    int size = numOfCols*numOfRows;//the size of the final 2D matrix
 
-    multiplyVectors(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
-    multiplyVectors(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
-    multiplyVectors(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
-
-    //print matrices
-
-//    for(int i=0; i<size; i++){
+// auto t1 = high_resolution_clock::now();
+//    multiplyVectors(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
+//    multiplyVectors(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
+//    multiplyVectors(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
+// auto t2 = high_resolution_clock::now();
 //
-//        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
-//
+//    auto duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in milliseconds without threads: " << duration << endl;
 //    }
+
+//    t1 = high_resolution_clock::now();
+    multiplyVectorsWithThreads(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
+    multiplyVectorsWithThreads(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
+    multiplyVectorsWithThreads(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
+//     t2 = high_resolution_clock::now();
 //
-//    for(int i=0; i<size; i++){
-//
-//        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
-//
+//     duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in milliseconds with threads: " << duration << endl;
 //    }
 
 }
@@ -2017,7 +2026,7 @@ void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int ro
 
 template <class FieldType>
 void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
-                                                vector<FieldType> & output, int numOfRows, int numOfCols){
+                                               vector<FieldType> & output, int numOfRows, int numOfCols){
 
     int toReduce = 0; //Every 4 multiplications there is need to reduce all table
     __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
@@ -2039,327 +2048,18 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
         }
     }
 
-    int numThreads = 2;
-    vector<thread> threads(numThreads);
-
-    int numRowsForEachThread;
-    if ((newNumRows / 8) <= numThreads){
-        numThreads = newNumRows / 8;
-        numRowsForEachThread = 1;
-    } else{
-        numRowsForEachThread = ((newNumRows / 8) + numThreads - 1)/ numThreads;
-    }
-
-    int numReductionThreads = numThreads;
-    int numReductionRowsForEachThread;
-    if (newNumRows <= numThreads){
-        numReductionThreads = newNumRows;
-        numReductionRowsForEachThread = 1;
-    } else{
-        numReductionRowsForEachThread = (newNumRows + numThreads - 1)/ numThreads;
-    }
-    vector<thread> reductionThreads(numReductionThreads);
 
     vector<long> outputDouble(newNumRows*newNumCols);
+
     for(int i=0; i<input.size(); i++){//go over each client
 
-        for (int t=0; t<numThreads; t++) {
-
-            if ((t + 1) * numRowsForEachThread <= (newNumRows/8)) {
-                threads[t] = thread(&ProtocolParty::multiplyVectorsPerThread, this, ref(input), ref(unitVectors), ref(outputDouble), newNumCols, i, t * numRowsForEachThread, (t + 1) * numRowsForEachThread);
-            } else {
-                threads[t] = thread(&ProtocolParty::multiplyVectorsPerThread, this, ref(input), ref(unitVectors), ref(outputDouble), newNumCols, i, t * numRowsForEachThread, newNumRows/8);
-            }
-        }
-        for (int t=0; t<numThreads; t++){
-            threads[t].join();
-        }
-//        for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++){ //go over each row
-//
-//            __m256i row = _mm256_maskload_epi32((int*)unitVectors[i].data() + rowIndex*8, mask);
-//            auto int0 = _mm256_extract_epi32(row, 0);
-//            auto int1 = _mm256_extract_epi32(row, 1);
-//            auto int2 = _mm256_extract_epi32(row, 2);
-//            auto int3 = _mm256_extract_epi32(row, 3);
-//            auto int4 = _mm256_extract_epi32(row, 4);
-//            auto int5 = _mm256_extract_epi32(row, 5);
-//            auto int6 = _mm256_extract_epi32(row, 6);
-//            auto int7 = _mm256_extract_epi32(row, 7);
-//
-//            __m256i row0 = _mm256_set1_epi32(int0);
-//            __m256i row1 = _mm256_set1_epi32(int1);
-//            __m256i row2 = _mm256_set1_epi32(int2);
-//            __m256i row3 = _mm256_set1_epi32(int3);
-//            __m256i row4 = _mm256_set1_epi32(int4);
-//            __m256i row5 = _mm256_set1_epi32(int5);
-//            __m256i row6 = _mm256_set1_epi32(int6);
-//            __m256i row7 = _mm256_set1_epi32(int7);
-//
-//            for(int colIndex=0; colIndex<newNumCols / 64; colIndex++){//go over each message
-//
-//                //load 8 vectors for 8 small matrices
-//                auto start = (int*) input[i].data() + colIndex * 64;
-//                __m256i col0 = _mm256_maskload_epi32(start, mask);
-//                __m256i col1 = _mm256_maskload_epi32(start + 8, mask);
-//                __m256i col2 = _mm256_maskload_epi32(start + 16, mask);
-//                __m256i col3 = _mm256_maskload_epi32(start + 24, mask);
-//                __m256i col4 = _mm256_maskload_epi32(start + 32, mask);
-//                __m256i col5 = _mm256_maskload_epi32(start + 40, mask);
-//                __m256i col6 = _mm256_maskload_epi32(start + 48, mask);
-//                __m256i col7 = _mm256_maskload_epi32(start + 56, mask);
-//
-//                __m256i colHigh0 = _mm256_srli_epi64(col0, 32);
-//                __m256i colHigh1 = _mm256_srli_epi64(col1, 32);
-//                __m256i colHigh2 = _mm256_srli_epi64(col2, 32);
-//                __m256i colHigh3 = _mm256_srli_epi64(col3, 32);
-//                __m256i colHigh4 = _mm256_srli_epi64(col4, 32);
-//                __m256i colHigh5 = _mm256_srli_epi64(col5, 32);
-//                __m256i colHigh6 = _mm256_srli_epi64(col6, 32);
-//                __m256i colHigh7 = _mm256_srli_epi64(col7, 32);
-//
-//                //fill each row in every small matrix
-//                for (int j = 0; j < 8; j++) {
-//
-//                    //load 8 vectors for 8 small matrices
-//
-//                    long* startD = (long*)outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
-//                    __m256i outputLow0 = _mm256_maskload_epi64((long long int*)startD, mask);
-//                    __m256i outputHigh0 = _mm256_maskload_epi64((long long int*)startD + 4, mask);
-//                    __m256i outputLow1 = _mm256_maskload_epi64((long long int*)startD + 8, mask);
-//                    __m256i outputHigh1 = _mm256_maskload_epi64((long long int*)startD + 12, mask);
-//                    __m256i outputLow2 = _mm256_maskload_epi64((long long int*)startD + 16, mask);
-//                    __m256i outputHigh2 = _mm256_maskload_epi64((long long int*)startD + 20, mask);
-//                    __m256i outputLow3 = _mm256_maskload_epi64((long long int*)startD + 24, mask);
-//                    __m256i outputHigh3 = _mm256_maskload_epi64((long long int*)startD + 28, mask);
-//                    __m256i outputLow4 = _mm256_maskload_epi64((long long int*)startD + 32, mask);
-//                    __m256i outputHigh4 = _mm256_maskload_epi64((long long int*)startD + 36, mask);
-//                    __m256i outputLow5 = _mm256_maskload_epi64((long long int*)startD + 40, mask);
-//                    __m256i outputHigh5 = _mm256_maskload_epi64((long long int*)startD + 44, mask);
-//                    __m256i outputLow6 = _mm256_maskload_epi64((long long int*)startD + 48, mask);
-//                    __m256i outputHigh6 = _mm256_maskload_epi64((long long int*)startD + 52, mask);
-//                    __m256i outputLow7 = _mm256_maskload_epi64((long long int*)startD + 56, mask);
-//                    __m256i outputHigh7 = _mm256_maskload_epi64((long long int*)startD + 60, mask);
-//
-//                    __m256i rowI;
-//                    if (j == 0) rowI = row0;
-//                    else if (j == 1) rowI = row1;
-//                    else if (j == 2) rowI = row2;
-//                    else if (j == 3) rowI = row3;
-//                    else if (j == 4) rowI = row4;
-//                    else if (j == 5) rowI = row5;
-//                    else if (j == 6) rowI = row6;
-//                    else if (j == 7) rowI = row7;
-//
-//                    //calc 8 first rows
-//                    __m256i c0 = _mm256_mul_epi32(rowI, col0);
-//                    __m256i c1 = _mm256_mul_epi32(rowI, col1);
-//                    __m256i c2 = _mm256_mul_epi32(rowI, col2);
-//                    __m256i c3 = _mm256_mul_epi32(rowI, col3);
-//                    __m256i c4 = _mm256_mul_epi32(rowI, col4);
-//                    __m256i c5 = _mm256_mul_epi32(rowI, col5);
-//                    __m256i c6 = _mm256_mul_epi32(rowI, col6);
-//                    __m256i c7 = _mm256_mul_epi32(rowI, col7);
-//                    outputLow0 = _mm256_add_epi64(outputLow0, c0);
-//                    outputLow1 = _mm256_add_epi64(outputLow1, c1);
-//                    outputLow2 = _mm256_add_epi64(outputLow2, c2);
-//                    outputLow3 = _mm256_add_epi64(outputLow3, c3);
-//                    outputLow4 = _mm256_add_epi64(outputLow4, c4);
-//                    outputLow5 = _mm256_add_epi64(outputLow5, c5);
-//                    outputLow6 = _mm256_add_epi64(outputLow6, c6);
-//                    outputLow7 = _mm256_add_epi64(outputLow7, c7);
-//
-//                    c0 = _mm256_mul_epi32(rowI, colHigh0);
-//                    c1 = _mm256_mul_epi32(rowI, colHigh1);
-//                    c2 = _mm256_mul_epi32(rowI, colHigh2);
-//                    c3 = _mm256_mul_epi32(rowI, colHigh3);
-//                    c4 = _mm256_mul_epi32(rowI, colHigh4);
-//                    c5 = _mm256_mul_epi32(rowI, colHigh5);
-//                    c6 = _mm256_mul_epi32(rowI, colHigh6);
-//                    c7 = _mm256_mul_epi32(rowI, colHigh7);
-//
-//                    outputHigh0 = _mm256_add_epi64(outputHigh0, c0);
-//                    outputHigh1 = _mm256_add_epi64(outputHigh1, c1);
-//                    outputHigh2 = _mm256_add_epi64(outputHigh2, c2);
-//                    outputHigh3 = _mm256_add_epi64(outputHigh3, c3);
-//                    outputHigh4 = _mm256_add_epi64(outputHigh4, c4);
-//                    outputHigh5 = _mm256_add_epi64(outputHigh5, c5);
-//                    outputHigh6 = _mm256_add_epi64(outputHigh6, c6);
-//                    outputHigh7 = _mm256_add_epi64(outputHigh7, c7);
-//
-//                    _mm256_maskstore_epi64((long long int*)startD, mask, outputLow0);
-//                    _mm256_maskstore_epi64((long long int*)startD + 4, mask, outputHigh0);
-//                    _mm256_maskstore_epi64((long long int*)startD + 8, mask, outputLow1);
-//                    _mm256_maskstore_epi64((long long int*)startD + 12, mask, outputHigh1);
-//                    _mm256_maskstore_epi64((long long int*)startD + 16, mask, outputLow2);
-//                    _mm256_maskstore_epi64((long long int*)startD + 20, mask, outputHigh2);
-//                    _mm256_maskstore_epi64((long long int*)startD + 24, mask, outputLow3);
-//                    _mm256_maskstore_epi64((long long int*)startD + 28, mask, outputHigh3);
-//                    _mm256_maskstore_epi64((long long int*)startD + 32, mask, outputLow4);
-//                    _mm256_maskstore_epi64((long long int*)startD + 36, mask, outputHigh4);
-//                    _mm256_maskstore_epi64((long long int*)startD + 40, mask, outputLow5);
-//                    _mm256_maskstore_epi64((long long int*)startD + 44, mask, outputHigh5);
-//                    _mm256_maskstore_epi64((long long int*)startD + 48, mask, outputLow6);
-//                    _mm256_maskstore_epi64((long long int*)startD + 52, mask, outputHigh6);
-//                    _mm256_maskstore_epi64((long long int*)startD + 56, mask, outputLow7);
-//                    _mm256_maskstore_epi64((long long int*)startD + 60, mask, outputHigh7);
-//
-//                }
-//
-//            }
-//        }
+        multMatrices(input, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
 
         toReduce += 2;
 
         if (toReduce == 4 || i == input.size()-1){
             //reduce all matrix
-            for (int t=0; t<numReductionThreads; t++) {
-
-                if ((t + 1) * numReductionRowsForEachThread <= newNumRows) {
-                    reductionThreads[t] = thread(&ProtocolParty::reduceMatrixWithThreads, this, ref(outputDouble), newNumCols, i, t * numReductionRowsForEachThread, (t + 1) * numReductionRowsForEachThread);
-                } else {
-                    reductionThreads[t] = thread(&ProtocolParty::reduceMatrixWithThreads, this, ref(outputDouble), newNumCols, i, t * numReductionRowsForEachThread, newNumRows);
-                }
-            }
-            for (int t=0; t<numReductionThreads; t++){
-                reductionThreads[t].join();
-            }
-//            for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++){ //go over each row
-//
-//                for(int colIndex=0; colIndex<newNumCols / 32; colIndex++){//go over each message
-//
-//                    //load 8 vectors for 8 small matrices
-//                    auto startD = (long*) outputDouble.data() + rowIndex * newNumCols + colIndex * 32;
-//
-//                    __m256i output0 = _mm256_maskload_epi64((long long int*)startD, mask);
-//                    __m256i output1 = _mm256_maskload_epi64((long long int*)startD + 4, mask);
-//                    __m256i output2 = _mm256_maskload_epi64((long long int*)startD + 8, mask);
-//                    __m256i output3 = _mm256_maskload_epi64((long long int*)startD + 12, mask);
-//                    __m256i output4 = _mm256_maskload_epi64((long long int*)startD + 16, mask);
-//                    __m256i output5 = _mm256_maskload_epi64((long long int*)startD + 20, mask);
-//                    __m256i output6 = _mm256_maskload_epi64((long long int*)startD + 24, mask);
-//                    __m256i output7 = _mm256_maskload_epi64((long long int*)startD + 28, mask);
-//
-//
-//                    //get the bottom 31 bit
-//                    __m256i bottom0 = _mm256_and_si256(output0, p);
-//                    __m256i bottom1 = _mm256_and_si256(output1, p);
-//                    __m256i bottom2 = _mm256_and_si256(output2, p);
-//                    __m256i bottom3 = _mm256_and_si256(output3, p);
-//                    __m256i bottom4 = _mm256_and_si256(output4, p);
-//                    __m256i bottom5 = _mm256_and_si256(output5, p);
-//                    __m256i bottom6 = _mm256_and_si256(output6, p);
-//                    __m256i bottom7 = _mm256_and_si256(output7, p);
-////                    unsigned int bottom = multLong & p;
-//
-//                    //get the top 31 bits
-//
-//                    __m256i top0 = _mm256_srli_epi64(output0, 31);
-//                    __m256i top1 = _mm256_srli_epi64(output1, 31);
-//                    __m256i top2 = _mm256_srli_epi64(output2, 31);
-//                    __m256i top3 = _mm256_srli_epi64(output3, 31);
-//                    __m256i top4 = _mm256_srli_epi64(output4, 31);
-//                    __m256i top5 = _mm256_srli_epi64(output5, 31);
-//                    __m256i top6 = _mm256_srli_epi64(output6, 31);
-//                    __m256i top7 = _mm256_srli_epi64(output7, 31);
-//
-//
-//                    top0 = _mm256_and_si256(top0, p);
-//                    top1 = _mm256_and_si256(top1, p);
-//                    top2 = _mm256_and_si256(top2, p);
-//                    top3 = _mm256_and_si256(top3, p);
-//                    top4 = _mm256_and_si256(top4, p);
-//                    top5 = _mm256_and_si256(top5, p);
-//                    top6 = _mm256_and_si256(top6, p);
-//                    top7 = _mm256_and_si256(top7, p);
-////                    unsigned int top = (multLong>>31);
-//
-//                    __m256i res0 = _mm256_add_epi64(bottom0, top0);
-//                    __m256i res1 = _mm256_add_epi64(bottom1, top1);
-//                    __m256i res2 = _mm256_add_epi64(bottom2, top2);
-//                    __m256i res3 = _mm256_add_epi64(bottom3, top3);
-//                    __m256i res4 = _mm256_add_epi64(bottom4, top4);
-//                    __m256i res5 = _mm256_add_epi64(bottom5, top5);
-//                    __m256i res6 = _mm256_add_epi64(bottom6, top6);
-//                    __m256i res7 = _mm256_add_epi64(bottom7, top7);
-//
-//                    //test!!
-//                     top0 = _mm256_srli_epi64(output0, 62);
-//                     top1 = _mm256_srli_epi64(output1, 62);
-//                     top2 = _mm256_srli_epi64(output2, 62);
-//                     top3 = _mm256_srli_epi64(output3, 62);
-//                     top4 = _mm256_srli_epi64(output4, 62);
-//                     top5 = _mm256_srli_epi64(output5, 62);
-//                     top6 = _mm256_srli_epi64(output6, 62);
-//                     top7 = _mm256_srli_epi64(output7, 62);
-//
-//
-//                    top0 = _mm256_and_si256(top0, p);
-//                    top1 = _mm256_and_si256(top1, p);
-//                    top2 = _mm256_and_si256(top2, p);
-//                    top3 = _mm256_and_si256(top3, p);
-//                    top4 = _mm256_and_si256(top4, p);
-//                    top5 = _mm256_and_si256(top5, p);
-//                    top6 = _mm256_and_si256(top6, p);
-//                    top7 = _mm256_and_si256(top7, p);
-////                    unsigned int top = (multLong>>31);
-//
-//                     res0 = _mm256_add_epi64(res0, top0);
-//                     res1 = _mm256_add_epi64(res1, top1);
-//                     res2 = _mm256_add_epi64(res2, top2);
-//                     res3 = _mm256_add_epi64(res3, top3);
-//                     res4 = _mm256_add_epi64(res4, top4);
-//                     res5 = _mm256_add_epi64(res5, top5);
-//                     res6 = _mm256_add_epi64(res6, top6);
-//                     res7 = _mm256_add_epi64(res7, top7);
-//
-//                    //maximim the value of 2p-2
-////                    if(answer.elem>=p)
-////                        answer.elem-=p;
-////
-//////                    }
-//                    __m256i test0 = _mm256_cmpgt_epi32(res0, p);
-//                    __m256i test1 = _mm256_cmpgt_epi32(res1, p);
-//                    __m256i test2 = _mm256_cmpgt_epi32(res2, p);
-//                    __m256i test3 = _mm256_cmpgt_epi32(res3, p);
-//                    __m256i test4 = _mm256_cmpgt_epi32(res4, p);
-//                    __m256i test5 = _mm256_cmpgt_epi32(res5, p);
-//                    __m256i test6 = _mm256_cmpgt_epi32(res6, p);
-//                    __m256i test7 = _mm256_cmpgt_epi32(res7, p);
-//
-//                    __m256i sub0 = _mm256_and_si256(test0, p);
-//                    __m256i sub1 = _mm256_and_si256(test1, p);
-//                    __m256i sub2 = _mm256_and_si256(test2, p);
-//                    __m256i sub3 = _mm256_and_si256(test3, p);
-//                    __m256i sub4 = _mm256_and_si256(test4, p);
-//                    __m256i sub5 = _mm256_and_si256(test5, p);
-//                    __m256i sub6 = _mm256_and_si256(test6, p);
-//                    __m256i sub7 = _mm256_and_si256(test7, p);
-//
-//                    res0 = _mm256_sub_epi32(res0, sub0);
-//                    res1 = _mm256_sub_epi32(res1, sub1);
-//                    res2 = _mm256_sub_epi32(res2, sub2);
-//                    res3 = _mm256_sub_epi32(res3, sub3);
-//                    res4 = _mm256_sub_epi32(res4, sub4);
-//                    res5 = _mm256_sub_epi32(res5, sub5);
-//                    res6 = _mm256_sub_epi32(res6, sub6);
-//                    res7 = _mm256_sub_epi32(res7, sub7);
-//
-//
-//                    _mm256_maskstore_epi64((long long int*)startD, mask, res0);
-//                    _mm256_maskstore_epi64((long long int*)startD + 4, mask, res1);
-//                    _mm256_maskstore_epi64((long long int*)startD + 8, mask, res2);
-//                    _mm256_maskstore_epi64((long long int*)startD + 12, mask, res3);
-//                    _mm256_maskstore_epi64((long long int*)startD + 16, mask, res4);
-//                    _mm256_maskstore_epi64((long long int*)startD + 20, mask, res5);
-//                    _mm256_maskstore_epi64((long long int*)startD + 24, mask, res6);
-//                    _mm256_maskstore_epi64((long long int*)startD + 28, mask, res7);
-//
-////                    answer.elem = bottom + top;
-//
-//
-//
-//                }
-//            }
+            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
 
             toReduce = 0;
         }
@@ -2411,14 +2111,12 @@ void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input
 }
 
 template <class FieldType>
-void ProtocolParty<FieldType>::multiplyVectorsPerThread(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors, vector<long> & outputDouble,
-                                                        int newNumCols, int i, int start, int end){
+void ProtocolParty<FieldType>::multMatrices(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
+        vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask){
 
-    __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+    for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++) { //go over each row
 
-    for(int rowIndex = start; rowIndex<end; rowIndex++){ //go over each row
-
-        __m256i row = _mm256_maskload_epi32((int*)unitVectors[i].data() + rowIndex*8, mask);
+        __m256i row = _mm256_maskload_epi32((int *) unitVectors[i].data() + rowIndex * 8, mask);
         auto int0 = _mm256_extract_epi32(row, 0);
         auto int1 = _mm256_extract_epi32(row, 1);
         auto int2 = _mm256_extract_epi32(row, 2);
@@ -2437,10 +2135,10 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThread(vector<vector<FieldType>
         __m256i row6 = _mm256_set1_epi32(int6);
         __m256i row7 = _mm256_set1_epi32(int7);
 
-        for(int colIndex=0; colIndex<newNumCols / 64; colIndex++){//go over each message
+        for (int colIndex = 0; colIndex < newNumCols / 64; colIndex++) {//go over each message
 
             //load 8 vectors for 8 small matrices
-            auto start = (int*) input[i].data() + colIndex * 64;
+            auto start = (int *) input[i].data() + colIndex * 64;
             __m256i col0 = _mm256_maskload_epi32(start, mask);
             __m256i col1 = _mm256_maskload_epi32(start + 8, mask);
             __m256i col2 = _mm256_maskload_epi32(start + 16, mask);
@@ -2464,23 +2162,24 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThread(vector<vector<FieldType>
 
                 //load 8 vectors for 8 small matrices
 
-                long* startD = (long*)outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
-                __m256i outputLow0 = _mm256_maskload_epi64((long long int*)startD, mask);
-                __m256i outputHigh0 = _mm256_maskload_epi64((long long int*)startD + 4, mask);
-                __m256i outputLow1 = _mm256_maskload_epi64((long long int*)startD + 8, mask);
-                __m256i outputHigh1 = _mm256_maskload_epi64((long long int*)startD + 12, mask);
-                __m256i outputLow2 = _mm256_maskload_epi64((long long int*)startD + 16, mask);
-                __m256i outputHigh2 = _mm256_maskload_epi64((long long int*)startD + 20, mask);
-                __m256i outputLow3 = _mm256_maskload_epi64((long long int*)startD + 24, mask);
-                __m256i outputHigh3 = _mm256_maskload_epi64((long long int*)startD + 28, mask);
-                __m256i outputLow4 = _mm256_maskload_epi64((long long int*)startD + 32, mask);
-                __m256i outputHigh4 = _mm256_maskload_epi64((long long int*)startD + 36, mask);
-                __m256i outputLow5 = _mm256_maskload_epi64((long long int*)startD + 40, mask);
-                __m256i outputHigh5 = _mm256_maskload_epi64((long long int*)startD + 44, mask);
-                __m256i outputLow6 = _mm256_maskload_epi64((long long int*)startD + 48, mask);
-                __m256i outputHigh6 = _mm256_maskload_epi64((long long int*)startD + 52, mask);
-                __m256i outputLow7 = _mm256_maskload_epi64((long long int*)startD + 56, mask);
-                __m256i outputHigh7 = _mm256_maskload_epi64((long long int*)startD + 60, mask);
+                long *startD =
+                        (long *) outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
+                __m256i outputLow0 = _mm256_maskload_epi64((long long int *) startD, mask);
+                __m256i outputHigh0 = _mm256_maskload_epi64((long long int *) startD + 4, mask);
+                __m256i outputLow1 = _mm256_maskload_epi64((long long int *) startD + 8, mask);
+                __m256i outputHigh1 = _mm256_maskload_epi64((long long int *) startD + 12, mask);
+                __m256i outputLow2 = _mm256_maskload_epi64((long long int *) startD + 16, mask);
+                __m256i outputHigh2 = _mm256_maskload_epi64((long long int *) startD + 20, mask);
+                __m256i outputLow3 = _mm256_maskload_epi64((long long int *) startD + 24, mask);
+                __m256i outputHigh3 = _mm256_maskload_epi64((long long int *) startD + 28, mask);
+                __m256i outputLow4 = _mm256_maskload_epi64((long long int *) startD + 32, mask);
+                __m256i outputHigh4 = _mm256_maskload_epi64((long long int *) startD + 36, mask);
+                __m256i outputLow5 = _mm256_maskload_epi64((long long int *) startD + 40, mask);
+                __m256i outputHigh5 = _mm256_maskload_epi64((long long int *) startD + 44, mask);
+                __m256i outputLow6 = _mm256_maskload_epi64((long long int *) startD + 48, mask);
+                __m256i outputHigh6 = _mm256_maskload_epi64((long long int *) startD + 52, mask);
+                __m256i outputLow7 = _mm256_maskload_epi64((long long int *) startD + 56, mask);
+                __m256i outputHigh7 = _mm256_maskload_epi64((long long int *) startD + 60, mask);
 
                 __m256i rowI;
                 if (j == 0) rowI = row0;
@@ -2528,22 +2227,22 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThread(vector<vector<FieldType>
                 outputHigh6 = _mm256_add_epi64(outputHigh6, c6);
                 outputHigh7 = _mm256_add_epi64(outputHigh7, c7);
 
-                _mm256_maskstore_epi64((long long int*)startD, mask, outputLow0);
-                _mm256_maskstore_epi64((long long int*)startD + 4, mask, outputHigh0);
-                _mm256_maskstore_epi64((long long int*)startD + 8, mask, outputLow1);
-                _mm256_maskstore_epi64((long long int*)startD + 12, mask, outputHigh1);
-                _mm256_maskstore_epi64((long long int*)startD + 16, mask, outputLow2);
-                _mm256_maskstore_epi64((long long int*)startD + 20, mask, outputHigh2);
-                _mm256_maskstore_epi64((long long int*)startD + 24, mask, outputLow3);
-                _mm256_maskstore_epi64((long long int*)startD + 28, mask, outputHigh3);
-                _mm256_maskstore_epi64((long long int*)startD + 32, mask, outputLow4);
-                _mm256_maskstore_epi64((long long int*)startD + 36, mask, outputHigh4);
-                _mm256_maskstore_epi64((long long int*)startD + 40, mask, outputLow5);
-                _mm256_maskstore_epi64((long long int*)startD + 44, mask, outputHigh5);
-                _mm256_maskstore_epi64((long long int*)startD + 48, mask, outputLow6);
-                _mm256_maskstore_epi64((long long int*)startD + 52, mask, outputHigh6);
-                _mm256_maskstore_epi64((long long int*)startD + 56, mask, outputLow7);
-                _mm256_maskstore_epi64((long long int*)startD + 60, mask, outputHigh7);
+                _mm256_maskstore_epi64((long long int *) startD, mask, outputLow0);
+                _mm256_maskstore_epi64((long long int *) startD + 4, mask, outputHigh0);
+                _mm256_maskstore_epi64((long long int *) startD + 8, mask, outputLow1);
+                _mm256_maskstore_epi64((long long int *) startD + 12, mask, outputHigh1);
+                _mm256_maskstore_epi64((long long int *) startD + 16, mask, outputLow2);
+                _mm256_maskstore_epi64((long long int *) startD + 20, mask, outputHigh2);
+                _mm256_maskstore_epi64((long long int *) startD + 24, mask, outputLow3);
+                _mm256_maskstore_epi64((long long int *) startD + 28, mask, outputHigh3);
+                _mm256_maskstore_epi64((long long int *) startD + 32, mask, outputLow4);
+                _mm256_maskstore_epi64((long long int *) startD + 36, mask, outputHigh4);
+                _mm256_maskstore_epi64((long long int *) startD + 40, mask, outputLow5);
+                _mm256_maskstore_epi64((long long int *) startD + 44, mask, outputHigh5);
+                _mm256_maskstore_epi64((long long int *) startD + 48, mask, outputLow6);
+                _mm256_maskstore_epi64((long long int *) startD + 52, mask, outputHigh6);
+                _mm256_maskstore_epi64((long long int *) startD + 56, mask, outputLow7);
+                _mm256_maskstore_epi64((long long int *) startD + 60, mask, outputHigh7);
 
             }
 
@@ -2551,13 +2250,12 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThread(vector<vector<FieldType>
     }
 }
 
+
 template <class FieldType>
-void ProtocolParty<FieldType>::reduceMatrixWithThreads(vector<long> & outputDouble, int newNumCols, int i, int start, int end){
+void ProtocolParty<FieldType>::reduceMatrix(vector<long> & outputDouble, int newNumRows, int newNumCols,
+        __m256i mask, __m256i p){
 
-    __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-    __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
-
-    for(int rowIndex = start; rowIndex<end; rowIndex++){ //go over each row
+    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++){ //go over each row
 
         for(int colIndex=0; colIndex<newNumCols / 32; colIndex++){//go over each message
 
@@ -2616,7 +2314,7 @@ void ProtocolParty<FieldType>::reduceMatrixWithThreads(vector<long> & outputDoub
             __m256i res6 = _mm256_add_epi64(bottom6, top6);
             __m256i res7 = _mm256_add_epi64(bottom7, top7);
 
-            //test!!
+
             top0 = _mm256_srli_epi64(output0, 62);
             top1 = _mm256_srli_epi64(output1, 62);
             top2 = _mm256_srli_epi64(output2, 62);
@@ -2689,7 +2387,187 @@ void ProtocolParty<FieldType>::reduceMatrixWithThreads(vector<long> & outputDoub
             _mm256_maskstore_epi64((long long int*)startD + 28, mask, res7);
 
 //                    answer.elem = bottom + top;
+
         }
+    }
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::multiplyVectorsWithThreads(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
+                                                vector<FieldType> & output, int numOfRows, int numOfCols){
+
+    int toReduce = 0; //Every 4 multiplications there is need to reduce all table
+    __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+    __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
+
+    int newNumRows = numOfRows;
+    if (numOfRows % 8 != 0) {
+        newNumRows = (numOfRows / 8)*8 + 8;
+        for( int i=0; i<unitVectors.size(); i++) {
+            unitVectors[i].resize(newNumRows);
+        }
+    }
+
+    int newNumCols = numOfCols;
+    if (numOfCols % 64 != 0) {
+        newNumCols = (numOfCols / 64)*64 + 64;
+        for( int i=0; i<input.size(); i++){
+            input[i].resize(newNumCols);
+        }
+    }
+
+    int numThreads = 2;
+    vector<thread> threads(numThreads);
+
+    int numClientsForEachThread;
+    if (input.size() <= numThreads){
+        numThreads = input.size();
+        numClientsForEachThread = 1;
+    } else{
+        numClientsForEachThread = (input.size() + numThreads - 1)/ numThreads;
+    }
+
+    vector<vector<long>> outputDoublePerThread(numThreads, vector<long>(newNumRows*newNumCols));
+    vector<long> outputDouble(newNumRows*newNumCols);
+
+    for (int t=0; t<numThreads; t++) {
+
+            if ((t + 1) * numClientsForEachThread <= input.size()) {
+                threads[t] = thread(&ProtocolParty::multiplyVectorsPerThread, this, ref(input), ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+            } else {
+                threads[t] = thread(&ProtocolParty::multiplyVectorsPerThread, this, ref(input), ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, input.size());
+            }
+        }
+        for (int t=0; t<numThreads; t++){
+            threads[t].join();
+        }
+
+
+    for(int t=0; t<numThreads; t++){//go over each client
+
+        for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++){ //go over each row
+
+            for(int colIndex=0; colIndex<newNumCols / 32; colIndex++) {//go over each message
+
+                //load 8 vectors for 8 small matrices
+                auto threadRow = (long *) outputDoublePerThread[t].data() + rowIndex * newNumCols + colIndex * 32;
+                auto outputRow = (long *) outputDouble.data() + rowIndex * newNumCols + colIndex * 32;
+
+                __m256i threadRow0 = _mm256_maskload_epi64((long long int *) threadRow, mask);
+                __m256i threadRow1 = _mm256_maskload_epi64((long long int *) threadRow + 4, mask);
+                __m256i threadRow2 = _mm256_maskload_epi64((long long int *) threadRow + 8, mask);
+                __m256i threadRow3 = _mm256_maskload_epi64((long long int *) threadRow + 12, mask);
+                __m256i threadRow4 = _mm256_maskload_epi64((long long int *) threadRow + 16, mask);
+                __m256i threadRow5 = _mm256_maskload_epi64((long long int *) threadRow + 20, mask);
+                __m256i threadRow6 = _mm256_maskload_epi64((long long int *) threadRow + 24, mask);
+                __m256i threadRow7 = _mm256_maskload_epi64((long long int *) threadRow + 28, mask);
+
+
+                __m256i outputRow0 = _mm256_maskload_epi64((long long int *) outputRow, mask);
+                __m256i outputRow1 = _mm256_maskload_epi64((long long int *) outputRow + 4, mask);
+                __m256i outputRow2 = _mm256_maskload_epi64((long long int *) outputRow + 8, mask);
+                __m256i outputRow3 = _mm256_maskload_epi64((long long int *) outputRow + 12, mask);
+                __m256i outputRow4 = _mm256_maskload_epi64((long long int *) outputRow + 16, mask);
+                __m256i outputRow5 = _mm256_maskload_epi64((long long int *) outputRow + 20, mask);
+                __m256i outputRow6 = _mm256_maskload_epi64((long long int *) outputRow + 24, mask);
+                __m256i outputRow7 = _mm256_maskload_epi64((long long int *) outputRow + 28, mask);
+
+                outputRow0 = _mm256_add_epi64(threadRow0, outputRow0);
+                outputRow1 = _mm256_add_epi64(threadRow1, outputRow1);
+                outputRow2 = _mm256_add_epi64(threadRow2, outputRow2);
+                outputRow3 = _mm256_add_epi64(threadRow3, outputRow3);
+                outputRow4 = _mm256_add_epi64(threadRow4, outputRow4);
+                outputRow5 = _mm256_add_epi64(threadRow5, outputRow5);
+                outputRow6 = _mm256_add_epi64(threadRow6, outputRow6);
+                outputRow7 = _mm256_add_epi64(threadRow7, outputRow7);
+
+                _mm256_maskstore_epi64((long long int *) outputRow, mask, outputRow0);
+                _mm256_maskstore_epi64((long long int *) outputRow + 4, mask, outputRow1);
+                _mm256_maskstore_epi64((long long int *) outputRow + 8, mask, outputRow2);
+                _mm256_maskstore_epi64((long long int *) outputRow + 12, mask, outputRow3);
+                _mm256_maskstore_epi64((long long int *) outputRow + 16, mask, outputRow4);
+                _mm256_maskstore_epi64((long long int *) outputRow + 20, mask, outputRow5);
+                _mm256_maskstore_epi64((long long int *) outputRow + 24, mask, outputRow6);
+                _mm256_maskstore_epi64((long long int *) outputRow + 28, mask, outputRow7);
+
+            }
+        }
+
+        toReduce ++;
+
+        if (toReduce == 32 || t == numThreads - 1){
+//            //reduce all matrix
+            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
+            toReduce = 0;
+        }
+
+    }
+//    cout<<"output double:"<<endl;
+//    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++) { //go over each row
+//        for (int colIndex = 0; colIndex < newNumCols; colIndex++) {//go over each message
+//            cout<<outputDouble[rowIndex * newNumCols  + colIndex] << " ";
+//        }
+//        cout<<endl;
+//    }
+
+    auto t1 = high_resolution_clock::now();
+    int numBlocks = (numOfCols % 8 == 0) ? numOfCols/8 : numOfCols/8 + 1;
+    int remain = (numOfCols % 8 == 0) ? 8 : numOfCols%8;
+
+    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++){ //go over each row
+
+        for(int colIndex=0; colIndex<numBlocks; colIndex++){//go over each message
+
+            for (int k=0; (colIndex < numBlocks-1 && k<8) || (colIndex == numBlocks-1 && k<remain); k++) {
+
+                if (k % 2 != 0) {
+                    //get the high int
+                    output[rowIndex * numOfCols + colIndex * 8 + k] = (int)outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2];
+                } else {
+                    //get the low int
+                    output[rowIndex * numOfCols + colIndex * 8 + k] = (int)outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2];
+                }
+            }
+        }
+    }
+
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds copy output: " << duration << endl;
+    }
+//    cout<<"output:"<<endl;
+//    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++) { //go over each row
+//
+//        for (int colIndex = 0; colIndex < numOfCols; colIndex++) {//go over each message
+//            cout<<output[rowIndex * numOfCols  + colIndex] << " ";
+//        }
+//        cout<<endl;
+//    }
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::multiplyVectorsPerThread(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors, vector<long> & outputDouble,
+                                                        int newNumRows, int newNumCols, int start, int end){
+
+    __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+    __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
+    int toReduce = 0;
+
+    for(int i=start; i<end; i++){//go over each client
+
+        multMatrices(input, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
+
+        toReduce += 2;
+
+        if (toReduce == 4 || i == input.size()-1){
+//            //reduce all matrix
+            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
+
+            toReduce = 0;
+        }
+
     }
 }
 
@@ -3304,7 +3182,7 @@ void ProtocolParty<FieldType>::outputPhase()
                               accIntCountersMat.size());
 
 
-    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     cout<<"passed with distinction"<<endl;
 }
