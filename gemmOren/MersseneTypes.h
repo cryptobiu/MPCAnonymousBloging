@@ -144,7 +144,7 @@ struct SMersenne31Classic
 	}
 };
 // implemtation of Merssene31 using hi-lo integer intrinsic.
-struct SMersenne31HiLo
+/*struct SMersenne31HiLo
 {
 	typedef unsigned int basic_t;
 	static const basic_t p = (1U << 31) - 1;
@@ -187,7 +187,7 @@ struct SMersenne31HiLo
 		basic_t sum = lo + hi * 2;
 		return SMersenne31HiLo(sum);
 	}
-};
+};*/
 
 ///////////////////////////////////////////////////////////////////
 // merssene61 code

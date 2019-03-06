@@ -8,7 +8,10 @@ set(CMAKE_CUDA_COMPILER /usr/local/cuda/bin/nvcc)
 
 find_package(CUDA REQUIRED)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -std=c++11 -mbmi2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -O3 -std=c++11 -mbmi2 -msse4.2 -march=native")
+
+# nvcc flags                                                                                                                                             
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_70 -Xcompiler -march=native)
 
 INCLUDE_DIRECTORIES($ENV{HOME} $ENV{HOME}/libscapi/install/include
         $ENV{HOME}/libscapi/install/include/OTExtensionBristol $ENV{HOME}/MPCAnonymousBloging/gemmOren)

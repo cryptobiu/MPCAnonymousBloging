@@ -1025,7 +1025,7 @@ void testGemmTNTilesCpu(int m, int width_a, int width_b, int tile_size)
 }
 
 int testSplit(size_t m, size_t width_a, size_t width_b);
-int main(int argc, const char *arg[]) 
+int main2(int argc, const char *arg[]) 
 {
 	// Parse the command line to obtain GEMM dimensions and scalar values.
 	// GEMM problem dimensions.
