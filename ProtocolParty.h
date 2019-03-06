@@ -19,6 +19,8 @@
 #include <emmintrin.h>
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
+#include "cudaGemm.h"
+
 
 #define flag_print false
 #define flag_print_timings true
@@ -457,24 +459,13 @@ template <class FieldType>
 void ProtocolParty<FieldType>::runOnline() {
 
 
+
     auto t1 = high_resolution_clock::now();
-    timer->startSubTask("ComputePhase", iteration);
-    timer->endSubTask("ComputePhase", iteration);
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-
-
-    if(flag_print_timings) {
-        cout << "time in milliseconds computationPhase: " << duration << endl;
-    }
-
-    t1 = high_resolution_clock::now();
     timer->startSubTask("VerificationPhase", iteration);
     verificationPhase();
     timer->endSubTask("VerificationPhase", iteration);
-    t2 = high_resolution_clock::now();
-    duration = duration_cast<milliseconds>(t2-t1).count();
+    auto t2 = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
 
     if(flag_print_timings) {
         cout << "time in milliseconds verificationPhase: " << duration << endl;
@@ -1941,6 +1932,25 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
     matrixMulTN(accMsgsMat.data(), l*sqrtR,  shiftedMsgsVectors.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
             numClients,  l*sqrtR, sqrtU);
+
+    int threads_per_device = 2;
+    int num_devices = 1;
+    //cudaSafeCall(cudaGetDeviceCount(&num_devices));
+    printf("%d devices used\n", num_devices);
+    std::vector<int> devices;
+    for (int device = 0; device < num_devices; ++device)
+    {
+        for (int i = 0; i < threads_per_device; ++i)
+            devices.push_back(device);
+    }
+
+    size_t tile_size = std::min(16384ULL, accMsgsMat.size() / devices.size());
+
+    GemmTNTiles31((merssene31_t *) accMsgsMat.data(), l*sqrtR,
+                  (merssene31_t *) shiftedMsgsVectors.data(), l*sqrtR,
+                  (merssene31_t *) shiftedUnitVectors.data(), sqrtU,
+                  numClients, l*sqrtR, sqrtU, tile_size,
+                  devices, false);
 
     matrixMulTN(accMsgsSquareMat.data(), l*sqrtR,  shiftedMsgsVectorsSquares.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
             numClients, l*sqrtR, sqrtU);

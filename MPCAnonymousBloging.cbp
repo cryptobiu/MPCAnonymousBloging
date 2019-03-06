@@ -37,6 +37,8 @@
 					<Add directory="/home/meital"/>
 					<Add directory="/home/meital/libscapi/install/include"/>
 					<Add directory="/home/meital/libscapi/install/include/OTExtensionBristol"/>
+					<Add directory="/home/meital/MPCAnonymousBloging/gemmOren"/>
+					<Add directory="/usr/local/cuda/include"/>
 					<Add directory="/usr/include/c++/7"/>
 					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
 					<Add directory="/usr/include/c++/7/backward"/>
@@ -63,6 +65,8 @@
 					<Add directory="/home/meital"/>
 					<Add directory="/home/meital/libscapi/install/include"/>
 					<Add directory="/home/meital/libscapi/install/include/OTExtensionBristol"/>
+					<Add directory="/home/meital/MPCAnonymousBloging/gemmOren"/>
+					<Add directory="/usr/local/cuda/include"/>
 					<Add directory="/usr/include/c++/7"/>
 					<Add directory="/usr/include/x86_64-linux-gnu/c++/7"/>
 					<Add directory="/usr/include/c++/7/backward"/>
@@ -90,10 +94,16 @@
 				</MakeCommands>
 			</Target>
 		</Build>
+		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/CMakeFiles/MPCAnonymousBloging.dir/gemmOren/MPCAnonymousBloging_generated_kernel.cu.o">
+			<Option target="MPCAnonymousBloging"/>
+		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolParty.cpp">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/ProtocolParty.h">
+			<Option target="MPCAnonymousBloging"/>
+		</Unit>
+		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/gemmOren/kernel.cu">
 			<Option target="MPCAnonymousBloging"/>
 		</Unit>
 		<Unit filename="/home/meital/ClionProjects/MPCAnonymousBloging/main.cpp">
