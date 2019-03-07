@@ -1931,8 +1931,8 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
                                  vector<FieldType> &accCountersMat){
 
 
-    matrixMulTN(accMsgsMat.data(), l*sqrtR,  shiftedMsgsVectors.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
-            numClients,  l*sqrtR, sqrtU);
+    //matrixMulTN(accMsgsMat.data(), l*sqrtR,  shiftedMsgsVectors.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
+    //     numClients,  l*sqrtR, sqrtU);
 
     int threads_per_device = 2;
     int num_devices = 1;
@@ -1945,22 +1945,26 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
             devices.push_back(device);
     }
 
-    size_t tile_size = std::min(16384ULL, (unsigned long long) accMsgsMat.size() / devices.size());
+    size_t tile_size = std::min(16384ULL, (unsigned long long) numClients / devices.size());
 
-    GemmTNTiles31((merssene31_t *) accMsgsMat.data(), l*sqrtR,
+    GemmTNTiles31(
                   (merssene31_t *) shiftedMsgsVectors.data(), l*sqrtR,
                   (merssene31_t *) shiftedUnitVectors.data(), sqrtU,
+		  (merssene31_t *) accMsgsMat.data(), l*sqrtR,
                   numClients, l*sqrtR, sqrtU, tile_size,
                   devices, false);
+    //matrixMulTN(accMsgsSquareMat.data(), l*sqrtR,  shiftedMsgsVectorsSquares.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
+    //    numClients, l*sqrtR, sqrtU);
 
-    matrixMulTN(accMsgsSquareMat.data(), l*sqrtR,  shiftedMsgsVectorsSquares.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
-            numClients, l*sqrtR, sqrtU);
+    GemmTNTiles31( (merssene31_t*)shiftedMsgsVectorsSquares.data(), l*sqrtR, 
+    (merssene31_t*)shiftedUnitVectors.data(), sqrtU, (merssene31_t*) accMsgsSquareMat.data(), l*sqrtR,
+     numClients, l*sqrtR, sqrtU, tile_size, devices, false);
 
+    //matrixMulTN(accCountersMat.data(), sqrtR,  shiftedMsgsVectorsCounters.data(), sqrtR,shiftedUnitVectors.data(), sqrtU,
+    //        numClients, sqrtR, sqrtU);
 
-    matrixMulTN(accCountersMat.data(), sqrtR,  shiftedMsgsVectorsCounters.data(), sqrtR,shiftedUnitVectors.data(), sqrtU,
-            numClients, sqrtR, sqrtU);
-
-
+    GemmTNTiles31 ( (merssene31_t*) shiftedMsgsVectorsCounters.data(), sqrtR, (merssene31_t*)shiftedUnitVectors.data(), sqrtU,
+	(merssene31_t*) accCountersMat.data(), sqrtR, numClients, sqrtR, sqrtU, tile_size, devices, false);
 
 
 }
