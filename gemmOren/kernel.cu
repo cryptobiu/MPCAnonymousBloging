@@ -628,6 +628,7 @@ void processTiles31(int device_id, merssene31_t* ptr_a, size_t h_lda,
 
 
 	C.SetZero(stream);
+	printf("%d %d %d %d", C._rows, C._columns, C._ldm, h_ldc);
 	for (int i = 0; i < num_tiles; ++i)
 	{
 		auto& tile = tiles[i];
@@ -654,8 +655,9 @@ void processTiles31(int device_id, merssene31_t* ptr_a, size_t h_lda,
 	cudaSafeCall(cudaMemcpy2DAsync(h_C.data(), h_ldc * sizeof(merssene31_t),
 		C._ptr, C._ldm * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
 		C._columns, cudaMemcpyDeviceToHost, stream));
-
+	printf("******");
 	cudaSafeCall(cudaStreamSynchronize(stream));
+	printf("******");
 	if (stream != nullptr)
 		cudaSafeCall(cudaStreamDestroy(stream));
 
