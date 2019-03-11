@@ -19,6 +19,7 @@
 #include <emmintrin.h>
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
+#include <omp.h>
 #ifdef __CUDA_ARCH__
 #include "cudaGemm.h"
 #endif
@@ -60,7 +61,8 @@ private:
     int securityParamter = 40;
     int sqrtR;
     int sqrtU;
-
+    int numThreads;
+    vector<thread> threads;
 
     vector<vector<FieldType>> msgsVectors;
     vector<vector<FieldType>> unitVectors;
@@ -302,6 +304,8 @@ public:
     void generateRandomSharesWithCheck(int numOfRnadoms, vector<FieldType>& randomElementsToFill);
     void generateRandom2TAndTShares(int numOfRandomPairs, vector<FieldType>& randomElementsToFill);
 
+    void calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, int start, int end);
+    void calcRecBufElements(vector<vector<FieldType>> & recBufsElements, vector<FieldType> & randomElementsToFill, int start, int end);
     /**
      * Check whether given points lie on polynomial of degree d.
      * This check is performed by interpolating x on the first d + 1 positions of α and check the remaining positions.
@@ -358,6 +362,8 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
     numServers = stoi(this->getParser().getValueByKey(arguments, "numServers"));
     numClients = stoi(this->getParser().getValueByKey(arguments, "numClients"));
+    numThreads = stoi(this->getParser().getValueByKey(arguments, "numThreads"));
+    threads.resize(numThreads);
     string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
@@ -484,7 +490,7 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("outputPhase", iteration);
-    outputPhase();
+    //outputPhase();
     timer->endSubTask("outputPhase", iteration);
     t2 = high_resolution_clock::now();
 
@@ -644,12 +650,8 @@ void ProtocolParty<FieldType>::getRandomShares(int numOfRandoms, vector<FieldTyp
 template <class FieldType>
 void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, vector<FieldType>& randomElementsToFill){
 
-
-    int index = 0;
     int robin = 0;
     int no_random = numOfRandomPairs;
-
-    vector<FieldType> x1(N),y1(N), x2(N),y2(N), t1(N), r1(N), t2(N), r2(N);;
 
     vector<vector<FieldType>> sendBufsElements(N);
     vector<vector<FieldType>> recBufsElements(N);
@@ -672,12 +674,117 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
         recBufsElements[i].resize(no_buckets*2);
     }
 
+    int sizeForEachThread;
+    if (no_buckets <= numThreads){
+        numThreads = no_buckets;
+        sizeForEachThread = 1;
+    } else{
+        sizeForEachThread = (no_buckets + numThreads - 1)/ numThreads;
+    }
+
+    for (int t=0; t<numThreads; t++) {
+
+        if ((t + 1) * sizeForEachThread <= no_buckets) {
+            threads[t] = thread(&ProtocolParty::calcSendBufElements, this, ref(sendBufsElements), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::calcSendBufElements, this, ref(sendBufsElements), t * sizeForEachThread, no_buckets);
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
     /**
      *  generate random sharings.
      *  first degree t.
      *
      */
-    for(int k=0; k < no_buckets; k++)
+
+//    for(int k=0; k < no_buckets; k++)
+//    {
+//        // generate random degree-T polynomial
+//        for(int i = 0; i < T+1; i++)
+//        {
+//            // A random field element, uniform distribution, note that x1[0] is the secret which is also random
+//            x1[i] = field->Random();
+//
+//        }
+//
+//        matrix_vand.MatrixMult(x1, y1,T+1); // eval poly at alpha-positions
+//
+//        x2[0] = x1[0];
+//        // generate random degree-T polynomial
+//        for(int i = 1; i < 2*T+1; i++)
+//        {
+//            // A random field element, uniform distribution, note that x1[0] is the secret which is also random
+//            x2[i] = field->Random();
+//
+//        }
+//
+//        matrix_vand.MatrixMult(x2, y2,2*T+1);
+//
+//        // prepare shares to be sent
+//        for(int i=0; i < N; i++)
+//        {
+//            //cout << "y1[ " <<i<< "]" <<y1[i] << endl;
+//            sendBufsElements[i][2*k] = y1[i];
+//            sendBufsElements[i][2*k + 1] = y2[i];
+//
+//        }
+//    }
+
+
+    roundFunctionSyncElements(sendBufsElements, recBufsElements,4);
+
+    for (int t=0; t<numThreads; t++) {
+
+        if ((t + 1) * sizeForEachThread <= no_buckets) {
+            threads[t] = thread(&ProtocolParty::calcRecBufElements, this, ref(recBufsElements), ref(randomElementsToFill), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::calcRecBufElements, this, ref(recBufsElements), ref(randomElementsToFill), t * sizeForEachThread, no_buckets);
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+//    for(int k=0; k < no_buckets; k++) {
+//        for (int i = 0; i < N; i++) {
+//
+//            t1[i] = recBufsElements[i][2*k];
+//            t2[i] = recBufsElements[i][(2*k +1)];
+//
+//
+//        }
+//        matrix_vand_transpose.MatrixMult(t1, r1,N-T);
+//        matrix_vand_transpose.MatrixMult(t2, r2,N-T);
+//
+//        //copy the resulting vector to the array of randoms
+//        for (int i = 0; i < (N - T); i++) {
+//
+//            randomElementsToFill[index*2] = r1[i];
+//            randomElementsToFill[index*2 +1] = r2[i];
+//            index++;
+//
+//        }
+//    }
+
+    //check validity of the t-shares. 2t-shares do not have to be checked
+    //copy the t-shares for checking
+
+    for(int i=0; i<randomElementsOnlyTshares.size(); i++){
+
+        randomElementsOnlyTshares[i] = randomElementsToFill[2*i];
+    }
+
+    batchConsistencyCheckOfShares(randomElementsOnlyTshares);
+
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, int start, int end){
+
+    vector<FieldType> x1(N),y1(N), x2(N),y2(N);
+
+    for(int k=start; k < end; k++)
     {
         // generate random degree-T polynomial
         for(int i = 0; i < T+1; i++)
@@ -709,11 +816,14 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
 
         }
     }
+}
 
+template <class FieldType>
+void ProtocolParty<FieldType>::calcRecBufElements(vector<vector<FieldType>> & recBufsElements, vector<FieldType> & randomElementsToFill, int start, int end){
 
-    roundFunctionSyncElements(sendBufsElements, recBufsElements,4);
+    vector<FieldType> t1(N), r1(N), t2(N), r2(N);
 
-    for(int k=0; k < no_buckets; k++) {
+    for(int k=start; k < end; k++) {
         for (int i = 0; i < N; i++) {
 
             t1[i] = recBufsElements[i][2*k];
@@ -727,23 +837,11 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
         //copy the resulting vector to the array of randoms
         for (int i = 0; i < (N - T); i++) {
 
-            randomElementsToFill[index*2] = r1[i];
-            randomElementsToFill[index*2 +1] = r2[i];
-            index++;
+            randomElementsToFill[k*2] = r1[i];
+            randomElementsToFill[k*2 +1] = r2[i];
 
         }
     }
-
-    //check validity of the t-shares. 2t-shares do not have to be checked
-    //copy the t-shares for checking
-
-    for(int i=0; i<randomElementsOnlyTshares.size(); i++){
-
-        randomElementsOnlyTshares[i] = randomElementsToFill[2*i];
-    }
-
-    batchConsistencyCheckOfShares(randomElementsOnlyTshares);
-
 }
 
 /**
@@ -2416,9 +2514,6 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreads(vector<vector<FieldTyp
         }
     }
 
-    int numThreads = 2;
-    vector<thread> threads(numThreads);
-
     int numClientsForEachThread;
     if (input.size() <= numThreads){
         numThreads = input.size();
@@ -3193,7 +3288,7 @@ void ProtocolParty<FieldType>::roundFunctionSync(vector<vector<byte>> &sendBufs,
 
     //cout<<"in roundFunctionSync "<< round<< endl;
 
-    int numThreads = 10;//parties.size();
+    int numThreads = parties.size();
     int numPartiesForEachThread;
 
     if (parties.size() <= numThreads){
@@ -3268,7 +3363,7 @@ void ProtocolParty<FieldType>::roundFunctionSyncElements(vector<vector<FieldType
 
     //cout<<"in roundFunctionSync "<< round<< endl;
 
-    int numThreads = 10;//parties.size();
+    int numThreads = parties.size();
     int numPartiesForEachThread;
 
     if (parties.size() <= numThreads){
