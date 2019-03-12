@@ -296,6 +296,10 @@ public:
      * First, for each input gate, the party owning the input creates shares for that input by choosing a random coefficients for the polynomial
      * Then, all the shares are sent to the relevant party
      */
+
+    void prepareForUnitTest(vector<FieldType> &randomElements, vector<vector<FieldType>> &msgsVectors,
+                            vector<FieldType> &sumXandSqaure, vector<vector<FieldType>> &msgsVectorsForUnitTest, int start, int end);
+
     void inputPhase();
     void inputVerification(vector<FieldType> &inputShares);
 
@@ -351,6 +355,8 @@ public:
 
 
 };
+
+
 
 
 template <class FieldType>
@@ -490,7 +496,7 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("outputPhase", iteration);
-    //outputPhase();
+    outputPhase();
     timer->endSubTask("outputPhase", iteration);
     t2 = high_resolution_clock::now();
 
@@ -674,6 +680,8 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
         recBufsElements[i].resize(no_buckets*2);
     }
 
+
+
     int sizeForEachThread;
     if (no_buckets <= numThreads){
         numThreads = no_buckets;
@@ -681,6 +689,14 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     } else{
         sizeForEachThread = (no_buckets + numThreads - 1)/ numThreads;
     }
+
+    cout<<"numThreads is " <<numThreads<<endl;
+    cout<<"num buckets " <<no_buckets<<endl;
+
+    auto t1 = high_resolution_clock::now();
+
+
+
 
     for (int t=0; t<numThreads; t++) {
 
@@ -693,6 +709,16 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
+
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds calcSendBufElements: " << duration << endl;
+    }
+
+
+    cout<<"numThreads is " <<numThreads<<endl;
     /**
      *  generate random sharings.
      *  first degree t.
@@ -735,6 +761,9 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
 
     roundFunctionSyncElements(sendBufsElements, recBufsElements,4);
 
+
+    t1 = high_resolution_clock::now();
+
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * sizeForEachThread <= no_buckets) {
@@ -746,6 +775,16 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
+
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds calcRecBufElements: " << duration << endl;
+    }
+
+
+
 //    for(int k=0; k < no_buckets; k++) {
 //        for (int i = 0; i < N; i++) {
 //
@@ -783,6 +822,8 @@ template <class FieldType>
 void ProtocolParty<FieldType>::calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, int start, int end){
 
     vector<FieldType> x1(N),y1(N), x2(N),y2(N);
+
+    cout<<"start to end thread : " <<start << "," << end<<endl;
 
     for(int k=start; k < end; k++)
     {
@@ -1293,34 +1334,62 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     t1 = high_resolution_clock::now();
 
 
-
-    for(int i=0; i<msgsVectors.size(); i++){
-
-        msgsVectorsForUnitTest[i].resize(sqrtR, *field->GetZero());
-        for(int k=0; k<sqrtR; k++){
-
-            for(int l1=0; l1< l; l1++){
-
-                //compute the sum of all the elements of the first part for all clients
-                sumXandSqaure[i*l + l1] += msgsVectors[i][l*k + l1];
-
-                //compute the sum of all the elements of the second part for all clients - the squares
-                sumXandSqaure[msgsVectors.size()*l + i*l + l1] += msgsVectors[i][sqrtR*l+l*k + l1];
-
-                //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
-                //and summing those with the unit vector with
-                msgsVectorsForUnitTest[i][k] += msgsVectors[i][l*k + l1]*randomElements[sqrtR + l1] +
-                                             msgsVectors[i][sqrtR*l+l*k + l1]*randomElements[sqrtR + l + l1];
-
-
-            }
-
-            //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
-            msgsVectorsForUnitTest[i][k] +=  msgsVectors[i][sqrtR*l*2 + k] * randomElements[sqrtR + 2*l];
-
-        }
-
+    int sizeForEachThread;
+    if (msgsVectors.size() <= numThreads){
+        numThreads = msgsVectors.size();
+        sizeForEachThread = 1;
+    } else{
+        sizeForEachThread = (msgsVectors.size() + numThreads - 1)/ numThreads;
     }
+
+    cout<<"numThreads is " <<numThreads<<endl;
+    cout<<"num buckets " <<msgsVectors.size()<<endl;
+
+    //prepareForUnitTest(randomElements, msgsVectors, sumXandSqaure, msgsVectorsForUnitTest);
+
+    for (int t=0; t<numThreads; t++) {
+
+        if ((t + 1) * sizeForEachThread <= msgsVectors.size()) {
+            threads[t] = thread(&ProtocolParty::prepareForUnitTest, this, ref(randomElements), ref(msgsVectors)  , ref(sumXandSqaure),
+                    ref(msgsVectorsForUnitTest), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::prepareForUnitTest, this, ref(randomElements), ref(msgsVectors)  , ref(sumXandSqaure),
+                                ref(msgsVectorsForUnitTest), t * sizeForEachThread, msgsVectors.size());
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+
+//    for(int i=0; i<msgsVectors.size(); i++){
+//
+//        msgsVectorsForUnitTest[i].resize(sqrtR, *field->GetZero());
+//        for(int k=0; k<sqrtR; k++){
+//
+//            for(int l1=0; l1< l; l1++){
+//
+//                //compute the sum of all the elements of the first part for all clients
+//                sumXandSqaure[i*l + l1] += msgsVectors[i][l*k + l1];
+//
+//                //compute the sum of all the elements of the second part for all clients - the squares
+//                sumXandSqaure[msgsVectors.size()*l + i*l + l1] += msgsVectors[i][sqrtR*l+l*k + l1];
+//
+//                //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
+//                //and summing those with the unit vector with
+//                msgsVectorsForUnitTest[i][k] += msgsVectors[i][l*k + l1]*randomElements[sqrtR + l1] +
+//                                                msgsVectors[i][sqrtR*l+l*k + l1]*randomElements[sqrtR + l + l1];
+//
+//
+//            }
+//
+//            //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
+//            msgsVectorsForUnitTest[i][k] +=  msgsVectors[i][sqrtR*l*2 + k] * randomElements[sqrtR + 2*l];
+//
+//        }
+//
+//    }
+
+
 
     t2 = high_resolution_clock::now();
 
@@ -1500,6 +1569,39 @@ int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVecto
     return flag;
 
 }
+template <class FieldType>
+void ProtocolParty<FieldType>::prepareForUnitTest(vector<FieldType> &randomElements, vector<vector<FieldType>> &msgsVectors,
+                        vector<FieldType> &sumXandSqaure, vector<vector<FieldType>> &msgsVectorsForUnitTest, int start, int end) {
+    for(int i=start; i < end; i++){
+
+        msgsVectorsForUnitTest[i].resize(sqrtR, *field->GetZero());
+        for(int k=0; k < sqrtR; k++){
+
+            for(int l1=0; l1 < l; l1++){
+
+                //compute the sum of all the elements of the first part for all clients
+                sumXandSqaure[i * l + l1] += msgsVectors[i][l * k + l1];
+
+                //compute the sum of all the elements of the second part for all clients - the squares
+                sumXandSqaure[msgsVectors.size() * l + i * l + l1] += msgsVectors[i][sqrtR * l +
+                                                                                                 l * k + l1];
+
+                //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
+                //and summing those with the unit vector with
+                msgsVectorsForUnitTest[i][k] += msgsVectors[i][l * k + l1] * randomElements[sqrtR + l1] +
+                                                msgsVectors[i][sqrtR * l + l * k + l1] * randomElements[
+                                                        sqrtR + l + l1];
+
+
+            }
+
+            //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
+            msgsVectorsForUnitTest[i][k] += msgsVectors[i][sqrtR * l * 2 + k] * randomElements[sqrtR + 2 *l];
+
+        }
+
+    }
+}
 
 template <class FieldType>
 int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &vecs) {
@@ -1573,6 +1675,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 
     vector<FieldType> sum1(vecs.size()*securityParamter);
     vector<FieldType> sum0(vecs.size()*securityParamter);//do in a 1 dimension array for multiplication
+
     vector<long> sum01(2*vecs.size()*securityParamter);//do in a 1 dimension array for multiplication
 
     //use the random elements for the bits. This is ok since the random elements were chosen after the input
@@ -1649,39 +1752,45 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 //        }
 //    }
 //    t2 = high_resolution_clock::now();
-
-    duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time for add to sum0 and sum 1: " << duration << endl;
-    }
-
-    t1 = high_resolution_clock::now();
-    regMatrixMulTN(sum1.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor1.data(), vecs[0].size(), securityParamter);
-
-    regMatrixMulTN(sum0.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor0.data(), vecs[0].size(), securityParamter);
-
-
-
-//    t1 = high_resolution_clock::now();
-//    for(int i=0; i<vecs.size(); i++) {
-//        secTimesI = i*securityParamter;
-//        //counter = 0;
-//        for (int j = 0; j < securityParamter; j++) {
-//            shiftBits = vecs[0].size()*j;
-//            for(int k = 0; k<vecs[0].size();k++) {
 //
-//
-//                //if related bit is zero, accume the sum in sum 0
-//
-//                    sum01[2*(secTimesI + j) + constRandomBitsPrim[k]] +=  randomVecs[i][k].elem;
-//
-//
-//                //counter++;
-//            }
-//        }
+//    duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time for add to sum0 and sum 1: " << duration << endl;
 //    }
 
-    cout<<sum01[2 + constRandomBitsPrim[10]];
+    t1 = high_resolution_clock::now();
+//    regMatrixMulTN(sum1.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor1.data(), vecs[0].size(), securityParamter);
+//
+//    regMatrixMulTN(sum0.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor0.data(), vecs[0].size(), securityParamter);
+
+
+
+    t1 = high_resolution_clock::now();
+    for(int i=0; i<vecs.size(); i++) {
+        for (int j = 0; j < securityParamter; j++) {
+            //shiftBits = vecs[0].size()*j;
+            for(int k = 0; k<vecs[0].size();k++) {
+
+
+                //if related bit is zero, accume the sum in sum 0
+
+                    sum01[(i*securityParamter + j) + vecs.size()*securityParamter*constRandomBitsPrim[vecs[0].size()* j + k]] +=  randomVecs[i][k].elem;
+
+
+                //counter++;
+            }
+        }
+    }
+
+
+    //turn the sum01 into sum0 and sum1 field elements
+    for(int i=0; i<vecs.size()*securityParamter; i++) {
+
+        sum0[i] = FieldType(sum01[i]);
+        sum1[i] = FieldType(sum01[vecs.size()*securityParamter + i]);
+
+    }
+
 
     t2 = high_resolution_clock::now();
 
@@ -1689,12 +1798,10 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
     if(flag_print_timings) {
         cout << "time for add to sums01: " << duration << endl;
     }
-    //perform BigR * sum0
-
 
     t1 = high_resolution_clock::now();
     vector<FieldType> Rsum0Vec(sum0.size());
-    vector<FieldType> Rsum01Vec(sum01.size());
+    //vector<FieldType> Rsum01Vec(sum01.size());
     //run the semi honest multiplication to get the second part of each share
     DNHonestMultiplication(sum0.data(), bigRVec.data(),Rsum0Vec, sum0.size());
     //DNHonestMultiplication(sum01.data(), bigRVec.data(),Rsum01Vec, sum01.size());
@@ -2917,28 +3024,28 @@ void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &
 
     for(int i=0; i<accIntCountersMat.size(); i++){
 
-        cout<<"accIntCountersMat["<<i<<"]"<<accIntCountersMat[i]<<endl;
-        if(accIntCountersMat[i]==1){
-            for(int l1=0; l1<l; l1++) {
-                cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat[l * i + l1] << "\033[0m" << endl;
-            }
-            counter++;
-        }
-        else if(accIntCountersMat[i]==2){
+        if(i%10000==0) {
+            cout << "accIntCountersMat[" << i << "]" << accIntCountersMat[i] << endl;
+            if (accIntCountersMat[i] == 1) {
+                for (int l1 = 0; l1 < l; l1++) {
+                    cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat[l * i + l1] << "\033[0m" << endl;
+                }
+                counter++;
+            } else if (accIntCountersMat[i] == 2) {
 
-            for(int l1=0; l1<l; l1++) {
-                cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat[l * i + l1] << "\033[0m" << endl;
-            }
-            counter++;
+                for (int l1 = 0; l1 < l; l1++) {
+                    cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat[l * i + l1] << "\033[0m" << endl;
+                }
+                counter++;
 
-            for(int l1=0; l1<l; l1++) {
-                cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat2[l * i + l1] << "\033[0m" << endl;
-            }
-            counter++;
+                for (int l1 = 0; l1 < l; l1++) {
+                    cout << "\033[1;31mmessage #" << counter << " is " << accMsgsMat2[l * i + l1] << "\033[0m" << endl;
+                }
+                counter++;
 
-        }
-        else{
-            //no messages to extract
+            } else {
+                //no messages to extract
+            }
         }
 
     }
@@ -3281,7 +3388,7 @@ void ProtocolParty<FieldType>::outputPhase()
                               accIntCountersMat.size());
 
 
-//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     cout<<"passed with distinction"<<endl;
 }
