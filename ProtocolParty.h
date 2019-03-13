@@ -304,7 +304,7 @@ public:
     void generateRandomSharesWithCheck(int numOfRnadoms, vector<FieldType>& randomElementsToFill);
     void generateRandom2TAndTShares(int numOfRandomPairs, vector<FieldType>& randomElementsToFill);
 
-    void calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, int start, int end);
+    void calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, PrgFromOpenSSLAES & prg, int start, int end);
     void calcRecBufElements(vector<vector<FieldType>> & recBufsElements, vector<FieldType> & randomElementsToFill, int start, int end);
     /**
      * Check whether given points lie on polynomial of degree d.
@@ -490,7 +490,7 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("outputPhase", iteration);
-    //outputPhase();
+    outputPhase();
     timer->endSubTask("outputPhase", iteration);
     t2 = high_resolution_clock::now();
 
@@ -667,6 +667,16 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     randomElementsToFill.resize(no_buckets*(N-T)*2);
     vector<FieldType> randomElementsOnlyTshares (no_buckets*(N-T) );
 
+    vector<PrgFromOpenSSLAES> prgs(numThreads);
+    int* keyBytes = new int[4];
+    for (int i=0; i<numThreads; i++){
+        for (int j=0; j<4; j++){
+            keyBytes[j] = field->Random().elem;
+        }
+        SecretKey key((byte*)keyBytes, 16, "");
+        prgs[i].setKey(key);
+    }
+    delete [] keyBytes;
 
     for(int i=0; i < N; i++)
     {
@@ -685,9 +695,9 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * sizeForEachThread <= no_buckets) {
-            threads[t] = thread(&ProtocolParty::calcSendBufElements, this, ref(sendBufsElements), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+            threads[t] = thread(&ProtocolParty::calcSendBufElements, this, ref(sendBufsElements), ref(prgs[t]), t * sizeForEachThread, (t + 1) * sizeForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::calcSendBufElements, this, ref(sendBufsElements), t * sizeForEachThread, no_buckets);
+            threads[t] = thread(&ProtocolParty::calcSendBufElements, this, ref(sendBufsElements), ref(prgs[t]), t * sizeForEachThread, no_buckets);
         }
     }
     for (int t=0; t<numThreads; t++){
@@ -780,28 +790,36 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
 }
 
 template <class FieldType>
-void ProtocolParty<FieldType>::calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, int start, int end){
+void ProtocolParty<FieldType>::calcSendBufElements(vector<vector<FieldType>> & sendBufsElements, PrgFromOpenSSLAES & prg, int start, int end){
 
     vector<FieldType> x1(N),y1(N), x2(N),y2(N);
+
+    int* tempInt;
 
     for(int k=start; k < end; k++)
     {
         // generate random degree-T polynomial
+        tempInt = (int*)prg.getPRGBytesEX((T+1)*4);
+
         for(int i = 0; i < T+1; i++)
         {
             // A random field element, uniform distribution, note that x1[0] is the secret which is also random
-            x1[i] = field->Random();
+            x1[i] = field->GetElement(tempInt[i]);
+//            x1[i] = tempInt[i] >> 1;
 
         }
 
         matrix_vand.MatrixMult(x1, y1,T+1); // eval poly at alpha-positions
 
         x2[0] = x1[0];
+
         // generate random degree-T polynomial
+        tempInt = (int*)prg.getPRGBytesEX((2*T+1)*4);
+
         for(int i = 1; i < 2*T+1; i++)
         {
             // A random field element, uniform distribution, note that x1[0] is the secret which is also random
-            x2[i] = field->Random();
+            x2[i] = field->GetElement(tempInt[i]);
 
         }
 
