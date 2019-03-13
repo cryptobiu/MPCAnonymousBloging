@@ -63,6 +63,7 @@ private:
     int sqrtU;
     int numThreads;
     vector<thread> threads;
+    vector<PrgFromOpenSSLAES> prgs;
 
     vector<vector<FieldType>> msgsVectors;
     vector<vector<FieldType>> unitVectors;
@@ -255,6 +256,9 @@ public:
     void multiplyVectorsPerThread(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors, vector<long> & outputDouble,
                                                             int newNumRows, int newNumCols, int start, int end);
 
+    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
+                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
+
     int generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat,
@@ -400,6 +404,16 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
     parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
 
+    prgs.resize(numThreads);
+    int* keyBytes = new int[4];
+    for (int i=0; i<numThreads; i++){
+        for (int j=0; j<4; j++){
+            keyBytes[j] = field->Random().elem;
+        }
+        SecretKey key((byte*)keyBytes, 16, "");
+        prgs[i].setKey(key);
+    }
+    delete [] keyBytes;
 
 
     string tmp = "init times";
@@ -655,41 +669,20 @@ void ProtocolParty<FieldType>::getRandomShares(int numOfRandoms, vector<FieldTyp
 
 template <class FieldType>
 void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, vector<FieldType>& randomElementsToFill){
-
+    auto t1 = high_resolution_clock::now();
     int robin = 0;
     int no_random = numOfRandomPairs;
-
-    vector<vector<FieldType>> sendBufsElements(N);
-    vector<vector<FieldType>> recBufsElements(N);
 
     // the number of buckets (each bucket requires one double-sharing
     // from each party and gives N-2T random double-sharings)
     int no_buckets = (no_random / (N-T))+1;
 
-    //sharingBufTElements.resize(no_buckets*(N-2*T)); // my shares of the double-sharings
-    //sharingBuf2TElements.resize(no_buckets*(N-2*T)); // my shares of the double-sharings
+    vector<vector<FieldType>> sendBufsElements(N, vector<FieldType>(no_buckets*2));
+    vector<vector<FieldType>> recBufsElements(N, vector<FieldType>(no_buckets*2));
 
     //maybe add some elements if a partial bucket is needed
     randomElementsToFill.resize(no_buckets*(N-T)*2);
     vector<FieldType> randomElementsOnlyTshares (no_buckets*(N-T) );
-
-    vector<PrgFromOpenSSLAES> prgs(numThreads);
-    int* keyBytes = new int[4];
-    for (int i=0; i<numThreads; i++){
-        for (int j=0; j<4; j++){
-            keyBytes[j] = field->Random().elem;
-        }
-        SecretKey key((byte*)keyBytes, 16, "");
-        prgs[i].setKey(key);
-    }
-    delete [] keyBytes;
-
-    for(int i=0; i < N; i++)
-    {
-        sendBufsElements[i].resize(no_buckets*2);
-        recBufsElements[i].resize(no_buckets*2);
-    }
-
 
 
     int sizeForEachThread;
@@ -699,11 +692,13 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     } else{
         sizeForEachThread = (no_buckets + numThreads - 1)/ numThreads;
     }
+    auto t2 = high_resolution_clock::now();
 
-    cout<<"numThreads is " <<numThreads<<endl;
-    cout<<"num buckets " <<no_buckets<<endl;
-
-    auto t1 = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds header: " << duration << endl;
+    }
+     t1 = high_resolution_clock::now();
 
 
 
@@ -720,15 +715,13 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
         threads[t].join();
     }
 
-    auto t2 = high_resolution_clock::now();
+     t2 = high_resolution_clock::now();
 
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
+     duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in milliseconds calcSendBufElements: " << duration << endl;
     }
 
-
-    cout<<"numThreads is " <<numThreads<<endl;
     /**
      *  generate random sharings.
      *  first degree t.
@@ -767,10 +760,16 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
 //
 //        }
 //    }
+    t1 = high_resolution_clock::now();
 
 
     roundFunctionSyncElements(sendBufsElements, recBufsElements,4);
+    t2 = high_resolution_clock::now();
 
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds round function: " << duration << endl;
+    }
 
     t1 = high_resolution_clock::now();
 
@@ -818,13 +817,28 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
 
     //check validity of the t-shares. 2t-shares do not have to be checked
     //copy the t-shares for checking
-
+    t1 = high_resolution_clock::now();
     for(int i=0; i<randomElementsOnlyTshares.size(); i++){
 
         randomElementsOnlyTshares[i] = randomElementsToFill[2*i];
     }
 
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds copy: " << duration << endl;
+    }
+
+    t1 = high_resolution_clock::now();
     batchConsistencyCheckOfShares(randomElementsOnlyTshares);
+
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds batch consistency: " << duration << endl;
+    }
 
 }
 
@@ -1782,21 +1796,44 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 
 
     t1 = high_resolution_clock::now();
-    for(int i=0; i<vecs.size(); i++) {
-        for (int j = 0; j < securityParamter; j++) {
-            //shiftBits = vecs[0].size()*j;
-            for(int k = 0; k<vecs[0].size();k++) {
 
+    int sizeForEachThread;
+    if (vecs.size() <= numThreads){
+        numThreads = vecs.size();
+        sizeForEachThread = 1;
+    } else{
+        sizeForEachThread = (vecs.size() + numThreads - 1)/ numThreads;
+    }
 
-                //if related bit is zero, accume the sum in sum 0
+    for (int t=0; t<numThreads; t++) {
 
-                    sum01[(i*securityParamter + j) + vecs.size()*securityParamter*constRandomBitsPrim[vecs[0].size()* j + k]] +=  randomVecs[i][k].elem;
-
-
-                //counter++;
-            }
+        if ((t + 1) * sizeForEachThread <= vecs.size()) {
+            threads[t] = thread(&ProtocolParty::assignSumsPerThread, this, ref(sum01), ref(vecs), ref(constRandomBitsPrim),
+                                ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::assignSumsPerThread, this, ref(sum01), ref(vecs), ref(constRandomBitsPrim),
+                                ref(randomVecs),  t * sizeForEachThread, vecs.size());
         }
     }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+
+//    for(int i=0; i<vecs.size(); i++) {
+//        for (int j = 0; j < securityParamter; j++) {
+//            //shiftBits = vecs[0].size()*j;
+//            for(int k = 0; k<vecs[0].size();k++) {
+//
+//
+//                //if related bit is zero, accume the sum in sum 0
+//
+//                    sum01[(i*securityParamter + j) + vecs.size()*securityParamter*constRandomBitsPrim[vecs[0].size()* j + k]] +=  randomVecs[i][k].elem;
+//
+//
+//                //counter++;
+//            }
+//        }
+//    }
 
 
     //turn the sum01 into sum0 and sum1 field elements
@@ -1872,6 +1909,23 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 
 
     return flag;
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
+        vector<vector<FieldType>> & randomVecs, int start, int end){
+
+    for(int i=start; i<end; i++) {
+        for (int j = 0; j < securityParamter; j++) {
+
+            for(int k = 0; k<vecs[0].size();k++) {
+
+                //if related bit is zero, accume the sum in sum 0
+                sum01[(i*securityParamter + j) + vecs.size()*securityParamter*constRandomBitsPrim[vecs[0].size()* j + k]] +=  randomVecs[i][k].elem;
+
+            }
+        }
+    }
 }
 
 template <class FieldType>
@@ -3272,6 +3326,7 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
     PrgFromOpenSSLAES prg((numOfRandomElements*size/16) + 1);
     SecretKey sk(aesKey, "aes");
     prg.setKey(sk);
+
 
     for(int i=0; i<numOfRandomElements; i++){
 
