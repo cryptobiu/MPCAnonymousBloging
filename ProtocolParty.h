@@ -304,9 +304,6 @@ public:
     void prepareForUnitTest(vector<FieldType> &randomElements, vector<vector<FieldType>> &msgsVectors,
                             vector<FieldType> &sumXandSqaure, vector<vector<FieldType>> &msgsVectorsForUnitTest, int start, int end);
 
-    void inputPhase();
-    void inputVerification(vector<FieldType> &inputShares);
-
     void generateRandomShares(int numOfRandoms, vector<FieldType> &randomElementsToFill);
     void getRandomShares(int numOfRandoms, vector<FieldType> &randomElementsToFill);
     void generateRandomSharesWithCheck(int numOfRnadoms, vector<FieldType>& randomElementsToFill);
@@ -722,44 +719,7 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
         cout << "time in milliseconds calcSendBufElements: " << duration << endl;
     }
 
-    /**
-     *  generate random sharings.
-     *  first degree t.
-     *
-     */
 
-//    for(int k=0; k < no_buckets; k++)
-//    {
-//        // generate random degree-T polynomial
-//        for(int i = 0; i < T+1; i++)
-//        {
-//            // A random field element, uniform distribution, note that x1[0] is the secret which is also random
-//            x1[i] = field->Random();
-//
-//        }
-//
-//        matrix_vand.MatrixMult(x1, y1,T+1); // eval poly at alpha-positions
-//
-//        x2[0] = x1[0];
-//        // generate random degree-T polynomial
-//        for(int i = 1; i < 2*T+1; i++)
-//        {
-//            // A random field element, uniform distribution, note that x1[0] is the secret which is also random
-//            x2[i] = field->Random();
-//
-//        }
-//
-//        matrix_vand.MatrixMult(x2, y2,2*T+1);
-//
-//        // prepare shares to be sent
-//        for(int i=0; i < N; i++)
-//        {
-//            //cout << "y1[ " <<i<< "]" <<y1[i] << endl;
-//            sendBufsElements[i][2*k] = y1[i];
-//            sendBufsElements[i][2*k + 1] = y2[i];
-//
-//        }
-//    }
     t1 = high_resolution_clock::now();
 
 
@@ -791,29 +751,6 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     if(flag_print_timings) {
         cout << "time in milliseconds calcRecBufElements: " << duration << endl;
     }
-
-
-
-//    for(int k=0; k < no_buckets; k++) {
-//        for (int i = 0; i < N; i++) {
-//
-//            t1[i] = recBufsElements[i][2*k];
-//            t2[i] = recBufsElements[i][(2*k +1)];
-//
-//
-//        }
-//        matrix_vand_transpose.MatrixMult(t1, r1,N-T);
-//        matrix_vand_transpose.MatrixMult(t2, r2,N-T);
-//
-//        //copy the resulting vector to the array of randoms
-//        for (int i = 0; i < (N - T); i++) {
-//
-//            randomElementsToFill[index*2] = r1[i];
-//            randomElementsToFill[index*2 +1] = r2[i];
-//            index++;
-//
-//        }
-//    }
 
     //check validity of the t-shares. 2t-shares do not have to be checked
     //copy the t-shares for checking
@@ -858,7 +795,6 @@ void ProtocolParty<FieldType>::calcSendBufElements(vector<vector<FieldType>> & s
         {
             // A random field element, uniform distribution, note that x1[0] is the secret which is also random
             x1[i] = field->GetElement(tempInt[i]);
-//            x1[i] = tempInt[i] >> 1;
 
         }
 
@@ -933,7 +869,7 @@ void ProtocolParty<FieldType>::initializationPhase()
 
     beta.resize(1);
     y_for_interpolate.resize(N);
-    //gateShareArr.resize((M - circuit.getNrOfOutputGates())*2); // my share of the gate (for all gates)
+
     alpha.resize(N); // N distinct non-zero field elements
     vector<FieldType> alpha1(N-T);
     vector<FieldType> alpha2(T);
@@ -1131,7 +1067,6 @@ bool ProtocolParty<FieldType>::checkConsistency(vector<FieldType>& x, int d)
 template <class FieldType>
 FieldType ProtocolParty<FieldType>::interpolate(vector<FieldType>& x)
 {
-    //vector<FieldType> y(N); // result of interpolate
     matrix_for_interpolate.MatrixMult(x, y_for_interpolate);
     return y_for_interpolate[0];
 }
@@ -1164,10 +1099,8 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
     vector<FieldType> xyMinusR;//hold both in the same vector to send in one batch
     vector<byte> xyMinusRBytes;
 
-    //vector<vector<byte>> recBufsBytes(N);
     vector<vector<FieldType>> recBufsElements(N);
     vector<vector<FieldType>> sendBufsElements(N);
-    //vector<vector<byte>> sendBufsBytes(N);
 
 
     //generate the shares for x+a and y+b. do it in the same array to send once
@@ -1193,14 +1126,13 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
         //fill the send buf according to the number of elements to send to each party
         sendBufsElements[i].resize(currentNumOfElements);
-        //sendBufsBytes[i].resize(currentNumOfElements*fieldByteSize);
+
         for(int j=0; j<currentNumOfElements; j++) {
 
             sendBufsElements[i][j] = xyMinusRShares[counter];
             counter++;
 
         }
-        //field->elementVectorToByteVector(sendBufsElements[i], sendBufsBytes[i]);
 
     }
 
@@ -1230,7 +1162,6 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
     {
         for (int i = 0; i < N; i++) {
 
-            //xyMinurAllShares[i] = field->bytesToElement(recBufsBytes[i].data() + (k * fieldByteSize));
             xyMinurAllShares[i] = recBufsElements[i][k];
         }
 
@@ -1239,7 +1170,6 @@ void ProtocolParty<FieldType>::DNHonestMultiplication(FieldType *a, FieldType *b
 
     }
 
-    //field->elementVectorToByteVector(xyMinusR, xyMinusRBytes);
 
     //prepare the send buffers
     for(int i=0; i<N; i++){
@@ -1757,38 +1687,6 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         cout << "time in mult by randoms: " << duration << endl;
     }
 
-//    int shiftBits;
-//    int secTimesI;
-//    t1 = high_resolution_clock::now();
-//    int counter;
-//    for(int i=0; i<vecs.size(); i++) {
-//        secTimesI = i*securityParamter;
-//        //counter = 0;
-//        for (int j = 0; j < securityParamter; j++) {
-//            shiftBits = vecs[0].size()*j;
-//
-//            auto temp = &constRandomBitsPrim[shiftBits];
-//            for(int k = 0; k<vecs[0].size();k++) {
-//
-//
-//                //if related bit is zero, accume the sum in sum 0
-//                if((temp[k])==0)/*if((randomBits[k] & 1)==0)*//*if(k%2==0)*//*if((randomBits[k] & ( shiftbyOne[j] ))==0)*/ /*if(((randomBits[k] >> j) & 1)==0)*/
-//                    sum0[secTimesI + j] +=  randomVecs[i][k];
-//                else //bit is 1, accume the sum in sum 1
-//                    sum1[secTimesI + j] +=  randomVecs[i][k];
-//
-//                //counter++;
-//            }
-//        }
-//    }
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for add to sum0 and sum 1: " << duration << endl;
-//    }
-
-    t1 = high_resolution_clock::now();
 //    regMatrixMulTN(sum1.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor1.data(), vecs[0].size(), securityParamter);
 //
 //    regMatrixMulTN(sum0.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor0.data(), vecs[0].size(), securityParamter);
@@ -1818,23 +1716,6 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
-
-//    for(int i=0; i<vecs.size(); i++) {
-//        for (int j = 0; j < securityParamter; j++) {
-//            //shiftBits = vecs[0].size()*j;
-//            for(int k = 0; k<vecs[0].size();k++) {
-//
-//
-//                //if related bit is zero, accume the sum in sum 0
-//
-//                    sum01[(i*securityParamter + j) + vecs.size()*securityParamter*constRandomBitsPrim[vecs[0].size()* j + k]] +=  randomVecs[i][k].elem;
-//
-//
-//                //counter++;
-//            }
-//        }
-//    }
-
 
     //turn the sum01 into sum0 and sum1 field elements
     for(int i=0; i<vecs.size()*securityParamter; i++) {
