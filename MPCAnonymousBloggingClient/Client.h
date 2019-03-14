@@ -20,6 +20,7 @@ private:
     int l;
     int numClients, sqrtR, sqrtU;
     int numServers;
+    int server;
     int T; //number of malicious servers
 
     // sizes are in bytes
@@ -60,15 +61,21 @@ Client<FieldType>::Client(int argc, char **argv){
     numServers = stoi(parser.getValueByKey(arguments, "numServers"));
     numClients = stoi(parser.getValueByKey(arguments, "numClients"));
     string fieldType = parser.getValueByKey(arguments, "fieldType");
-
+    server = stoi(parser.getValueByKey(arguments, "server"));
+    cout<<"parser.getValueByKey(arguments, \"server\") = "<<parser.getValueByKey(arguments, "server")<<endl;
+cout<<"server = "<<server<<endl;
     sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
     sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
     T = (numServers+1)/2 - 1;
 
 
 
-    auto key = prg.generateKey(128);
+//    auto key = prg.generateKey(128);
+    vector<byte> keyBytes(32, 0);
+    SecretKey key(keyBytes,"");
     prg.setKey(key);
+
+
 
     if(fieldType.compare("ZpMersenne31") == 0) {
         field = new TemplateField<FieldType>(2147483647);
@@ -114,10 +121,13 @@ template<class FieldType>
 vector<FieldType> Client<FieldType>::makeInputVector(){
 
     vector<FieldType> msg(l);
-    auto r = field->Random();
+
+    auto r = field->GetElement(prg.getRandom32());
+//    auto r = field->Random();
     msg[l-1] = r;
     for (int k=0; k<l-1; k++){
-        msg[k] = field->Random() + r;
+        msg[k] = field->GetElement(prg.getRandom32()) + r;
+//        msg[k] = field->Random() + r;
     }
 
     //Choose random indices i,j
@@ -146,7 +156,8 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
     //Set the one in the second [0, 0, ..., 1, 0, ..., 0] vector
     vals[2*l*sqrtR + sqrtR + j] = *field->GetOne();
 
-    vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->Random();
+    vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->GetElement(prg.getRandom32());
+//    vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->Random();
 
 //    cout<<"original values:"<<endl;
 //    for (int i=0; i<vals.size(); i++){
@@ -173,7 +184,8 @@ vector<vector<FieldType>> Client<FieldType>::createShares(vector<FieldType> & va
         for(int i = 1; i < T+1; i++)
         {
             // A random field element, uniform distribution
-            x1[i] = field->Random();
+            x1[i] = field->GetElement(prg.getRandom32());
+//            x1[i] = field->Random();
         }
 
         matrix_vand.MatrixMult(x1, y1, T+1); // eval poly at alpha-positions predefined to be alpha_i = i
@@ -196,24 +208,48 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
     ofstream outputFile;
      int size = 2*(l*sqrtR) + sqrtR + sqrtU + 1;
 
-    for (int i=0; i<numServers; i++){
-
+    if (server != 1000) {
         if (field->getElementSizeInBytes() == 8) {
-            long *serverShares = (long *) shares[i].data();
-            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
+            long *serverShares = (long *) shares[server].data();
+            outputFile.open(
+                    string(getenv("HOME")) + "/files/server" + to_string(server) + "ForClient" + to_string(clientID) +
+                    "inputs.bin", ios::out | ios::binary);
 
             for (int j = 0; j < size; j++) {
                 outputFile << serverShares[j] << endl;
             }
         }
         if (field->getElementSizeInBytes() == 4) {
-            int *serverShares = (int *) shares[i].data();
-            outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
+            int *serverShares = (int *) shares[server].data();
+            outputFile.open(
+                    string(getenv("HOME")) + "/files/server" + to_string(server) + "ForClient" + to_string(clientID) +
+                    "inputs.bin", ios::out | ios::binary);
 
-            outputFile.write((char*)serverShares, 4*size);
+            outputFile.write((char *) serverShares, 4 * size);
 
         }
         outputFile.close();
+    } else {
+
+        for (int i=0; i<numServers; i++){
+
+            if (field->getElementSizeInBytes() == 8) {
+                long *serverShares = (long *) shares[i].data();
+                outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
+
+                for (int j = 0; j < size; j++) {
+                    outputFile << serverShares[j] << endl;
+                }
+            }
+            if (field->getElementSizeInBytes() == 4) {
+                int *serverShares = (int *) shares[i].data();
+                outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
+
+                outputFile.write((char*)serverShares, 4*size);
+
+            }
+            outputFile.close();
+        }
     }
 
 }
