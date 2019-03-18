@@ -3269,9 +3269,18 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<FieldType> shiftedMsgsUnits;
 
 
+    auto t1 = high_resolution_clock::now();
     splitShiftForGPU(msgsVectors, unitVectors,
                      shiftedMsgsVec, shiftedMsgsUnits,
                      shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
+
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
+    }
+
 
 
     vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
@@ -3280,6 +3289,7 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
 
+    t1 = high_resolution_clock::now();
     generateSharedMatricesForGPU(shiftedMsgsVec,
                                  shiftedMsgsVectorsSquares,
                                  shiftedMsgsVectorsCounters,
@@ -3287,6 +3297,14 @@ void ProtocolParty<FieldType>::outputPhase()
                                  accMsgsMat,
                                  accMsgsSquareMat,
                                  accCountersMat);
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
+    }
+
+
 
 //----------------------------------------------------------//
 
@@ -3317,11 +3335,18 @@ void ProtocolParty<FieldType>::outputPhase()
 //#endif
 
 
-
+    t1 = high_resolution_clock::now();
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
-                                        accCountersMat,
-                                        accIntCountersMat);
+                                                accCountersMat,
+                                                accIntCountersMat);
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in miliseconds generateClearMatricesForTesting: " << duration << endl;
+    }
+
 
     cout<<"flag for clear is "<<flag<<endl;
 
@@ -3335,13 +3360,29 @@ void ProtocolParty<FieldType>::outputPhase()
 
     }
 
+    t1 = high_resolution_clock::now();
     extractMessagesForTesting(accMsgsMat,
                               accMsgsSquareMat,
-                            accIntCountersMat,
+                              accIntCountersMat,
                               accIntCountersMat.size());
 
+    t2 = high_resolution_clock::now();
 
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in miliseconds extractMessagesForTesting: " << duration << endl;
+    }
+
+
+    t1 = high_resolution_clock::now();
     printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in miliseconds printOutputMessagesForTesting: " << duration << endl;
+    }
 
     cout<<"passed with distinction"<<endl;
 }

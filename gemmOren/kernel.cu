@@ -1085,6 +1085,112 @@ int main2(int argc, const char *arg[])
 
 	// Exit.
 }
+
+/////////////////////////////////////
+
+template<typename _type>
+		cudaError_t GemmNN31(
+		size_t M,
+size_t N,
+		size_t K,
+merssene31_t::Accum_t alpha,
+		_type const *A,
+size_t lda,
+		_type const *B,
+size_t ldb,
+		merssene31_t::Accum_t beta,
+_type *C,
+		size_t ldc,
+cudaStream_t& stream) {
+
+// Define type definition for single-precision CUTLASS GEMM with column-major
+// input matrices and 128x128x8 threadblock tile size.
+//
+// Note, GemmTraits<> is a generic template defined for various general matrix product
+// computations within CUTLASS. It is intended to be maximally flexible, and consequently
+// it contains numerous template arguments.
+//
+// To keep the interface manageable, several helpers are defined for plausible compositions
+// including the following example for single-precision GEMM. Typical values are used as
+// default template arguments. See `cutlass/gemm/gemm_traits.h` for more details.
+//
+//SMersseneGemmConfig31<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>> mygemmconf;
+typedef cutlass::gemm::SgemmTraits <
+		cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
+		cutlass::MatrixLayout::kColumnMajor,   // layout of B matrix
+		cutlass::Shape<8, 128, 128>,           // threadblock tile size
+		cutlass::gemm::LinearScaling<merssene31_t>,
+		/// Tile size for thread-level GEMM (K-by-N-by-M)
+		cutlass::Shape<8, 8, 8>,
+		/// The number of floats loaded in one LDG for A.
+		1,
+		/// The number of floats loaded in one LDG for B.
+		1,
+		/// The index.
+		int,
+		/// The SGEMM config.
+		SMersseneGemmConfig31<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>>
+		/// The traits class for the epilogue.
+		//,cutlass::gemm::SimplifiedGemmEpilogueTraits<
+		//SMersseneGemmConfig31<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>>,
+		//cutlass::gemm::LinearScaling<merssene31_t::Accum_t,
+		//cutlass::gemm::FragmentMultiplyAdd<merssene31_t::Accum_t, merssene31_t::Accum_t/*accumulator type*/> > >
+		//
+		//cutlass::gemm::myLinearScaling<merssene31_t::Accum_t>, int>
+		/*typename GemmEpilogueTraits_ =
+		SimplifiedGemmEpilogueTraits<GemmConfig_, EpilogueFunctor_, Index_> >
+		*/
+>
+		GemmTraits;
+
+// Define a CUTLASS GEMM type from a GemmTraits<> instantiation.
+typedef cutlass::gemm::Gemm<GemmTraits> Gemm;
+
+// Construct and initialize CUTLASS GEMM parameters object.
+//
+// One of CUTLASS's design patterns is to define parameters objects that are constructible
+// in host code and passed to kernels by value. These may include pointers, strides, scalars,
+// and other arguments needed by Gemm and its components.
+//
+// The benefits of this pattern are (1.) a structured, composable strategy for passing host-constructible
+// arguments to kernels and (2.) minimized initialization overhead on kernel entry.
+//
+typename Gemm::Params params;
+
+//GemmTraits::Epilogue a;
+int result = params.initialize(
+		M,     // GEMM M dimension
+		N,     // GEMM N dimension
+		K,     // GEMM K dimension
+		alpha, // scalar alpha
+		A,     // matrix A operand
+		lda,
+		B,     // matrix B operand
+		ldb,
+		beta,  // scalar beta
+		C,     // source matrix C
+		ldc,
+		C,     // destination matrix C (may be different memory than source C matrix)
+		ldc
+);
+
+if (result) {
+std::cerr << "Failed to initialize CUTLASS Gemm::Params object." << std::endl;
+return cudaErrorInvalidValue;
+}
+
+
+// Launch the CUTLASS GEMM kernel.
+Gemm::launch(params, stream);
+
+// Return any errors associated with the launch or cudaSuccess if no error.
+return cudaGetLastError();
+}
+
+
+/////////////////////////////////////
+
+
 //
 //
 ////////////////////////////////////////////////////////
