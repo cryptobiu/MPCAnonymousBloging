@@ -20,9 +20,9 @@
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
 #include <omp.h>
-#ifdef __CUDA_ARCH__
+//#ifdef __NVCC__
 #include "cudaGemm.h"
-#endif
+//#endif
 #include <algorithm>
 
 
@@ -222,7 +222,7 @@ public:
                                          vector<FieldType> &accMsgsSquareMat,
                                          vector<FieldType> &accCountersMat);
 
-#ifdef __CUDA_ARCH__
+//#ifdef __NVCC__
     int generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                         vector<FieldType> &shiftedMsgsVectorsSquares,
                                         vector<FieldType> &shiftedMsgsVectorsCounters,
@@ -230,7 +230,7 @@ public:
                                         vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
-#endif
+//#endif
 
     void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
 
@@ -271,11 +271,11 @@ public:
     void splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                     vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter);
 
-#ifdef __CUDA_ARCH__
+//#ifdef __NVCC__
     void splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                                                     vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
                                                     vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter);
-#endif
+//#endif
 
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
@@ -1854,7 +1854,7 @@ void ProtocolParty<FieldType>::splitShift(vector<vector<FieldType>> &msgsVectors
 
 }
 
-#ifdef __CUDA_ARCH__
+//#ifdef __NVCC__
 template <class FieldType>
 void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
                                                 vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
@@ -1901,7 +1901,7 @@ void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsV
 
 }
 
-#endif
+//#endif
 
 
 template <class FieldType>
@@ -2090,7 +2090,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<Fiel
 
 }
 
-#ifdef __CUDA_ARCH__
+//#ifdef __NVCC__
 template <class FieldType>
 int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                  vector<FieldType> &shiftedMsgsVectorsSquares,
@@ -2138,7 +2138,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
 
 }
-#endif
+//#endif
 
 
 template <class FieldType>
@@ -3260,7 +3260,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-#ifdef __CUDA_ARCH__
+//#ifdef __NVCC__
 //gpu version
 //-----------------------------------------------------//
     vector<FieldType> shiftedMsgsVectorsSquares;
@@ -3292,10 +3292,10 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-#else
+//#else
 //cpu optimed version
 //-------------------------------------------------------//
-    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
+  /*  vector<vector<FieldType>> shiftedMsgsVectorsSquares;
     vector<vector<FieldType>> shiftedMsgsVectorsCounters;
     splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
 
@@ -3313,7 +3313,8 @@ void ProtocolParty<FieldType>::outputPhase()
                                     accCountersMat);
 
     //-----------------------------------------------------//
-#endif
+*/
+//#endif
 
 
 
