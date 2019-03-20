@@ -22,6 +22,7 @@
 #include <omp.h>
 //#ifdef __NVCC__
 #include "cudaGemm.h"
+#incude "utils.h"
 #include <cuda_runtime.h>
 //#endif
 #include <algorithm>
