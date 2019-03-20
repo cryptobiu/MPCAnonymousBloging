@@ -414,18 +414,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     delete [] keyBytes;
 
 
-    string tmp = "init times";
-    //cout<<"before sending any data"<<endl;
-    byte tmpBytes[20];
-    for (int i=0; i<parties.size(); i++){
-        if (parties[i]->getID() < m_partyId){
-            parties[i]->getChannel()->write(tmp);
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-        } else {
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-            parties[i]->getChannel()->write(tmp);
-        }
-    }
+
 
 
     auto t1 = high_resolution_clock::now();
@@ -442,6 +431,20 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     shiftbyOne.resize(securityParamter);
     for(int i=0; i<securityParamter; i++){
         shiftbyOne[i] = 1 << i;
+    }
+
+
+    string tmp = "init times";
+    //cout<<"before sending any data"<<endl;
+    byte tmpBytes[20];
+    for (int i=0; i<parties.size(); i++){
+        if (parties[i]->getID() < m_partyId){
+            parties[i]->getChannel()->write(tmp);
+            parties[i]->getChannel()->read(tmpBytes, tmp.size());
+        } else {
+            parties[i]->getChannel()->read(tmpBytes, tmp.size());
+            parties[i]->getChannel()->write(tmp);
+        }
     }
 }
 
@@ -1620,6 +1623,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 
     vector<FieldType> flattenVec;
 
+    auto t1 = high_resolution_clock::now();
     //turn to one vector for the gpu multiplication. NOTE make sure to pass the flatten vector after testing.
     for(int i=0; i<vecs.size(); i++){
 
@@ -1629,6 +1633,14 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         //msgsVectors[i].resize(0);
 
     }
+
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time for flattenVec in unittest: " << duration << endl;
+    }
+
 
 
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
@@ -1670,7 +1682,7 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
 
     byte *constRandomBitsPrim = constRandomBits.data();
 
-    auto t1 = high_resolution_clock::now();
+    t1 = high_resolution_clock::now();
     //generate msg array that is the multiplication of an element with the related random share.
     for(int i = 0; i < vecs.size(); i++){
         randomVecs[i].resize(vecs[0].size());
@@ -1681,9 +1693,9 @@ int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
         }
     }
 
-    auto t2 = high_resolution_clock::now();
+    t2 = high_resolution_clock::now();
 
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in mult by randoms: " << duration << endl;
     }
