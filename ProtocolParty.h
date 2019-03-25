@@ -304,6 +304,8 @@ public:
     void splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors,
                     vector<FieldType> &msgsVectorsShifted, vector<FieldType> &squaresVectorsShifted, vector<FieldType> &countersVectorsShifted, vector<FieldType> &unitVectorsShifted);
 
+    void splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, int size, int l, int position, int start, int end);
+
 //        void copyBackToVectors();
 
 
@@ -2343,58 +2345,130 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
     generateRandomShiftingindices(randomShiftingIndices);
 
     int shiftRow, shiftCol;
-    int typeSize = field->getElementSizeInBytes();
-    for(int i=0; i<batchSize; i++){
 
-        //get the row and col shift
-        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-
-        //generate the shifted message and assign that back to the msgsVectors
-        memcpy(msgsVectorsShifted.data() + i*sqrtR*l, msgsVectors.data() + i*sqrtR*l+ shiftRow*l, l*(sqrtR-shiftRow)*typeSize);
-        memcpy(msgsVectorsShifted.data() + i*sqrtR*l + l*(sqrtR-shiftRow), msgsVectors.data() + i*sqrtR*l, shiftRow*l*typeSize);
-
+    int numClientsForEachThread;
+    if (batchSize <= numThreads){
+        numThreads = batchSize;
+        numClientsForEachThread = 1;
+    } else{
+        numClientsForEachThread = (batchSize + numThreads - 1)/ numThreads;
     }
+    vector<thread> threads(numThreads);
+
+    for (int t=0; t<numThreads; t++) {
+
+        if ((t + 1) * numClientsForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(msgsVectorsShifted), ref(msgsVectors), sqrtR, l, 0,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(msgsVectorsShifted), ref(msgsVectors), sqrtR, l, 0,  t * numClientsForEachThread, batchSize);
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+
+    int typeSize = field->getElementSizeInBytes();
+//    for(int i=0; i<batchSize; i++){
+//
+//        //get the row and col shift
+//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
+//
+//        //generate the shifted message and assign that back to the msgsVectors
+//        memcpy(msgsVectorsShifted.data() + i*sqrtR*l, msgsVectors.data() + i*sqrtR*l+ shiftRow*l, l*(sqrtR-shiftRow)*typeSize);
+//        memcpy(msgsVectorsShifted.data() + i*sqrtR*l + l*(sqrtR-shiftRow), msgsVectors.data() + i*sqrtR*l, shiftRow*l*typeSize);
+//
+//    }
 
     msgsVectors.resize(0);
 
-    for(int i=0; i<batchSize; i++){
+    for (int t=0; t<numThreads; t++) {
 
-        //get the row and col shift
-        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-
-        //generate the shifted message square
-        memcpy(squaresVectorsShifted.data() + i*sqrtR*l, squaresVectors.data() + i*sqrtR*l + shiftRow*l, l*(sqrtR-shiftRow)*typeSize);
-        memcpy(squaresVectorsShifted.data() + i*sqrtR*l + l*(sqrtR-shiftRow), squaresVectors.data() + i*sqrtR*l, shiftRow*l*typeSize);
-
-
+        if ((t + 1) * numClientsForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(squaresVectorsShifted), ref(squaresVectors), sqrtR, l, 0,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(squaresVectorsShifted), ref(squaresVectors), sqrtR, l, 0,  t * numClientsForEachThread, batchSize);
+        }
     }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+//    for(int i=0; i<batchSize; i++){
+//
+//        //get the row and col shift
+//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
+//
+//        //generate the shifted message square
+//        memcpy(squaresVectorsShifted.data() + i*sqrtR*l, squaresVectors.data() + i*sqrtR*l + shiftRow*l, l*(sqrtR-shiftRow)*typeSize);
+//        memcpy(squaresVectorsShifted.data() + i*sqrtR*l + l*(sqrtR-shiftRow), squaresVectors.data() + i*sqrtR*l, shiftRow*l*typeSize);
+//
+//
+//    }
 
     squaresVectors.resize(0);
 
-    for(int i=0; i<batchSize; i++){
+    for (int t=0; t<numThreads; t++) {
 
-        //get the row and col shift
-        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-
-        //generate the shifted counter
-        memcpy(countersVectorsShifted.data() + i*sqrtR, countersVectors.data() + i*sqrtR + shiftRow, (sqrtR-shiftRow)*typeSize);
-        memcpy(countersVectorsShifted.data() + i*sqrtR + sqrtR-shiftRow, countersVectors.data() + i*sqrtR, shiftRow*typeSize);
+        if ((t + 1) * numClientsForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(countersVectorsShifted), ref(countersVectors), sqrtR, 1, 0,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(countersVectorsShifted), ref(countersVectors), sqrtR, 1, 0,  t * numClientsForEachThread, batchSize);
+        }
     }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+//    for(int i=0; i<batchSize; i++){
+//
+//        //get the row and col shift
+//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
+//
+//        //generate the shifted counter
+//        memcpy(countersVectorsShifted.data() + i*sqrtR, countersVectors.data() + i*sqrtR + shiftRow, (sqrtR-shiftRow)*typeSize);
+//        memcpy(countersVectorsShifted.data() + i*sqrtR + sqrtR-shiftRow, countersVectors.data() + i*sqrtR, shiftRow*typeSize);
+//    }
 
     countersVectors.resize(0);
 
-    for(int i=0; i<batchSize; i++){
+    for (int t=0; t<numThreads; t++) {
 
-        //get the row and col shift
-        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
-
-        //generate the shifted unit vector, assign back to the unit vector
-        memcpy(unitVectorsShifted.data() + i*sqrtU, unitVectors.data() + i*sqrtU + shiftCol, (sqrtU-shiftCol)*typeSize);
-        memcpy(unitVectorsShifted.data() + i*sqrtU + sqrtU-shiftCol, unitVectors.data() + i*sqrtU, shiftCol*typeSize);
-
+        if ((t + 1) * numClientsForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(unitVectorsShifted), ref(unitVectors), sqrtU, 1, 1,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::splitShiftByThreads, this, ref(randomShiftingIndices), ref(unitVectorsShifted), ref(unitVectors), sqrtU, 1, 1,  t * numClientsForEachThread, batchSize);
+        }
     }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+//    for(int i=0; i<batchSize; i++){
+//
+//        //get the row and col shift
+//        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
+//
+//        //generate the shifted unit vector, assign back to the unit vector
+//        memcpy(unitVectorsShifted.data() + i*sqrtU, unitVectors.data() + i*sqrtU + shiftCol, (sqrtU-shiftCol)*typeSize);
+//        memcpy(unitVectorsShifted.data() + i*sqrtU + sqrtU-shiftCol, unitVectors.data() + i*sqrtU, shiftCol*typeSize);
+//
+//    }
 
     unitVectorsFlat.resize(0);
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, int size, int l, int position, int start, int end){
+    int typeSize = field->getElementSizeInBytes();
+    int shiftPos;
+
+    for(int i=start; i<end; i++){
+
+        //get the row and col shift
+        shiftPos = randomShiftingIndices[2*i + position];//this is for the message , the square and the counter
+
+        //generate the shifted message and assign that back to the msgsVectors
+        memcpy(shiftedArr.data() + i*size*l, originalArr.data() + i*size*l+ shiftPos*l, l*(size-shiftPos)*typeSize);
+        memcpy(shiftedArr.data() + i*size*l + l*(size-shiftPos), originalArr.data() + i*size*l, shiftPos*l*typeSize);
+
+    }
 }
 //
 //template <class FieldType>
@@ -3515,10 +3589,10 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 
     for (int t=0; t<numThreads; t++) {
 
-        if ((t + 1) * numClientsForEachThread <= input.size()) {
+        if ((t + 1) * numClientsForEachThread <= batchSize) {
             threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, input.size());
+            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, batchSize);
         }
     }
     for (int t=0; t<numThreads; t++){
@@ -3669,7 +3743,7 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
 
         toReduce += 2;
 
-        if (toReduce == 4 || i == input.size()-1){
+        if (toReduce == 4 || i == batchSize - 1){
 //            //reduce all matrix
             reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
 
@@ -4387,7 +4461,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-//#ifdef __NVCC__
+#ifdef __NVCC__
     //gpu version
 //-----------------------------------------------------//
 //    vector<FieldType> shiftedMsgsVectorsSquares;
@@ -4437,36 +4511,36 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-//#else
+#else
 //cpu optimed version
 //-------------------------------------------------------//
 
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
-//                                    squaresVectorsShiftedFlat,
-//                                    countersVectorsShiftedFlat,
-//                                    unitVectorsShiftedFlat,
-//                                    accMsgsMat,
-//                                    accMsgsSquareMat,
-//                                    accCountersMat);
+    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+    vector<int> accIntCountersMat(sqrtR*sqrtU);
+
+    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
+                                    squaresVectorsShiftedFlat,
+                                    countersVectorsShiftedFlat,
+                                    unitVectorsShiftedFlat,
+                                    accMsgsMat,
+                                    accMsgsSquareMat,
+                                    accCountersMat);
 
     //-----------------------------------------------------//
 
-//#endif
+#endif
 
 
-    t1 = high_resolution_clock::now();
+    auto t1 = high_resolution_clock::now();
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
                                                 accCountersMat,
                                                 accIntCountersMat);
-    t2 = high_resolution_clock::now();
+    auto t2 = high_resolution_clock::now();
 
-    duration = duration_cast<milliseconds>(t2-t1).count();
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in miliseconds generateClearMatricesForTesting: " << duration << endl;
     }
