@@ -551,7 +551,7 @@ void ProtocolParty<FieldType>::runOnline() {
     t1 = high_resolution_clock::now();
     timer->startSubTask("VerificationPhase", iteration);
     t = thread(&ProtocolParty::verificationPhase, this);
-    auto flag = verificationPhase();
+    //auto flag = verificationPhase();
     timer->endSubTask("VerificationPhase", iteration);
     t2 = high_resolution_clock::now();
     duration = duration_cast<milliseconds>(t2-t1).count();
