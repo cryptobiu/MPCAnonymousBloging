@@ -22,6 +22,7 @@
 #include <omp.h>
 #ifdef __NVCC__
 #include "cudaGemm.h"
+#incude "utils.h"
 #include <cuda_runtime.h>
 #endif
 #include <algorithm>
@@ -452,18 +453,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     delete [] keyBytes;
 
 
-    string tmp = "init times";
-    //cout<<"before sending any data"<<endl;
-    byte tmpBytes[20];
-    for (int i=0; i<parties.size(); i++){
-        if (parties[i]->getID() < m_partyId){
-            parties[i]->getChannel()->write(tmp);
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-        } else {
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-            parties[i]->getChannel()->write(tmp);
-        }
-    }
+
 
 
     auto t1 = high_resolution_clock::now();
@@ -480,6 +470,20 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     shiftbyOne.resize(securityParamter);
     for(int i=0; i<securityParamter; i++){
         shiftbyOne[i] = 1 << i;
+    }
+
+
+    string tmp = "init times";
+    //cout<<"before sending any data"<<endl;
+    byte tmpBytes[20];
+    for (int i=0; i<parties.size(); i++){
+        if (parties[i]->getID() < m_partyId){
+            parties[i]->getChannel()->write(tmp);
+            parties[i]->getChannel()->read(tmpBytes, tmp.size());
+        } else {
+            parties[i]->getChannel()->read(tmpBytes, tmp.size());
+            parties[i]->getChannel()->write(tmp);
+        }
     }
 }
 
@@ -1942,6 +1946,7 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
 
 
 }
+
 //
 //template <class FieldType>
 //int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
@@ -2163,6 +2168,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
             constRandomBitsFor0[size*j + k] = (1 - (randomBits[k] >> j)&1);
             constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
         }
+
     }
 
     byte *constRandomBitsPrim = constRandomBits.data();
@@ -2581,71 +2587,71 @@ void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsV
 //
 //}
 
-
-template <class FieldType>
-int ProtocolParty<FieldType>::generateSharedMatricesForTesting(vector<vector<FieldType>> &shiftedMsgsVectors,
-                                                               vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
-                                                               vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
-                                                               vector<vector<FieldType>> &shiftedUnitVectors,
-                                                               vector<FieldType> &accMsgsMat,
-                                                               vector<FieldType> &accMsgsSquareMat,
-                                                               vector<FieldType> &accCountersMat){
-
-    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
-    //and the second part is the addition of the sqaure of each message of that cell.
-
-    int numOfCols = sqrtR;
-    int numOfRows = sqrtU;
-    int size = numOfCols*numOfRows;//the size of the final 2D matrix
-
-    for(int i=0; i<batchSize; i++){//go over each client
-
-
-         for(int row = 0; row<numOfRows; row++){ //go over each row
-
-
-
-            for(int col=0; col<numOfCols*l; col++){//go over each message
-
-
-                    //accume message
-                    accMsgsMat[ (row * numOfCols*l + col)] +=
-                            shiftedMsgsVectors[i][col] *  shiftedUnitVectors[i][row];
-
-                    //accume the square of the message
-                    accMsgsSquareMat[ (row * numOfCols*l + col)] +=
-                            shiftedMsgsVectorsSquares[i][col] *  shiftedUnitVectors[i][row];
-
-
-
-            }
-
-             for(int col=0; col<numOfCols; col++){
-                 accCountersMat[ (row * numOfCols + col)] +=
-                         shiftedMsgsVectorsCounters[i][col] *  shiftedUnitVectors[i][row];
-
-
-
-             }
-        }
-
-    }
-
-    //print matrices
-
-//    for(int i=0; i<size; i++){
 //
-//        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
+//template <class FieldType>
+//int ProtocolParty<FieldType>::generateSharedMatricesForTesting(vector<vector<FieldType>> &shiftedMsgsVectors,
+//                                                               vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
+//                                                               vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
+//                                                               vector<vector<FieldType>> &shiftedUnitVectors,
+//                                                               vector<FieldType> &accMsgsMat,
+//                                                               vector<FieldType> &accMsgsSquareMat,
+//                                                               vector<FieldType> &accCountersMat){
+//
+//    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
+//    //and the second part is the addition of the sqaure of each message of that cell.
+//
+//    int numOfCols = sqrtR;
+//    int numOfRows = sqrtU;
+//    int size = numOfCols*numOfRows;//the size of the final 2D matrix
+//
+//    for(int i=0; i<batchSize; i++){//go over each client
+//
+//
+//         for(int row = 0; row<numOfRows; row++){ //go over each row
+//
+//
+//
+//            for(int col=0; col<numOfCols*l; col++){//go over each message
+//
+//
+//                    //accume message
+//                    accMsgsMat[ (row * numOfCols*l + col)] +=
+//                            shiftedMsgsVectors[i][col] *  shiftedUnitVectors[i][row];
+//
+//                    //accume the square of the message
+//                    accMsgsSquareMat[ (row * numOfCols*l + col)] +=
+//                            shiftedMsgsVectorsSquares[i][col] *  shiftedUnitVectors[i][row];
+//
+//
+//
+//            }
+//
+//             for(int col=0; col<numOfCols; col++){
+//                 accCountersMat[ (row * numOfCols + col)] +=
+//                         shiftedMsgsVectorsCounters[i][col] *  shiftedUnitVectors[i][row];
+//
+//
+//
+//             }
+//        }
 //
 //    }
 //
-//    for(int i=0; i<size; i++){
+//    //print matrices
 //
-//        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
+////    for(int i=0; i<size; i++){
+////
+////        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
+////
+////    }
+////
+////    for(int i=0; i<size; i++){
+////
+////        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
+////
+////    }
 //
-//    }
-
-}
+//}
 
 //
 //template <class FieldType>
