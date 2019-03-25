@@ -23,7 +23,7 @@
 //#ifdef __NVCC__
 #include "cudaGemm.h"
 #include "utils.h"
-#include <cuda_runtime.h>
+#include "cuda_runtime_api.h"
 //#endif
 #include <algorithm>
 
