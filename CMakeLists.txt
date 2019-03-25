@@ -18,7 +18,7 @@ set(SOURCE_FILES main.cpp ProtocolParty.cpp ProtocolParty.h)
     set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_70 -Xcompiler -march=native)
     CUDA_ADD_EXECUTABLE(MPCAnonymousBloging ${SOURCE_FILES} gemmOren/kernel.cu)
 
-add_executable(MPCAnonymousBloging ${SOURCE_FILES})
+#add_executable(MPCAnonymousBloging ${SOURCE_FILES})
 
 TARGET_LINK_LIBRARIES(MPCAnonymousBloging ntl.a
                       $ENV{HOME}/libscapi/libscapi.a gmp
