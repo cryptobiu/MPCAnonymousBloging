@@ -22,7 +22,7 @@
 #include <omp.h>
 //#ifdef __NVCC__
 #include "cudaGemm.h"
-#incude "utils.h"
+#include "utils.h"
 #include <cuda_runtime.h>
 //#endif
 #include <algorithm>
@@ -109,6 +109,8 @@ private:
     boost::asio::io_service io_service;
     vector<FieldType> alpha; // N distinct non-zero field elements
 
+
+    thread t;
 
 public:
 
@@ -550,8 +552,8 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("VerificationPhase", iteration);
-    thread t(&ProtocolParty::verificationPhase, this);
-//    auto flag = verificationPhase();
+    t = thread(&ProtocolParty::verificationPhase, this);
+    //auto flag = verificationPhase();
     timer->endSubTask("VerificationPhase", iteration);
     t2 = high_resolution_clock::now();
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -572,7 +574,7 @@ void ProtocolParty<FieldType>::runOnline() {
         cout << "time in milliseconds outputPhase: " << duration << endl;
     }
 
-    t.join();
+   // t.join();
 
 }
 
@@ -2810,7 +2812,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
     //     numClients,  l*sqrtR, sqrtU);
 
     int threads_per_device = 2;
-    //int num_devices = 1;
+    int num_devices = 1;
     cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices;
@@ -4534,6 +4536,8 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     auto t1 = high_resolution_clock::now();
+
+t.join();
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
                                                 accCountersMat,
