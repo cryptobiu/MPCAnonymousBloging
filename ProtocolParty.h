@@ -23,7 +23,7 @@
 //#ifdef __NVCC__
 #include "cudaGemm.h"
 #include "utils.h"
-#include "cuda_runtime_api.h"
+#include <cuda_runtime.h>
 //#endif
 #include <algorithm>
 
@@ -2736,7 +2736,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
     //     numClients,  l*sqrtR, sqrtU);
 
     int threads_per_device = 2;
-    //int num_devices = 1;
+    int num_devices = 1;
     cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices;
