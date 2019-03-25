@@ -4463,7 +4463,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-#ifdef __NVCC__
+//#ifdef __NVCC__
     //gpu version
 //-----------------------------------------------------//
 //    vector<FieldType> shiftedMsgsVectorsSquares;
@@ -4513,38 +4513,38 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-#else
+//#else
 //cpu optimed version
 //-------------------------------------------------------//
 
-    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-    vector<int> accIntCountersMat(sqrtR*sqrtU);
-
-    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
-                                    squaresVectorsShiftedFlat,
-                                    countersVectorsShiftedFlat,
-                                    unitVectorsShiftedFlat,
-                                    accMsgsMat,
-                                    accMsgsSquareMat,
-                                    accCountersMat);
+//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+//    vector<int> accIntCountersMat(sqrtR*sqrtU);
+//
+//    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
+//                                    squaresVectorsShiftedFlat,
+//                                    countersVectorsShiftedFlat,
+//                                    unitVectorsShiftedFlat,
+//                                    accMsgsMat,
+//                                    accMsgsSquareMat,
+//                                    accCountersMat);
 
     //-----------------------------------------------------//
 
-#endif
+//#endif
 
 
-    auto t1 = high_resolution_clock::now();
+    t1 = high_resolution_clock::now();
 
 t.join();
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
                                                 accCountersMat,
                                                 accIntCountersMat);
-    auto t2 = high_resolution_clock::now();
+    t2 = high_resolution_clock::now();
 
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in miliseconds generateClearMatricesForTesting: " << duration << endl;
     }
