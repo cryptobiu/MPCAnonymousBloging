@@ -20,11 +20,11 @@
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
 #include <omp.h>
-#ifdef __NVCC__
+//#ifdef __NVCC__
 #include "cudaGemm.h"
 #incude "utils.h"
 #include <cuda_runtime.h>
-#endif
+//#endif
 #include <algorithm>
 
 
@@ -243,7 +243,7 @@ public:
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
 
-#ifdef __NVCC__
+//#ifdef __NVCC__
     int generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                         vector<FieldType> &shiftedMsgsVectorsSquares,
                                         vector<FieldType> &shiftedMsgsVectorsCounters,
@@ -251,7 +251,7 @@ public:
                                         vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
-#endif
+//#endif
 
     void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
 
@@ -307,11 +307,11 @@ public:
 //        void copyBackToVectors();
 
 
-#ifdef __NVCC__
-    void splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-                                                    vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
-                                                    vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter);
-#endif
+//#ifdef __NVCC__
+//    void splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+//                                                    vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
+//                                                    vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter);
+//#endif
 
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
@@ -2458,55 +2458,55 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //    }
 //
 //}
-
-#ifdef __NVCC__
-template <class FieldType>
-void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-                                                vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
-                                          vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter){
-
-
-    //msgsVectorsSquare.resize(batchSize*sqrtR*l);
-    //msgsVectorsCounter.resize(batchSize*sqrtR);
-    //msgsVectorsVec.resize(batchSize*sqrtR*l);
-    //unitVectorsVec.resize(batchSize*sqrtU);
-
-
-    //generate random shifting for all servers
-    vector<int> randomShiftingIndices;
-    generateRandomShiftingindices(randomShiftingIndices);
-
-    int shiftRow, shiftCol;
-    for(int i=0; i<batchSize; i++){
-
-        //get the row and col shift
-        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
-
-        //generate the shifted message square
-        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin() + sqrtR*l + shiftRow*l, msgsVectors[i].begin()  + sqrtR*2*l);
-        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin()+ sqrtR*l, msgsVectors[i].begin() + sqrtR*l+ shiftRow*l);
-
-        //generate the shifted counter
-        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin() + sqrtR*2*l + shiftRow, msgsVectors[i].begin()  + sqrtR*2*l + sqrtR);
-        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin()+ sqrtR*2*l, msgsVectors[i].begin() + sqrtR*2*l+ shiftRow);
-
-
-        //generate the shifted unit vector, assign back to the unit vector
-        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin() + shiftCol, unitVectors[i].end());
-        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin(), unitVectors[i].begin() +  shiftCol);
-        unitVectors[i].resize(0);
-
-        //generate the shifted message and assign that back to the msgsVectors
-        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin() + shiftRow*l, msgsVectors[i].begin() + sqrtR*l);
-        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin(), msgsVectors[i].begin() + shiftRow*l);
-        msgsVectors[i].resize(0);
-
-    }
-
-}
-
-#endif
+//
+//#ifdef __NVCC__
+//template <class FieldType>
+//void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
+//                                                vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
+//                                          vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter){
+//
+//
+//    //msgsVectorsSquare.resize(batchSize*sqrtR*l);
+//    //msgsVectorsCounter.resize(batchSize*sqrtR);
+//    //msgsVectorsVec.resize(batchSize*sqrtR*l);
+//    //unitVectorsVec.resize(batchSize*sqrtU);
+//
+//
+//    //generate random shifting for all servers
+//    vector<int> randomShiftingIndices;
+//    generateRandomShiftingindices(randomShiftingIndices);
+//
+//    int shiftRow, shiftCol;
+//    for(int i=0; i<batchSize; i++){
+//
+//        //get the row and col shift
+//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
+//        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
+//
+//        //generate the shifted message square
+//        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin() + sqrtR*l + shiftRow*l, msgsVectors[i].begin()  + sqrtR*2*l);
+//        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin()+ sqrtR*l, msgsVectors[i].begin() + sqrtR*l+ shiftRow*l);
+//
+//        //generate the shifted counter
+//        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin() + sqrtR*2*l + shiftRow, msgsVectors[i].begin()  + sqrtR*2*l + sqrtR);
+//        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin()+ sqrtR*2*l, msgsVectors[i].begin() + sqrtR*2*l+ shiftRow);
+//
+//
+//        //generate the shifted unit vector, assign back to the unit vector
+//        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin() + shiftCol, unitVectors[i].end());
+//        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin(), unitVectors[i].begin() +  shiftCol);
+//        unitVectors[i].resize(0);
+//
+//        //generate the shifted message and assign that back to the msgsVectors
+//        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin() + shiftRow*l, msgsVectors[i].begin() + sqrtR*l);
+//        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin(), msgsVectors[i].begin() + shiftRow*l);
+//        msgsVectors[i].resize(0);
+//
+//    }
+//
+//}
+//
+//#endif
 
 //
 //template <class FieldType>
@@ -2721,7 +2721,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimizedFlat(vector<FieldTy
 
 }
 
-#ifdef __NVCC__
+//#ifdef __NVCC__
 template <class FieldType>
 int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                  vector<FieldType> &shiftedMsgsVectorsSquares,
@@ -2769,7 +2769,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
 
 }
-#endif
+//#endif
 
 
 template <class FieldType>
@@ -4387,26 +4387,26 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-#ifdef __NVCC__
+//#ifdef __NVCC__
     //gpu version
 //-----------------------------------------------------//
-    vector<FieldType> shiftedMsgsVectorsSquares;
-    vector<FieldType> shiftedMsgsVectorsCounters;
-    vector<FieldType> shiftedMsgsVec;
-    vector<FieldType> shiftedMsgsUnits;
-
-
-    auto t1 = high_resolution_clock::now();
-    splitShiftForGPU(msgsVectors, unitVectors,
-                     shiftedMsgsVec, shiftedMsgsUnits,
-                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
-    }
+//    vector<FieldType> shiftedMsgsVectorsSquares;
+//    vector<FieldType> shiftedMsgsVectorsCounters;
+//    vector<FieldType> shiftedMsgsVec;
+//    vector<FieldType> shiftedMsgsUnits;
+//
+//
+//    auto t1 = high_resolution_clock::now();
+//    splitShiftForGPU(msgsVectors, unitVectors,
+//                     shiftedMsgsVec, shiftedMsgsUnits,
+//                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
+//
+//    auto t2 = high_resolution_clock::now();
+//
+//    auto duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
+//    }
 
 
 
@@ -4416,17 +4416,17 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
 
-    t1 = high_resolution_clock::now();
-    generateSharedMatricesForGPU(shiftedMsgsVec,
-                                 shiftedMsgsVectorsSquares,
-                                 shiftedMsgsVectorsCounters,
-                                 shiftedMsgsUnits,
+    auto t1 = high_resolution_clock::now();
+    generateSharedMatricesForGPU(msgsVectorsShiftedFlat,
+                                 squaresVectorsShiftedFlat,
+                                 countersVectorsShiftedFlat,
+                                 unitVectorsShiftedFlat,
                                  accMsgsMat,
                                  accMsgsSquareMat,
                                  accCountersMat);
-    t2 = high_resolution_clock::now();
+    auto t2 = high_resolution_clock::now();
 
-    duration = duration_cast<milliseconds>(t2-t1).count();
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
     }
@@ -4437,36 +4437,36 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-#else
+//#else
 //cpu optimed version
 //-------------------------------------------------------//
 
-    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-    vector<int> accIntCountersMat(sqrtR*sqrtU);
-
-    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
-                                    squaresVectorsShiftedFlat,
-                                    countersVectorsShiftedFlat,
-                                    unitVectorsShiftedFlat,
-                                    accMsgsMat,
-                                    accMsgsSquareMat,
-                                    accCountersMat);
+//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+//    vector<int> accIntCountersMat(sqrtR*sqrtU);
+//
+//    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
+//                                    squaresVectorsShiftedFlat,
+//                                    countersVectorsShiftedFlat,
+//                                    unitVectorsShiftedFlat,
+//                                    accMsgsMat,
+//                                    accMsgsSquareMat,
+//                                    accCountersMat);
 
     //-----------------------------------------------------//
 
-#endif
+//#endif
 
 
-    auto t1 = high_resolution_clock::now();
+    t1 = high_resolution_clock::now();
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
                                                 accCountersMat,
                                                 accIntCountersMat);
-    auto t2 = high_resolution_clock::now();
+    t2 = high_resolution_clock::now();
 
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in miliseconds generateClearMatricesForTesting: " << duration << endl;
     }
