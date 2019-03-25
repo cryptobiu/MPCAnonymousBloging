@@ -64,7 +64,7 @@ private:
     int sqrtR;
     int sqrtU;
     int numThreads;
-    vector<thread> threads;
+
     vector<PrgFromOpenSSLAES> prgs;
 
     int batchSize;
@@ -378,7 +378,7 @@ public:
      * run the relevant verification algorithm and return accept/reject according to the output
      * of the verification algorithm.
      */
-    void verificationPhase();
+    int verificationPhase();
 
     vector<byte> generateCommonKey();
     void generatePseudoRandomElements(vector<byte> & aesKey, vector<FieldType> &randomElementsToFill, int numOfRandomElements);
@@ -409,7 +409,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     numServers = stoi(this->getParser().getValueByKey(arguments, "numServers"));
     numClients = stoi(this->getParser().getValueByKey(arguments, "numClients"));
     numThreads = stoi(this->getParser().getValueByKey(arguments, "numThreads"));
-    threads.resize(numThreads);
+
     string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
@@ -548,7 +548,8 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("VerificationPhase", iteration);
-    verificationPhase();
+    thread t(&ProtocolParty::verificationPhase, this);
+//    auto flag = verificationPhase();
     timer->endSubTask("VerificationPhase", iteration);
     t2 = high_resolution_clock::now();
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -568,6 +569,8 @@ void ProtocolParty<FieldType>::runOnline() {
     if(flag_print_timings) {
         cout << "time in milliseconds outputPhase: " << duration << endl;
     }
+
+    t.join();
 
 }
 
@@ -733,7 +736,6 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     randomElementsToFill.resize(no_buckets*(N-T)*2);
     vector<FieldType> randomElementsOnlyTshares (no_buckets*(N-T) );
 
-
     int sizeForEachThread;
     if (no_buckets <= numThreads){
         numThreads = no_buckets;
@@ -741,6 +743,8 @@ void ProtocolParty<FieldType>::generateRandom2TAndTShares(int numOfRandomPairs, 
     } else{
         sizeForEachThread = (no_buckets + numThreads - 1)/ numThreads;
     }
+    vector<thread> threads(numThreads);
+
     auto t2 = high_resolution_clock::now();
 
     auto duration = duration_cast<milliseconds>(t2-t1).count();
@@ -1627,7 +1631,7 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     } else{
         sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
     }
-
+    vector<thread> threads(numThreads);
     cout<<"numThreads is " <<numThreads<<endl;
     cout<<"num buckets " <<batchSize<<endl;
 
@@ -2200,6 +2204,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     } else{
         sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
     }
+    vector<thread> threads(numThreads);
 
     for (int t=0; t<numThreads; t++) {
 
@@ -3503,6 +3508,7 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
     } else{
         numClientsForEachThread = (batchSize + numThreads - 1)/ numThreads;
     }
+    vector<thread> threads(numThreads);
 
     vector<vector<long>> outputDoublePerThread(numThreads, vector<long>(newNumRows*newNumCols));
     vector<long> outputDouble(newNumRows*newNumCols);
@@ -3919,7 +3925,7 @@ void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &
 
     for(int i=0; i<accIntCountersMat.size(); i++){
 
-//        if(i%10000==0) {
+        if(i%10000==0) {
             cout << "accIntCountersMat[" << i << "]" << accIntCountersMat[i] << endl;
             if (accIntCountersMat[i] == 1) {
                 for (int l1 = 0; l1 < l; l1++) {
@@ -3941,7 +3947,7 @@ void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &
             } else {
                 //no messages to extract
             }
-//        }
+        }
 
     }
 
@@ -4025,7 +4031,7 @@ void ProtocolParty<FieldType>::inputPhase() {
 }
 
 template <class FieldType>
-void ProtocolParty<FieldType>::verificationPhase() {
+int ProtocolParty<FieldType>::verificationPhase() {
 
     //first check that the inputs are consistent
     //checkInputConsistency(msgsVectors, unitVectors);
@@ -4036,6 +4042,8 @@ void ProtocolParty<FieldType>::verificationPhase() {
     auto flag =  validMsgsTestFlat(msgsVectorsShiftedFlat, squaresVectorsShiftedFlat, countersVectorsShiftedFlat, unitVectorsShiftedFlat);
 
     cout<<"flag is : "<<flag<<endl;
+
+    return flag;
 
   }
 
