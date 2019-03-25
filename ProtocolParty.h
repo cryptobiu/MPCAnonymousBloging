@@ -110,6 +110,8 @@ private:
     vector<FieldType> alpha; // N distinct non-zero field elements
 
 
+    thread t;
+
 public:
 
     ProtocolParty(int argc, char* argv[]);
@@ -548,7 +550,7 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("VerificationPhase", iteration);
-    //thread t(&ProtocolParty::verificationPhase, this);
+    t = thread(&ProtocolParty::verificationPhase, this);
     auto flag = verificationPhase();
     timer->endSubTask("VerificationPhase", iteration);
     t2 = high_resolution_clock::now();
@@ -4459,6 +4461,7 @@ void ProtocolParty<FieldType>::outputPhase()
 //#endif
 
 
+t.join();
     t1 = high_resolution_clock::now();
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
