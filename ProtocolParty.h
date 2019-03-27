@@ -289,6 +289,8 @@ public:
 //    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
 //                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
 
+    void multRanodmsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,
+                              FieldType* randomElements, int size, int start, int end);
     void assignSumsPerThreadFlat(vector<long> & sum01, vector<FieldType> & vecs, int size, byte* constRandomBitsPrim,
                                                         vector<vector<FieldType>> & randomVecs, int start, int end);
     int generateClearMatricesForTesting(vector<FieldType> &accMsgsMat,
@@ -2179,18 +2181,38 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     }
 
+    int sizeForEachThread;
+    if (vecs.size() <= numThreads){
+        numThreads = batchSize;
+        sizeForEachThread = 1;
+    } else{
+        sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
+    }
+    vector<thread> threads(numThreads);
+
     byte *constRandomBitsPrim = constRandomBits.data();
 
     auto t1 = high_resolution_clock::now();
-    //generate msg array that is the multiplication of an element with the related random share.
-    for(int i = 0; i < batchSize; i++){
-        randomVecs[i].resize(size);
+    for (int t=0; t<numThreads; t++) {
 
-        for(int j=0; j<size ; j++){
-
-            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+        if ((t + 1) * sizeForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::multRanodmsByThreads, this, ref(randomVecs), ref(vecs), ref(randomElements), size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::multRanodmsByThreads, this, ref(randomVecs), ref(vecs), ref(randomElements), size, t * sizeForEachThread, batchSize);
         }
     }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+//    //generate msg array that is the multiplication of an element with the related random share.
+//    for(int i = 0; i < batchSize; i++){
+//        randomVecs[i].resize(size);
+//
+//        for(int j=0; j<size ; j++){
+//
+//            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+//        }
+//    }
 
     auto t2 = high_resolution_clock::now();
 
@@ -2201,14 +2223,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     t1 = high_resolution_clock::now();
 
-    int sizeForEachThread;
-    if (vecs.size() <= numThreads){
-        numThreads = batchSize;
-        sizeForEachThread = 1;
-    } else{
-        sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
-    }
-    vector<thread> threads(numThreads);
+
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2297,6 +2312,19 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 
     return flag;
+}
+
+
+template <class FieldType>
+void ProtocolParty<FieldType>::multRanodmsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, FieldType* randomElements, int size, int start, int end){
+    for(int i = start; i < end; i++){
+        randomVecs[i].resize(size);
+
+        for(int j=0; j<size ; j++){
+
+            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+        }
+    }
 }
 //
 //template <class FieldType>
@@ -4522,6 +4550,7 @@ void ProtocolParty<FieldType>::outputPhase()
 //    vector<FieldType> accCountersMat(sqrtR*sqrtU);
 //    vector<int> accIntCountersMat(sqrtR*sqrtU);
 //
+//    auto t1 = high_resolution_clock::now();
 //    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
 //                                    squaresVectorsShiftedFlat,
 //                                    countersVectorsShiftedFlat,
@@ -4529,7 +4558,12 @@ void ProtocolParty<FieldType>::outputPhase()
 //                                    accMsgsMat,
 //                                    accMsgsSquareMat,
 //                                    accCountersMat);
-
+//    auto t2 = high_resolution_clock::now();
+//
+//    auto duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in miliseconds generateSharedMatricesOptimized: " << duration << endl;
+//    }
     //-----------------------------------------------------//
 
 //#endif
