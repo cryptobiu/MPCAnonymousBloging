@@ -2194,6 +2194,14 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     byte *constRandomBitsPrim = constRandomBits.data();
 
     auto t1 = high_resolution_clock::now();
+    or(int i = 0; i < batchSize; i++){
+        randomVecs[i].resize(size);
+//
+//        for(int j=0; j<size ; j++){
+//
+//            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+//        }
+    }
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * sizeForEachThread <= batchSize) {
@@ -2319,7 +2327,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 template <class FieldType>
 void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, FieldType* randomElements, int size, int start, int end){
     for(int i = start; i < end; i++){
-        randomVecs[i].resize(size);
+//        randomVecs[i].resize(size);
 
         for(int j=0; j<size ; j++){
 
