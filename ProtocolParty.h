@@ -289,7 +289,7 @@ public:
 //    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
 //                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
 
-    void multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,
+    void multRandomsByThreads(vector<vector<FieldType>> & randomVecs, FieldType* vecs,
                               FieldType* randomElements, int size, int start, int end);
     void assignSumsPerThreadFlat(vector<long> & sum01, vector<FieldType> & vecs, int size, byte* constRandomBitsPrim,
                                                         vector<vector<FieldType>> & randomVecs, int start, int end);
@@ -2205,9 +2205,9 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * sizeForEachThread <= batchSize) {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
+            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), vecs.data() + t * sizeForEachThread * size, randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, batchSize);
+            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), vecs.data() + t * sizeForEachThread * size, randomElements, size, t * sizeForEachThread, batchSize);
         }
     }
     for (int t=0; t<numThreads; t++){
@@ -2325,13 +2325,14 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, FieldType* randomElements, int size, int start, int end){
+void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, FieldType * vecs, FieldType* randomElements, int size, int start, int end){
+    int counter = 0;
     for(int i = start; i < end; i++){
 //        randomVecs[i].resize(size);
 
         for(int j=0; j<size ; j++){
 
-            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+            randomVecs[i][j] = vecs[counter++] * randomElements[j];
         }
     }
 }
