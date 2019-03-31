@@ -449,7 +449,7 @@ width_b - number of elements in matrix B
 */
 void testGemmTN31(size_t m, size_t width_a, size_t width_b)
 {
-	printf("Starting merssene 31 gemm test\n");
+//	printf("Starting merssene 31 gemm test\n");
 	cudaStream_t stream = NULL;
 	size_t h_lda = width_a;
 	size_t h_ldb = width_b;
@@ -493,8 +493,8 @@ void testGemmTN31(size_t m, size_t width_a, size_t width_b)
 
 	float average_ms = 0;
 	cudaSafeCall(cudaEventElapsedTime(&average_ms, start, end));
-	std::cout << "Mat size: M=" << m << ", N=" << width_a << 
-		", K=" << width_b << ", Time: " << average_ms << "ms\n";
+//	std::cout << "Mat size: M=" << m << ", N=" << width_a <<
+//		", K=" << width_b << ", Time: " << average_ms << "ms\n";
 	
 
 	cudaSafeCall(cudaMemcpy2DAsync(h_C.data(), h_ldc * sizeof(merssene31_t),
@@ -512,12 +512,12 @@ void testGemmTN31(size_t m, size_t width_a, size_t width_b)
 				bool yyy = true;*/
 	}
 	else 
-		printf("Test Passed\n");
+//		printf("Test Passed\n");
 }
 
 void testGemmTN61(size_t m, size_t width_a, size_t width_b)
 {
-	printf("Starting merssene 61 gemm test\n");
+//	printf("Starting merssene 61 gemm test\n");
 	cudaStream_t stream = NULL;
 	size_t h_lda = width_a;
 	size_t h_ldb = width_b;
@@ -561,8 +561,8 @@ void testGemmTN61(size_t m, size_t width_a, size_t width_b)
 
 	float average_ms = 0;
 	cudaSafeCall(cudaEventElapsedTime(&average_ms, start, end));
-	std::cout << "Mat size: M=" << m << ", N=" << width_a << ", K=" <<
-		width_b << ", Time: " << average_ms << "ms\n";
+//	std::cout << "Mat size: M=" << m << ", N=" << width_a << ", K=" <<
+//		width_b << ", Time: " << average_ms << "ms\n";
 
 
 	// (512 * 128) * (256 * 512) = (128 * 256)
@@ -628,12 +628,12 @@ void processTiles31(int device_id, merssene31_t* ptr_a, size_t h_lda,
 
 
 	C.SetZero(stream);
-	printf("%d %d %d %d", C._rows, C._columns, C._ldm, h_ldc);
+//	printf("%d %d %d %d", C._rows, C._columns, C._ldm, h_ldc);
 	for (int i = 0; i < num_tiles; ++i)
 	{
 		auto& tile = tiles[i];
-		std::cout << "device " << device_id << " starting work on tile " <<
-			i << ", line " << tile._start << ", size " << tile._size << "\n";
+//		std::cout << "device " << device_id << " starting work on tile " <<
+//			i << ", line " << tile._start << ", size " << tile._size << "\n";
 
 		cudaSafeCall(cudaMemcpy2DAsync(A._ptr, A._ldm * sizeof(merssene31_t),
 			ptr_a + h_lda * tile._start, h_lda * sizeof(merssene31_t),
@@ -700,8 +700,8 @@ void processTiles61(int device_id, merssene61_t* ptr_a, size_t h_lda,
 	for (int i = 0; i < num_tiles; ++i)
 	{
 		auto& tile = tiles[i];
-		std::cout << "device " << device_id << " starting work on tile " <<
-			i << ", line " << tile._start << ", size " << tile._size << "\n";
+//		std::cout << "device " << device_id << " starting work on tile " <<
+//			i << ", line " << tile._start << ", size " << tile._size << "\n";
 
 		cudaSafeCall(cudaMemcpy2DAsync(A._ptr, A._ldm * sizeof(merssene61_t),
 			ptr_a + h_lda * tile._start, h_lda * sizeof(merssene61_t),
@@ -765,10 +765,10 @@ void GemmTNTiles31(merssene31_t* h_A, size_t h_lda,
 	std::vector< std::vector<STile> > tiles_groups(num_threads);
 	size_t group_size = (tiles_all.size() + num_threads - 1) / num_threads;
 
-	std::cout << "Launching job size: (" << m << "," << width_a <<
-		"," << width_b << "). " << tiles_all.size() <<
-		" tiles of size " << tile_size << " on " << devices.size() <<
-		" devices\n";
+//	std::cout << "Launching job size: (" << m << "," << width_a <<
+//		"," << width_b << "). " << tiles_all.size() <<
+//		" tiles of size " << tile_size << " on " << devices.size() <<
+//		" devices\n";
 	if (cheat)
 		for (auto& elm : tiles_all)
 			elm._start = 0;
@@ -790,13 +790,13 @@ void GemmTNTiles31(merssene31_t* h_A, size_t h_lda,
 	//	h_Cs(num_threads, std::vector<merssene31_t>(h_ldc * width_b, 0));// , h_ldc * width_b, 0);
 	std::vector<merssene31_t>  h_C_all(h_ldc * width_b);
 	std::vector<std::thread> threads(num_threads);
-	printf("Allocation finished\n");
+//	printf("Allocation finished\n");
 	
 	Mat<merssene31_t> d_C_sum(width_a, width_b);
 	std::mutex mutex;
 
 
-	printf("data generation done.\n");
+//	printf("data generation done.\n");
 	auto start = std::chrono::system_clock::now();
 
 	for (size_t tid = 0; tid < num_threads; ++tid)
@@ -855,7 +855,7 @@ void testGemmTNTiles31(size_t m, size_t width_a, size_t width_b, size_t tile_siz
 	std::vector<merssene31_t> h_B(h_ldb * alloc_dim);
 	std::vector<merssene31_t>  h_C_all(h_ldc * width_b);
 	std::vector<merssene31_t> h_C_ref(h_ldc * width_b, 0);
-	printf("Allocation finished\n");
+//	printf("Allocation finished\n");
 	randvec((merssene31_t::basic_t*)h_A.data(), width_a, alloc_dim, width_a, merssene31_t::p);
 	randvec((merssene31_t::basic_t*)h_B.data(), width_b, alloc_dim, width_b, merssene31_t::p);
 
@@ -902,10 +902,10 @@ void GemmTNTiles61(merssene61_t* h_A, size_t h_lda,
 	std::vector< std::vector<STile> > tiles_groups(num_threads);
 	size_t group_size = (tiles_all.size() + num_threads - 1) / num_threads;
 
-	std::cout << "Launching job size: (" << m << ","  << width_a << 
-		","  << width_b << "). " << tiles_all.size() << 
-		" tiles of size " << tile_size << " on " << devices.size() << 
-		" devices\n";
+//	std::cout << "Launching job size: (" << m << ","  << width_a <<
+//		","  << width_b << "). " << tiles_all.size() <<
+//		" tiles of size " << tile_size << " on " << devices.size() <<
+//		" devices\n";
 	if (cheat)
 		for (auto& elm : tiles_all)
 			elm._start = 0;
@@ -956,7 +956,7 @@ void testGemmTNTiles61(size_t m, size_t width_a, size_t width_b, size_t tile_siz
 	const std::vector<int>& devices, bool cheat)
 {
 	size_t alloc_dim = cheat ? tile_size : m;
-	printf("starting Merssene61 tile test\n");
+//	printf("starting Merssene61 tile test\n");
 	
 	size_t h_lda = width_a;
 	size_t h_ldb = width_b;

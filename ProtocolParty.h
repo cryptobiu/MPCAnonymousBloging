@@ -2193,26 +2193,26 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     byte *constRandomBitsPrim = constRandomBits.data();
 
     auto t1 = high_resolution_clock::now();
-    for (int t=0; t<numThreads; t++) {
-
-        if ((t + 1) * sizeForEachThread <= batchSize) {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), ref(randomElements), size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
-        } else {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), ref(randomElements), size, t * sizeForEachThread, batchSize);
-        }
-    }
-    for (int t=0; t<numThreads; t++){
-        threads[t].join();
-    }
-//    //generate msg array that is the multiplication of an element with the related random share.
-//    for(int i = 0; i < batchSize; i++){
-//        randomVecs[i].resize(size);
+//    for (int t=0; t<numThreads; t++) {
 //
-//        for(int j=0; j<size ; j++){
-//
-//            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+//        if ((t + 1) * sizeForEachThread <= batchSize) {
+//            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), ref(randomElements), size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
+//        } else {
+//            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), ref(randomElements), size, t * sizeForEachThread, batchSize);
 //        }
 //    }
+//    for (int t=0; t<numThreads; t++){
+//        threads[t].join();
+//    }
+//    //generate msg array that is the multiplication of an element with the related random share.
+    for(int i = 0; i < batchSize; i++){
+        randomVecs[i].resize(size);
+
+        for(int j=0; j<size ; j++){
+
+            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+        }
+    }
 
     auto t2 = high_resolution_clock::now();
 
