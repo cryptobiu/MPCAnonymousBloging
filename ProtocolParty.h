@@ -308,7 +308,7 @@ public:
     void splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors,
                     vector<FieldType> &msgsVectorsShifted, vector<FieldType> &squaresVectorsShifted, vector<FieldType> &countersVectorsShifted, vector<FieldType> &unitVectorsShifted);
 
-    void splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, int size, int l, int position, int start, int end);
+    void splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, long size, long l, long position, long start, long end);
 
 //        void copyBackToVectors();
 
@@ -2498,9 +2498,9 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 }
 
 template <class FieldType>
-void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, int size, int l, int position, int start, int end){
-    int typeSize = field->getElementSizeInBytes();
-    int shiftPos;
+void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, long size, long l, long position, long start, long end){
+    long typeSize = field->getElementSizeInBytes();
+    long shiftPos;
 
     for(int i=start; i<end; i++){
 
