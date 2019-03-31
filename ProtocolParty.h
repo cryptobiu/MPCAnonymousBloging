@@ -2189,6 +2189,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
     }
     vector<thread> threads(numThreads);
+    cout<<"num threads = "<< numThreads<< endl;
 
     byte *constRandomBitsPrim = constRandomBits.data();
 
