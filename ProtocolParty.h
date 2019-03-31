@@ -2194,7 +2194,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     byte *constRandomBitsPrim = constRandomBits.data();
 
     auto t1 = high_resolution_clock::now();
-    or(int i = 0; i < batchSize; i++){
+    for(int i = 0; i < batchSize; i++){
         randomVecs[i].resize(size);
 //
 //        for(int j=0; j<size ; j++){
