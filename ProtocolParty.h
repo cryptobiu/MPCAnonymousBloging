@@ -4029,7 +4029,7 @@ void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &
 
     for(int i=0; i<accIntCountersMat.size(); i++){
 
-        if(i%10000==0) {
+        if(i%100000==0) {
             cout << "accIntCountersMat[" << i << "]" << accIntCountersMat[i] << endl;
             if (accIntCountersMat[i] == 1) {
                 for (int l1 = 0; l1 < l; l1++) {
