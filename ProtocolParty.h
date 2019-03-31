@@ -2155,28 +2155,28 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     //was set.
     long * randomBits = (long *)randomElements;
 
-    vector<FieldType> constRandomBitsFor1(size*securityParamter);//we do not use bit set since this is
+//    vector<FieldType> constRandomBitsFor1(size*securityParamter);//we do not use bit set since this is
     //better performance wise rather than memory wise
 
 
-    vector<FieldType> constRandomBitsFor0(size*securityParamter);//we do not use bit set since this is
+//    vector<FieldType> constRandomBitsFor0(size*securityParamter);//we do not use bit set since this is
     //better performance wise rather than memory wise
 
     vector<byte> constRandomBits(size*securityParamter);
 
 
-    byte **constRandomBitsMat = new byte*[securityParamter];
+//    byte **constRandomBitsMat = new byte*[securityParamter];
 
     //fill the random bits once and use it without shifting for every client
     for (int j = 0; j < securityParamter; j++) {
 
-        constRandomBitsMat[j] = new byte[size];
+//        constRandomBitsMat[j] = new byte[size];
         for (int k = 0; k < size; k++) {
 
-            constRandomBitsFor1[size*j + k] = ((randomBits[k] >> j)&1);
+//            constRandomBitsFor1[size*j + k] = ((randomBits[k] >> j)&1);
             constRandomBits[size*j + k] = ((randomBits[k] >> j)&1);
-            constRandomBitsFor0[size*j + k] = (1 - (randomBits[k] >> j)&1);
-            constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
+//            constRandomBitsFor0[size*j + k] = (1 - (randomBits[k] >> j)&1);
+//            constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
         }
 
     }
@@ -2193,7 +2193,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     byte *constRandomBitsPrim = constRandomBits.data();
 
-    auto t1 = high_resolution_clock::now();
+
     for(int i = 0; i < batchSize; i++){
         randomVecs[i].resize(size);
 //
@@ -2202,6 +2202,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 //            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
 //        }
     }
+    auto t1 = high_resolution_clock::now();
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * sizeForEachThread <= batchSize) {
