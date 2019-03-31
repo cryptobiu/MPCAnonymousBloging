@@ -512,7 +512,7 @@ void testGemmTN31(size_t m, size_t width_a, size_t width_b)
 				bool yyy = true;*/
 	}
 	else 
-//		printf("Test Passed\n");
+		printf("Test Passed\n");
 }
 
 void testGemmTN61(size_t m, size_t width_a, size_t width_b)
