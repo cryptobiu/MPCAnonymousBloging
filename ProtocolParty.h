@@ -2208,9 +2208,9 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * sizeForEachThread <= batchSize) {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), vecs.data() + t * sizeForEachThread * size, randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
+            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), vecs.data() + t * sizeForEachThread * size, randomElements, size, t * sizeForEachThread, batchSize);
+            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, batchSize);
         }
     }
     for (int t=0; t<numThreads; t++){
