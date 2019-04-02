@@ -2328,7 +2328,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,, FieldType* randomElements, int size, int start, int end){
+void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, FieldType* randomElements, int size, int start, int end){
 
     for(long i = start; i < end; i++){
 //        randomVecs[i].resize(size);
