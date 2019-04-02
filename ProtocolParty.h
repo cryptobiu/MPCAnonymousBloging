@@ -2144,7 +2144,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
-    vector<vector<FieldType>> randomVecs(batchSize);
+    vector<vector<FieldType>> randomVecs(batchSize, vector<FieldType>(size));
 
     vector<FieldType> sum1(batchSize*securityParamter);
     vector<FieldType> sum0(batchSize*securityParamter);//do in a 1 dimension array for multiplication
@@ -2194,14 +2194,14 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     byte *constRandomBitsPrim = constRandomBits.data();
 
 
-    for(int i = 0; i < batchSize; i++){
-        randomVecs[i].resize(size);
-//
-//        for(int j=0; j<size ; j++){
-//
-//            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
-//        }
-    }
+//    for(int i = 0; i < batchSize; i++){
+//        randomVecs[i].resize(size);
+////
+////        for(int j=0; j<size ; j++){
+////
+////            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+////        }
+//    }
     auto t1 = high_resolution_clock::now();
     for (int t=0; t<numThreads; t++) {
 
@@ -2327,13 +2327,13 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 template <class FieldType>
 void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, FieldType * vecs, FieldType* randomElements, int size, int start, int end){
-    int counter = 0;
+
     for(int i = start; i < end; i++){
 //        randomVecs[i].resize(size);
 
         for(int j=0; j<size ; j++){
 
-            randomVecs[i][j] = vecs[counter++] * randomElements[j];
+            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
         }
     }
 }
