@@ -289,7 +289,7 @@ public:
 //    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
 //                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
 
-    void multRandomsByThreads(vector<vector<FieldType>> & randomVecs, FieldType* vecs,
+    void multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,,
                               FieldType* randomElements, int size, int start, int end);
     void assignSumsPerThreadFlat(vector<long> & sum01, vector<FieldType> & vecs, int size, byte* constRandomBitsPrim,
                                                         vector<vector<FieldType>> & randomVecs, int start, int end);
@@ -2328,7 +2328,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, FieldType * vecs, FieldType* randomElements, int size, int start, int end){
+void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,, FieldType* randomElements, int size, int start, int end){
 
     for(long i = start; i < end; i++){
 //        randomVecs[i].resize(size);
