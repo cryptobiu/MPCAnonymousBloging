@@ -2330,10 +2330,10 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 template <class FieldType>
 void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, FieldType * vecs, FieldType* randomElements, int size, int start, int end){
 
-    for(int i = start; i < end; i++){
+    for(long i = start; i < end; i++){
 //        randomVecs[i].resize(size);
 
-        for(int j=0; j<size ; j++){
+        for(long j=0; j<size ; j++){
 
             randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
         }
