@@ -57,17 +57,17 @@ private:
 
 
     //
-    int l;
-    int numClients;
+    long l;
+    long  numClients;
     int numServers;
     int securityParamter = 40;
-    int sqrtR;
-    int sqrtU;
+    long sqrtR;
+    long sqrtU;
     int numThreads;
 
     vector<PrgFromOpenSSLAES> prgs;
 
-    int batchSize;
+    long batchSize;
 
     vector<FieldType> msgsVectorsFlat;
     vector<FieldType> squaresVectorsFlat;
@@ -308,7 +308,7 @@ public:
     void splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors,
                     vector<FieldType> &msgsVectorsShifted, vector<FieldType> &squaresVectorsShifted, vector<FieldType> &countersVectorsShifted, vector<FieldType> &unitVectorsShifted);
 
-    void splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, int size, int l, int position, int start, int end);
+    void splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, long size, long l, long position, long start, long end);
 
 //        void copyBackToVectors();
 
@@ -926,6 +926,8 @@ void ProtocolParty<FieldType>::initializationPhase()
 {
     bigR.resize(1);
 
+cout<<"max size is "<<msgsVectorsFlat.max_size()<<endl;
+cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
     msgsVectorsFlat.resize(numClients*sqrtR*l);
     squaresVectorsFlat.resize(numClients*sqrtR*l);
     countersVectorsFlat.resize(numClients*sqrtR);
@@ -2496,9 +2498,9 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 }
 
 template <class FieldType>
-void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, int size, int l, int position, int start, int end){
-    int typeSize = field->getElementSizeInBytes();
-    int shiftPos;
+void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & shiftedArr, vector<FieldType> & originalArr, long size, long l, long position, long start, long end){
+    long typeSize = field->getElementSizeInBytes();
+    long shiftPos;
 
     for(int i=start; i<end; i++){
 
@@ -2852,15 +2854,18 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
     int threads_per_device = 2;
     int num_devices = 1;
-    cudaSafeCall(cudaGetDeviceCount(&num_devices));
+   //cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
-    std::vector<int> devices;
+    std::vector<int> devices(num_devices*threads_per_device);
     for (int device = 0; device < num_devices; ++device)
     {
-        for (int i = 0; i < threads_per_device; ++i)
-            devices.push_back(device);
+        for (int i = 0; i < threads_per_device; ++i){
+            devices[threads_per_device*device +i] = device;
+		cout<<"vec is "<<device<<endl;
+	}
     }
 
+cout<<"after devices vec"<<endl;
     size_t tile_size = std::min(16384ULL, (unsigned long long) numClients / devices.size());
 
     GemmTNTiles31(
