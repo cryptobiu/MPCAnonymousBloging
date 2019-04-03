@@ -81,7 +81,9 @@ private:
     vector<FieldType> sum1;
     vector<FieldType> sum0;
     vector<long> sum01;
-
+    vector<FieldType> sumOfElementsVecs;
+    vector<FieldType> openedSumOfElementsVecs;
+    vector<FieldType> sumsForConsistensyTestOpened;
     vector<FieldType> bigRVec;
 
     Measurement* timer;
@@ -944,8 +946,11 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
 
     sum1.resize(batchSize*securityParamter);
     sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-
     sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+
+    sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
+    openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
+    sumsForConsistensyTestOpened.resize(batchSize);
 
     beta.resize(1);
     y_for_interpolate.resize(N);
@@ -1311,12 +1316,11 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<FieldType> &msgsVectorsF
     for(int i=0; i<numClients; i++){
 
         readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msgsVectorsFlat.data() +i*sqrtR*l, squaresVectorsFlat.data() +i*sqrtR*l, countersVectorsFlat.data() +i*sqrtR, unitVectorsFlat.data() + i*sqrtU, &e);
-
+        
         if(i%10000==0) {
-            cout<<i<<" ";
+            cout<<i<<endl;
         }
     }
-    cout<<endl;
 
 }
 
@@ -1781,9 +1785,11 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         cout << "time in milliseconds unitVectorsTest 1: " << duration << endl;
     }
 
+    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
+
     cout<<"flag after first unit test is "<<flag<<endl;
-    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
-    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
+//    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
+//    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
 
     //flag = -1;//remove after fix
     if(flag==-1) {//all vectors passed the test
@@ -1820,7 +1826,7 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         cout << "time in milliseconds unitVectorsTest 2: " << duration << endl;
     }
 
-    vector<FieldType> sumsForConsistensyTestOpened(batchSize);
+//    vector<FieldType> sumsForConsistensyTestOpened(batchSize);
 
     //invoke a consistency test, need to return the index of a cheating client
     openShare(sumsForConsistensyTest.size(), sumsForConsistensyTest, sumsForConsistensyTestOpened, T);
@@ -2876,7 +2882,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
     int threads_per_device = 2;
     int num_devices = 1;
-   //cudaSafeCall(cudaGetDeviceCount(&num_devices));
+   cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices(num_devices*threads_per_device);
     for (int device = 0; device < num_devices; ++device)
