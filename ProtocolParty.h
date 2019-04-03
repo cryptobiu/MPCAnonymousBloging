@@ -1312,7 +1312,11 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<FieldType> &msgsVectorsF
 
         readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msgsVectorsFlat.data() +i*sqrtR*l, squaresVectorsFlat.data() +i*sqrtR*l, countersVectorsFlat.data() +i*sqrtR, unitVectorsFlat.data() + i*sqrtU, &e);
 
+        if(i%10000==0) {
+            cout<<i<<" ";
+        }
     }
+    cout<<endl;
 
 }
 
