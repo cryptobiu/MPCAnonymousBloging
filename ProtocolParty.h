@@ -78,6 +78,10 @@ private:
     vector<FieldType> countersVectorsShiftedFlat;
     vector<FieldType> unitVectorsShiftedFlat;
 
+    vector<FieldType> sum1;
+    vector<FieldType> sum0;
+    vector<long> sum01;
+
     vector<FieldType> bigRVec;
 
     Measurement* timer;
@@ -937,6 +941,11 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
     squaresVectorsShiftedFlat.resize(batchSize*sqrtR*l);
     countersVectorsShiftedFlat.resize(batchSize*sqrtR);
     unitVectorsShiftedFlat.resize(batchSize*sqrtU);
+
+    sum1.resize(batchSize*securityParamter);
+    sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
+
+    sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
     beta.resize(1);
     y_for_interpolate.resize(N);
@@ -2153,10 +2162,10 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
     vector<vector<FieldType>> randomVecs(batchSize, vector<FieldType>(size));
 
-    vector<FieldType> sum1(batchSize*securityParamter);
-    vector<FieldType> sum0(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-
-    vector<long> sum01(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+//    vector<FieldType> sum1(batchSize*securityParamter);
+//    vector<FieldType> sum0(batchSize*securityParamter);//do in a 1 dimension array for multiplication
+//
+//    vector<long> sum01(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
     //use the random elements for the bits. This is ok since the random elements were chosen after the input
     //was set.
