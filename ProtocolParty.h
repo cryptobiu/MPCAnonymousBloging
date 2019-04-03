@@ -933,6 +933,11 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
     countersVectorsFlat.resize(numClients*sqrtR);
     unitVectorsFlat.resize(numClients*sqrtU);
 
+    msgsVectorsShiftedFlat.resize(batchSize*sqrtR*l);
+    squaresVectorsShiftedFlat.resize(batchSize*sqrtR*l);
+    countersVectorsShiftedFlat.resize(batchSize*sqrtR);
+    unitVectorsShiftedFlat.resize(batchSize*sqrtU);
+
     beta.resize(1);
     y_for_interpolate.resize(N);
 
@@ -2378,10 +2383,10 @@ template <class FieldType>
 void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors,
         vector<FieldType> &msgsVectorsShifted, vector<FieldType> &squaresVectorsShifted, vector<FieldType> &countersVectorsShifted, vector<FieldType> &unitVectorsShifted){
 
-    msgsVectorsShifted.resize(batchSize*sqrtR*l);
-    squaresVectorsShifted.resize(batchSize*sqrtR*l);
-    countersVectorsShifted.resize(batchSize*sqrtR);
-    unitVectorsShifted.resize(batchSize*sqrtU);
+//    msgsVectorsShifted.resize(batchSize*sqrtR*l);
+//    squaresVectorsShifted.resize(batchSize*sqrtR*l);
+//    countersVectorsShifted.resize(batchSize*sqrtR);
+//    unitVectorsShifted.resize(batchSize*sqrtU);
 
     //generate random shifting for all servers
     vector<int> randomShiftingIndices;
@@ -2422,7 +2427,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //
 //    }
 
-    msgsVectors.resize(0);
+    msgsVectors.clear();
+    msgsVectors.shrink_to_fit();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2447,7 +2453,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //
 //    }
 
-    squaresVectors.resize(0);
+    squaresVectors.clear();
+    squaresVectors.shrink_to_fit();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2470,7 +2477,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //        memcpy(countersVectorsShifted.data() + i*sqrtR + sqrtR-shiftRow, countersVectors.data() + i*sqrtR, shiftRow*typeSize);
 //    }
 
-    countersVectors.resize(0);
+    countersVectors.clear();
+    countersVectors.shrink_to_fit();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2494,7 +2502,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //
 //    }
 
-    unitVectorsFlat.resize(0);
+    unitVectorsFlat.clear();
+    unitVectorsFlat.shrink_to_fit();
 }
 
 template <class FieldType>
