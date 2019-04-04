@@ -2260,9 +2260,9 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     t1 = high_resolution_clock::now();
 
 
-    regMatrixMulTN(sum1.data(), msgsVectorsShiftedFlat.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
+    regMatrixMulTN(sum1.data(), vecs.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
 
-    regMatrixMulTN(sum0.data(), msgsVectorsShiftedFlat.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
+    regMatrixMulTN(sum0.data(), vecs.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
 
 
 
