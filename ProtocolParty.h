@@ -2278,16 +2278,43 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         }
     }
 
-    processNN31((merssene31_t *)sum1.data(),
-                (merssene31_t *)vecs.data(), batchSize, size,
-                (merssene31_t *)constRandomBitsFor1.data(), securityParamter,
-                     devices);
+    vector<FieldType> A(6,1);
+    vector<FieldType> B(12,2);
+    vector<FieldType> C(8);
 
 
-    processNN31((merssene31_t *)sum0.data(),
-                (merssene31_t *)vecs.data(), batchSize, size,
-                (merssene31_t *)constRandomBitsFor0.data(), securityParamter,
-                     devices);
+    processNN31((merssene31_t *)C.data(),
+                (merssene31_t *)A.data(), 2, 3,
+                (merssene31_t *)B.data(), 4,
+                devices);
+
+    for(int i=0; i<C.size(); i++){
+
+        cout<<"C[i] is "<<C[i];
+    }
+
+    regMatrixMulTN((merssene31_t *)C.data(),
+                   (merssene31_t *)A.data(), 2, 3,
+                   (merssene31_t *)B.data(), 4);
+
+
+    for(int i=0; i<C.size(); i++){
+
+        cout<<"C[i] is "<<C[i];
+    }
+
+
+//
+//    processNN31((merssene31_t *)sum1.data(),
+//                (merssene31_t *)vecs.data(), batchSize, size,
+//                (merssene31_t *)constRandomBitsFor1.data(), securityParamter,
+//                     devices);
+//
+//
+//    processNN31((merssene31_t *)sum0.data(),
+//                (merssene31_t *)vecs.data(), batchSize, size,
+//                (merssene31_t *)constRandomBitsFor0.data(), securityParamter,
+//                     devices);
 
 
 
