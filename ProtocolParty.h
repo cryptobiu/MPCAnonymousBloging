@@ -2262,7 +2262,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     //regMatrixMulTN(sum1.data(), vecs.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
 
-    regMatrixMulTN(sum0.data(), vecs.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
+    //regMatrixMulTN(sum0.data(), vecs.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
 
 
     int threads_per_device = 2;
@@ -2278,15 +2278,15 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         }
     }
 
-    processNN31(sum1.data(),
-                     vecs.data(), batchSize, size,
-                     constRandomBitsFor1.data(), securityParamter,
+    processNN31((merssene31_t *)sum1.data(),
+                (merssene31_t *)vecs.data(), batchSize, size,
+                (merssene31_t *)constRandomBitsFor1.data(), securityParamter,
                      devices);
 
 
-    processNN31(sum0.data(),
-                     vecs.data(), batchSize, size,
-                     constRandomBitsFor0.data(), securityParamter,
+    processNN31((merssene31_t *)sum0.data(),
+                (merssene31_t *)vecs.data(), batchSize, size,
+                (merssene31_t *)constRandomBitsFor0.data(), securityParamter,
                      devices);
 
 
