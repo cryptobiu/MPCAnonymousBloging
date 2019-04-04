@@ -852,9 +852,9 @@ void processNN31(merssene31_t* h_C,
 
     //	printf("Starting merssene 31 gemm test\n");
     cudaStream_t stream = NULL;
-    size_t h_lda = colA;
-    size_t h_ldb = colB;
-    size_t h_ldc = colB;
+    size_t h_lda = rowA;
+    size_t h_ldb = colA;
+    size_t h_ldc = rowA;
 
 
     Mat<merssene31_t> A(colA, rowA); // A is width_a rows by height_a columns
