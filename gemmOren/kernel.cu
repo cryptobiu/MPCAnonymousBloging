@@ -862,13 +862,13 @@ void processNN31(merssene31_t* h_C,
     Mat<merssene31_t> C(rowA, colB); // C is height_a rows by height_b columns
 
     cudaSafeCall(cudaMemcpy2DAsync(A._ptr, A._ldm  * sizeof(merssene31_t),
-                                   h_A.data(), h_lda * sizeof(merssene31_t), rowA * sizeof(merssene31_t),
+                                   h_A, h_lda * sizeof(merssene31_t), rowA * sizeof(merssene31_t),
                                    colA, cudaMemcpyHostToDevice, stream));
     cudaSafeCall(cudaMemcpy2DAsync(B._ptr, B._ldm * sizeof(merssene31_t),
-                                   h_B.data(), h_ldb * sizeof(merssene31_t), colA* sizeof(merssene31_t),
+                                   h_B, h_ldb * sizeof(merssene31_t), colA* sizeof(merssene31_t),
                                    colB, cudaMemcpyHostToDevice, stream));
     cudaSafeCall(cudaMemcpy2DAsync(C._ptr, C._ldm * sizeof(merssene31_t),
-                                   h_C.data(), h_ldc * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
+                                   h_C, h_ldc * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
                                    C._columns, cudaMemcpyHostToDevice, stream));
     //cudaSafeCall(cudaMemcpyAsync(A._ptr, h_A.data(), h_A.size() * sizeof(merssene31_t), cudaMemcpyHostToDevice, stream));
     //cudaSafeCall(cudaMemcpyAsync(B._ptr, h_B.data(), h_B.size() * sizeof(merssene31_t), cudaMemcpyHostToDevice, stream));
