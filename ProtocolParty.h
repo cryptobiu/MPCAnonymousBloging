@@ -78,6 +78,12 @@ private:
     vector<FieldType> countersVectorsShiftedFlat;
     vector<FieldType> unitVectorsShiftedFlat;
 
+    vector<FieldType> sum1;
+    vector<FieldType> sum0;
+    vector<long> sum01;
+    vector<FieldType> sumOfElementsVecs;
+    vector<FieldType> openedSumOfElementsVecs;
+    vector<FieldType> sumsForConsistensyTestOpened;
     vector<FieldType> bigRVec;
 
     Measurement* timer;
@@ -933,6 +939,19 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
     countersVectorsFlat.resize(numClients*sqrtR);
     unitVectorsFlat.resize(numClients*sqrtU);
 
+    msgsVectorsShiftedFlat.resize(batchSize*sqrtR*l);
+    squaresVectorsShiftedFlat.resize(batchSize*sqrtR*l);
+    countersVectorsShiftedFlat.resize(batchSize*sqrtR);
+    unitVectorsShiftedFlat.resize(batchSize*sqrtU);
+
+    sum1.resize(batchSize*securityParamter);
+    sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
+    sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+
+    sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
+    openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
+    sumsForConsistensyTestOpened.resize(batchSize);
+
     beta.resize(1);
     y_for_interpolate.resize(N);
 
@@ -1297,7 +1316,10 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<FieldType> &msgsVectorsF
     for(int i=0; i<numClients; i++){
 
         readServerFile(string(getenv("HOME")) + "/files/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msgsVectorsFlat.data() +i*sqrtR*l, squaresVectorsFlat.data() +i*sqrtR*l, countersVectorsFlat.data() +i*sqrtR, unitVectorsFlat.data() + i*sqrtU, &e);
-
+        
+        if(i%10000==0) {
+            cout<<i<<endl;
+        }
     }
 
 }
@@ -1763,9 +1785,11 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         cout << "time in milliseconds unitVectorsTest 1: " << duration << endl;
     }
 
+    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
+
     cout<<"flag after first unit test is "<<flag<<endl;
-    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
-    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
+//    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
+//    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
 
     //flag = -1;//remove after fix
     if(flag==-1) {//all vectors passed the test
@@ -1802,7 +1826,7 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         cout << "time in milliseconds unitVectorsTest 2: " << duration << endl;
     }
 
-    vector<FieldType> sumsForConsistensyTestOpened(batchSize);
+//    vector<FieldType> sumsForConsistensyTestOpened(batchSize);
 
     //invoke a consistency test, need to return the index of a cheating client
     openShare(sumsForConsistensyTest.size(), sumsForConsistensyTest, sumsForConsistensyTestOpened, T);
@@ -2148,10 +2172,10 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
     vector<vector<FieldType>> randomVecs(batchSize, vector<FieldType>(size));
 
-    vector<FieldType> sum1(batchSize*securityParamter);
-    vector<FieldType> sum0(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-
-    vector<long> sum01(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+//    vector<FieldType> sum1(batchSize*securityParamter);
+//    vector<FieldType> sum0(batchSize*securityParamter);//do in a 1 dimension array for multiplication
+//
+//    vector<long> sum01(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
     //use the random elements for the bits. This is ok since the random elements were chosen after the input
     //was set.
@@ -2385,10 +2409,10 @@ template <class FieldType>
 void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors,
         vector<FieldType> &msgsVectorsShifted, vector<FieldType> &squaresVectorsShifted, vector<FieldType> &countersVectorsShifted, vector<FieldType> &unitVectorsShifted){
 
-    msgsVectorsShifted.resize(batchSize*sqrtR*l);
-    squaresVectorsShifted.resize(batchSize*sqrtR*l);
-    countersVectorsShifted.resize(batchSize*sqrtR);
-    unitVectorsShifted.resize(batchSize*sqrtU);
+//    msgsVectorsShifted.resize(batchSize*sqrtR*l);
+//    squaresVectorsShifted.resize(batchSize*sqrtR*l);
+//    countersVectorsShifted.resize(batchSize*sqrtR);
+//    unitVectorsShifted.resize(batchSize*sqrtU);
 
     //generate random shifting for all servers
     vector<int> randomShiftingIndices;
@@ -2429,7 +2453,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //
 //    }
 
-    msgsVectors.resize(0);
+    msgsVectors.clear();
+    msgsVectors.shrink_to_fit();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2454,7 +2479,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //
 //    }
 
-    squaresVectors.resize(0);
+    squaresVectors.clear();
+    squaresVectors.shrink_to_fit();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2477,7 +2503,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //        memcpy(countersVectorsShifted.data() + i*sqrtR + sqrtR-shiftRow, countersVectors.data() + i*sqrtR, shiftRow*typeSize);
 //    }
 
-    countersVectors.resize(0);
+    countersVectors.clear();
+    countersVectors.shrink_to_fit();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2501,7 +2528,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
 //
 //    }
 
-    unitVectorsFlat.resize(0);
+    unitVectorsFlat.clear();
+    unitVectorsFlat.shrink_to_fit();
 }
 
 template <class FieldType>
@@ -2861,7 +2889,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
     int threads_per_device = 2;
     int num_devices = 1;
-   //cudaSafeCall(cudaGetDeviceCount(&num_devices));
+   cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices(num_devices*threads_per_device);
     for (int device = 0; device < num_devices; ++device)
