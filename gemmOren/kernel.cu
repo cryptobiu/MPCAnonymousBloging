@@ -867,14 +867,15 @@ void processNN31(merssene31_t* h_C,
     cout<<"h_lda "<<h_lda<<endl;
     cout<<"h_ldb "<<h_ldb<<endl;
     cout<<"h_ldc "<<h_ldc<<endl;
+    cout<<"RowA "<<rowA<<endl;
 
 
     cudaSafeCall(cudaMemcpy2DAsync(A._ptr, A._ldm  * sizeof(merssene31_t),
-                                   h_A, h_lda * sizeof(merssene31_t), rowA * sizeof(merssene31_t),
-                                   colA, cudaMemcpyHostToDevice, stream));
+                                   h_A, h_lda * sizeof(merssene31_t), colA * sizeof(merssene31_t),
+                                   rowA, cudaMemcpyHostToDevice, stream));
     cudaSafeCall(cudaMemcpy2DAsync(B._ptr, B._ldm * sizeof(merssene31_t),
-                                   h_B, h_ldb * sizeof(merssene31_t), colA* sizeof(merssene31_t),
-                                   colB, cudaMemcpyHostToDevice, stream));
+                                   h_B, h_ldb * sizeof(merssene31_t), colB* sizeof(merssene31_t),
+                                   colA, cudaMemcpyHostToDevice, stream));
     cudaSafeCall(cudaMemcpy2DAsync(C._ptr, C._ldm * sizeof(merssene31_t),
                                    h_C, h_ldc * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
                                    C._columns, cudaMemcpyHostToDevice, stream));
