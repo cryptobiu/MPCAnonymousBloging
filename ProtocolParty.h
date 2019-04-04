@@ -2295,7 +2295,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     regMatrixMulTN(C.data(),
                    A.data(), 2, 3,
-                   B.data(), 4);
+                   B.data(), 3,4);
 
 
     for(int i=0; i<C.size(); i++){
