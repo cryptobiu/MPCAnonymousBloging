@@ -2284,8 +2284,8 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
 
     processNN31((merssene31_t *)C.data(),
-                (merssene31_t *)A.data(), 2, 3,
-                (merssene31_t *)B.data(), 4,
+                (merssene31_t *)B.data(), 2, 3,
+                (merssene31_t *)A.data(), 4,
                 devices);
 
     for(int i=0; i<C.size(); i++){

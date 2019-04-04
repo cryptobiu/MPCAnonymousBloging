@@ -766,8 +766,8 @@ cudaError_t GemmNN31(
 //
 //SMersseneGemmConfig31<cutlass::Shape<8, 128, 128>, cutlass::Shape<8, 8, 8>> mygemmconf;
     typedef cutlass::gemm::SgemmTraits <
-            cutlass::MatrixLayout::kRowMajor,   // layout of A matrix
-            cutlass::MatrixLayout::kRowMajor,   // layout of B matrix
+            cutlass::MatrixLayout::kColumnMajor,   // layout of A matrix
+            cutlass::MatrixLayout::kColumnMajor,   // layout of B matrix
             cutlass::Shape<8, 128, 128>,           // threadblock tile size
             cutlass::gemm::LinearScaling<merssene31_t>,
             /// Tile size for thread-level GEMM (K-by-N-by-M)
