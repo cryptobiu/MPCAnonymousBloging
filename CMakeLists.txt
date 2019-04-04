@@ -15,7 +15,7 @@ set(SOURCE_FILES main.cpp ProtocolParty.cpp ProtocolParty.h)
 
 
 # nvcc flags
-    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_70 -Xcompiler -march=native)
+    set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch=sm_37 -Xcompiler -march=native)
     CUDA_ADD_EXECUTABLE(MPCAnonymousBloging ${SOURCE_FILES} gemmOren/kernel.cu)
 
 #add_executable(MPCAnonymousBloging ${SOURCE_FILES})

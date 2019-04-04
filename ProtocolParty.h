@@ -2278,14 +2278,14 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         }
     }
 
-    vector<FieldType> A{1, 2, 3,4,5,6 }; ;
-    vector<FieldType> B{1, 2, 3,4,5,6,7,8,9,10,11,12};
-    vector<FieldType> C(8);
+    vector<FieldType> A{1, 2, 3,4,5,6 ,7,8,9};
+    vector<FieldType> B{9,8,7,6,5,4,3,2,1};
+    vector<FieldType> C(9);
 
 
     processNN31((merssene31_t *)C.data(),
-                (merssene31_t *)B.data(), 2, 3,
-                (merssene31_t *)A.data(), 4,
+                (merssene31_t *)B.data(), 3, 3,
+                (merssene31_t *)A.data(), 3,
                 devices);
 
     for(int i=0; i<C.size(); i++){
@@ -2293,9 +2293,10 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         cout<<"C[i] is "<<C[i];
     }
 
+cout<<"--------- reg result ----------------------------"<<endl;
     regMatrixMulTN(C.data(),
-                   A.data(), 2, 3,
-                   B.data(), 3,4);
+                   A.data(), 3, 3,
+                   B.data(), 3,3);
 
 
     for(int i=0; i<C.size(); i++){
