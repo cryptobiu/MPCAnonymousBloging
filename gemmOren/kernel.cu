@@ -857,9 +857,9 @@ void processNN31(merssene31_t* h_C,
     size_t h_ldc = colB;
 
 
-    Mat<merssene31_t> A(rowA, colA); // A is width_a rows by height_a columns
-    Mat<merssene31_t> B(colA, colB); // B is width_a rows by height_b columns
-    Mat<merssene31_t> C(rowA, colB); // C is height_a rows by height_b columns
+    Mat<merssene31_t> A(colA, rowA); // A is width_a rows by height_a columns
+    Mat<merssene31_t> B(colB, colA); // B is width_a rows by height_b columns
+    Mat<merssene31_t> C(colB, rowA); // C is height_a rows by height_b columns
 
     cout<<"aldm "<<A._ldm<<endl;
     cout<<"bldm "<<B._ldm<<endl;
