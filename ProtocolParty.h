@@ -2206,63 +2206,88 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         }
 
     }
-
-    int sizeForEachThread;
-    if (vecs.size() <= numThreads){
-        numThreads = batchSize;
-        sizeForEachThread = 1;
-    } else{
-        sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
-    }
-    vector<thread> threads(numThreads);
-    cout<<"num threads = "<< numThreads<< endl;
-
-    byte *constRandomBitsPrim = constRandomBits.data();
-
-
-//    for(int i = 0; i < batchSize; i++){
-//        randomVecs[i].resize(size);
+//
+//    int sizeForEachThread;
+//    if (vecs.size() <= numThreads){
+//        numThreads = batchSize;
+//        sizeForEachThread = 1;
+//    } else{
+//        sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
+//    }
+//    vector<thread> threads(numThreads);
+//    cout<<"num threads = "<< numThreads<< endl;
+//
+//    byte *constRandomBitsPrim = constRandomBits.data();
+//
+//
+////    for(int i = 0; i < batchSize; i++){
+////        randomVecs[i].resize(size);
+//////
+//////        for(int j=0; j<size ; j++){
+//////
+//////            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+//////        }
+////    }
+//    auto t1 = high_resolution_clock::now();
+//    for (int t=0; t<numThreads; t++) {
+//
+//        if ((t + 1) * sizeForEachThread <= batchSize) {
+//            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
+//        } else {
+//            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, batchSize);
+//        }
+//    }
+//    for (int t=0; t<numThreads; t++){
+//        threads[t].join();
+//    }
+////    //generate msg array that is the multiplication of an element with the related random share.
+////    for(int i = 0; i < batchSize; i++){
+////        randomVecs[i].resize(size);
 ////
 ////        for(int j=0; j<size ; j++){
 ////
 ////            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
 ////        }
-//    }
-    auto t1 = high_resolution_clock::now();
-    for (int t=0; t<numThreads; t++) {
-
-        if ((t + 1) * sizeForEachThread <= batchSize) {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
-        } else {
-            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, batchSize);
-        }
-    }
-    for (int t=0; t<numThreads; t++){
-        threads[t].join();
-    }
-//    //generate msg array that is the multiplication of an element with the related random share.
-//    for(int i = 0; i < batchSize; i++){
-//        randomVecs[i].resize(size);
+////    }
 //
-//        for(int j=0; j<size ; j++){
+//    auto t2 = high_resolution_clock::now();
 //
-//            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
-//        }
+//    auto duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in mult by randoms: " << duration << endl;
 //    }
-
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time in mult by randoms: " << duration << endl;
-    }
-
-    t1 = high_resolution_clock::now();
+//
+//    t1 = high_resolution_clock::now();
 
 
-    regMatrixMulTN(sum1.data(), vecs.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
+    //regMatrixMulTN(sum1.data(), vecs.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
 
     regMatrixMulTN(sum0.data(), vecs.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
+
+
+    int threads_per_device = 2;
+    int num_devices = 1;
+    cudaSafeCall(cudaGetDeviceCount(&num_devices));
+    printf("%d devices used\n", num_devices);
+    std::vector<int> devices(num_devices*threads_per_device);
+    for (int device = 0; device < num_devices; ++device)
+    {
+        for (int i = 0; i < threads_per_device; ++i){
+            devices[threads_per_device*device +i] = device;
+            cout<<"vec is "<<device<<endl;
+        }
+    }
+
+    processNN31(sum1.data(),
+                     vecs.data(), batchSize, size,
+                     constRandomBitsFor1.data(), securityParamter,
+                     devices);
+
+
+    processNN31(sum0.data(),
+                     vecs.data(), batchSize, size,
+                     constRandomBitsFor0.data(), securityParamter,
+                     devices);
 
 
 
@@ -2286,8 +2311,8 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     for(int i=0; i<batchSize*securityParamter; i++) {
 
 
-        if(sum0[i]!=FieldType(sum01[i]))
-            cout<<"this is one basa situation "<< i<<endl;
+        //if(sum0[i]!=FieldType(sum01[i]))
+         //   cout<<"this is one basa situation "<< i<<endl;
         //sum0[i] = FieldType(sum01[i]);
         //sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
 
