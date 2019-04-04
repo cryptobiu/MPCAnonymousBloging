@@ -50,7 +50,7 @@ write some hardcodre tests with data generation on device?!
 
 // SUint32 SMersenne31Naive SMersenne31Classic merssene31_tUint32Mixed SMersenne31HiLo
 
-
+using namespace std;
 
 
 template <
