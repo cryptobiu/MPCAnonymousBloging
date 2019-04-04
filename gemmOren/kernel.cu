@@ -736,6 +736,58 @@ void processTiles61(int device_id, merssene61_t* ptr_a, size_t h_lda,
 
 }
 
+void processNN31(merssene31_t* h_C,
+                 merssene31_t* h_A, size_t rowA, size_t colA,
+                 merssene31_t* h_B, size_t colB,
+                 const std::vector<int>& devices)
+{
+
+
+    //	printf("Starting merssene 31 gemm test\n");
+    cudaStream_t stream = NULL;
+    size_t h_lda = colA;
+    size_t h_ldb = colB;
+    size_t h_ldc = colB;
+
+
+    Mat<merssene31_t> A(rowA, colA); // A is width_a rows by height_a columns
+    Mat<merssene31_t> B(colA, colB); // B is width_a rows by height_b columns
+    Mat<merssene31_t> C(rowA, colB); // C is height_a rows by height_b columns
+
+    cudaSafeCall(cudaMemcpy2DAsync(A._ptr, A._ldm  * sizeof(merssene31_t),
+                                   h_A.data(), h_lda * sizeof(merssene31_t), rowA * sizeof(merssene31_t),
+                                   colA, cudaMemcpyHostToDevice, stream));
+    cudaSafeCall(cudaMemcpy2DAsync(B._ptr, B._ldm * sizeof(merssene31_t),
+                                   h_B.data(), h_ldb * sizeof(merssene31_t), colA* sizeof(merssene31_t),
+                                   colB, cudaMemcpyHostToDevice, stream));
+    cudaSafeCall(cudaMemcpy2DAsync(C._ptr, C._ldm * sizeof(merssene31_t),
+                                   h_C.data(), h_ldc * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
+                                   C._columns, cudaMemcpyHostToDevice, stream));
+    //cudaSafeCall(cudaMemcpyAsync(A._ptr, h_A.data(), h_A.size() * sizeof(merssene31_t), cudaMemcpyHostToDevice, stream));
+    //cudaSafeCall(cudaMemcpyAsync(B._ptr, h_B.data(), h_B.size() * sizeof(merssene31_t), cudaMemcpyHostToDevice, stream));
+    cudaEvent_t start, end;
+    cudaSafeCall(cudaEventCreate(&start));
+    cudaSafeCall(cudaEventCreate(&end));
+    cudaSafeCall(cudaEventRecord(start));
+
+    cudaSafeCall(GemmNN31(rowA, colB, colA, merssene31_t::Accum_t(1),
+                          A._ptr, A._ldm, B._ptr, B._ldm, merssene31_t::Accum_t(1), C._ptr, C._ldm, stream));
+
+    cudaSafeCall(cudaEventRecord(end));
+    cudaSafeCall(cudaEventSynchronize(end));
+
+    float average_ms = 0;
+    cudaSafeCall(cudaEventElapsedTime(&average_ms, start, end));
+//	std::cout << "Mat size: M=" << m << ", N=" << width_a <<
+//		", K=" << width_b << ", Time: " << average_ms << "ms\n";
+
+
+    cudaSafeCall(cudaMemcpy2DAsync(h_C.data(), h_ldc * sizeof(merssene31_t),
+                                   C._ptr, C._ldm * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
+                                   C._columns, cudaMemcpyDeviceToHost, stream));
+}
+
+
 
 /* performs matrix multiplication using tiles. recieves/returns data on host.
 h_A - pointer to matrix A data

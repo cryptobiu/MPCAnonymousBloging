@@ -2157,11 +2157,11 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     //was set.
     long * randomBits = (long *)randomElements;
 
-//    vector<FieldType> constRandomBitsFor1(size*securityParamter);//we do not use bit set since this is
+    vector<FieldType> constRandomBitsFor1(size*securityParamter);//we do not use bit set since this is
     //better performance wise rather than memory wise
 
 
-//    vector<FieldType> constRandomBitsFor0(size*securityParamter);//we do not use bit set since this is
+    vector<FieldType> constRandomBitsFor0(size*securityParamter);//we do not use bit set since this is
     //better performance wise rather than memory wise
 
     vector<byte> constRandomBits(size*securityParamter);
@@ -2175,9 +2175,9 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 //        constRandomBitsMat[j] = new byte[size];
         for (int k = 0; k < size; k++) {
 
-//            constRandomBitsFor1[size*j + k] = ((randomBits[k] >> j)&1);
+            constRandomBitsFor1[size*j + k] = ((randomBits[k] >> j)&1);
             constRandomBits[size*j + k] = ((randomBits[k] >> j)&1);
-//            constRandomBitsFor0[size*j + k] = (1 - (randomBits[k] >> j)&1);
+            constRandomBitsFor0[size*j + k] = (1 - (randomBits[k] >> j)&1);
 //            constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
         }
 
@@ -2234,6 +2234,13 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     }
 
     t1 = high_resolution_clock::now();
+
+
+    regMatrixMulTN(sum1.data(), msgsVectorsShiftedFlat.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
+
+    regMatrixMulTN(sum0.data(), msgsVectorsShiftedFlat.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
+
+
 
 
 

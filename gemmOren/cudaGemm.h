@@ -18,4 +18,10 @@ void GemmTNTiles31(merssene31_t* h_A, size_t h_lda,
                    size_t m, size_t width_a, size_t width_b, size_t tile_size,
                    const std::vector<int>& devices, bool cheat);
 
+
+void processNN31(merssene31_t* h_C,
+                 merssene31_t* h_A, size_t rowA, size_t colA,
+                 merssene31_t* h_B, size_t colB,
+                 const std::vector<int>& devices);
+
 #endif //MPCANONYMOUSBLOGING_CUDAGEMM_H
