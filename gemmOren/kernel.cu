@@ -889,7 +889,7 @@ void processNN31(merssene31_t* h_C,
 //		", K=" << width_b << ", Time: " << average_ms << "ms\n";
 
 
-    cudaSafeCall(cudaMemcpy2DAsync(h_C.data(), h_ldc * sizeof(merssene31_t),
+    cudaSafeCall(cudaMemcpy2DAsync(h_C, h_ldc * sizeof(merssene31_t),
                                    C._ptr, C._ldm * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
                                    C._columns, cudaMemcpyDeviceToHost, stream));
 }
