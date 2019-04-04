@@ -2285,8 +2285,11 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     //turn the sum01 into sum0 and sum1 field elements
     for(int i=0; i<batchSize*securityParamter; i++) {
 
-        sum0[i] = FieldType(sum01[i]);
-        sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
+
+        if(sum0[i]!=FieldType(sum01[i]))
+            cout<<"this is one basa situation "<< i<<endl;
+        //sum0[i] = FieldType(sum01[i]);
+        //sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
 
     }
 
