@@ -2278,8 +2278,8 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
         }
     }
 
-    vector<FieldType> A(6,1);
-    vector<FieldType> B(12,2);
+    vector<FieldType> A{1, 2, 3,4,5,6 }; ;
+    vector<FieldType> B{1, 2, 3,4,5,6,7,8,9,10,11,12};
     vector<FieldType> C(8);
 
 
