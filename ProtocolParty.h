@@ -448,6 +448,46 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     batchSize = numClients;
     s = to_string(m_partyId);
 
+    int threads_per_device = 2;
+    int num_devices = 1;
+    cudaSafeCall(cudaGetDeviceCount(&num_devices));
+    printf("%d devices used\n", num_devices);
+    std::vector<int> devices(num_devices*threads_per_device);
+    for (int device = 0; device < num_devices; ++device)
+    {
+        for (int i = 0; i < threads_per_device; ++i){
+            devices[threads_per_device*device +i] = device;
+            cout<<"vec is "<<device<<endl;
+        }
+    }
+
+    vector<FieldType> A{1, 2, 3,4,5,6 ,7,8,9};
+    vector<FieldType> B{9,8,7,6,5,4,3,2,1};
+    vector<FieldType> C(9);
+
+
+    processNN31((merssene31_t *)C.data(),
+                (merssene31_t *)B.data(), 3, 3,
+                (merssene31_t *)A.data(), 3,
+                devices);
+
+    for(int i=0; i<C.size(); i++){
+
+        cout<<"C[i] is "<<C[i];
+    }
+
+    cout<<"--------- reg result ----------------------------"<<endl;
+    regMatrixMulTN(C.data(),
+                   A.data(), 3, 3,
+                   B.data(), 3,3);
+
+
+    for(int i=0; i<C.size(); i++){
+
+        cout<<"C[i] is "<<C[i];
+    }
+
+/*
     MPCCommunication comm;
     string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
 
@@ -470,7 +510,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
     auto t1 = high_resolution_clock::now();
     initializationPhase(/*matrix_him, matrix_vand, m*/);
-
+/*
     auto t2 = high_resolution_clock::now();
 
     auto duration = duration_cast<milliseconds>(t2-t1).count();
@@ -497,6 +537,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
             parties[i]->getChannel()->write(tmp);
         }
     }
+    */
 }
 
 
