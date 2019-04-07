@@ -448,55 +448,96 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     batchSize = numClients;
     s = to_string(m_partyId);
 
-    MPCCommunication comm;
-    string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
-
-    parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
-
-    prgs.resize(numThreads);
-    int* keyBytes = new int[4];
-    for (int i=0; i<numThreads; i++){
-        for (int j=0; j<4; j++){
-            keyBytes[j] = field->Random().elem;
-        }
-        SecretKey key((byte*)keyBytes, 16, "");
-        prgs[i].setKey(key);
-    }
-    delete [] keyBytes;
-
-
-
-
-
-    auto t1 = high_resolution_clock::now();
-    initializationPhase(/*matrix_him, matrix_vand, m*/);
-
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time in milliseconds initializationPhase: " << duration << endl;
-    }
-
-
-    shiftbyOne.resize(securityParamter);
-    for(int i=0; i<securityParamter; i++){
-        shiftbyOne[i] = 1 << i;
-    }
-
-
-    string tmp = "init times";
-    //cout<<"before sending any data"<<endl;
-    byte tmpBytes[20];
-    for (int i=0; i<parties.size(); i++){
-        if (parties[i]->getID() < m_partyId){
-            parties[i]->getChannel()->write(tmp);
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-        } else {
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-            parties[i]->getChannel()->write(tmp);
+    int threads_per_device = 2;
+    int num_devices = 1;
+    cudaSafeCall(cudaGetDeviceCount(&num_devices));
+    printf("%d devices used\n", num_devices);
+    std::vector<int> devices(num_devices*threads_per_device);
+    for (int device = 0; device < num_devices; ++device)
+    {
+        for (int i = 0; i < threads_per_device; ++i){
+            devices[threads_per_device*device +i] = device;
+            cout<<"vec is "<<device<<endl;
         }
     }
+
+    vector<FieldType> A{1, 2, 3,4,5,6 ,7,8,9};
+    vector<FieldType> B{9,8,7,6,5,4,3,2,1};
+    vector<FieldType> C(9);
+
+
+    processNN31((merssene31_t *)C.data(),
+                (merssene31_t *)B.data(), 3, 3,
+                (merssene31_t *)A.data(), 3,
+                devices);
+
+    for(int i=0; i<C.size(); i++){
+
+        cout<<"C[i] is "<<C[i];
+    }
+
+    cout<<"--------- reg result ----------------------------"<<endl;
+    regMatrixMulTN(C.data(),
+                   A.data(), 3, 3,
+                   B.data(), 3,3);
+
+
+    for(int i=0; i<C.size(); i++){
+
+        cout<<"C[i] is "<<C[i];
+    }
+
+//
+//    MPCCommunication comm;
+//    string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
+//
+//    parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
+//
+//    prgs.resize(numThreads);
+//    int* keyBytes = new int[4];
+//    for (int i=0; i<numThreads; i++){
+//        for (int j=0; j<4; j++){
+//            keyBytes[j] = field->Random().elem;
+//        }
+//        SecretKey key((byte*)keyBytes, 16, "");
+//        prgs[i].setKey(key);
+//    }
+//    delete [] keyBytes;
+//
+//
+//
+//
+//
+//    auto t1 = high_resolution_clock::now();
+//    initializationPhase(/*matrix_him, matrix_vand, m*/);
+//
+//    auto t2 = high_resolution_clock::now();
+//
+//    auto duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in milliseconds initializationPhase: " << duration << endl;
+//    }
+//
+//
+//    shiftbyOne.resize(securityParamter);
+//    for(int i=0; i<securityParamter; i++){
+//        shiftbyOne[i] = 1 << i;
+//    }
+//
+//
+//    string tmp = "init times";
+//    //cout<<"before sending any data"<<endl;
+//    byte tmpBytes[20];
+//    for (int i=0; i<parties.size(); i++){
+//        if (parties[i]->getID() < m_partyId){
+//            parties[i]->getChannel()->write(tmp);
+//            parties[i]->getChannel()->read(tmpBytes, tmp.size());
+//        } else {
+//            parties[i]->getChannel()->read(tmpBytes, tmp.size());
+//            parties[i]->getChannel()->write(tmp);
+//        }
+//    }
+//
 }
 
 
