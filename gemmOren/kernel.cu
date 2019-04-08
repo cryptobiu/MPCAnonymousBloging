@@ -845,7 +845,7 @@ cudaError_t GemmNN31(
 
 void processNN31(merssene31_t* h_C,
                  merssene31_t* h_A, size_t rowA, size_t colA,
-                 merssene31_t* h_B, size_t colB,
+                 merssene31_t* h_B, size_t rowB, size_t colB,
                  const std::vector<int>& devices)
 {
 
@@ -854,12 +854,12 @@ void processNN31(merssene31_t* h_C,
     cudaStream_t stream = NULL;
     size_t h_lda = colA;
     size_t h_ldb = colB;
-    size_t h_ldc = colB;
+    size_t h_ldc = colA;
 
 
     Mat<merssene31_t> A(colA, rowA); // A is width_a rows by height_a columns
-    Mat<merssene31_t> B(colB, colA); // B is width_a rows by height_b columns
-    Mat<merssene31_t> C(colB, rowA); // C is height_a rows by height_b columns
+    Mat<merssene31_t> B(colB, rowB); // B is width_a rows by height_b columns
+    Mat<merssene31_t> C(colA, rowB); // C is height_a rows by height_b columns
 
     cout<<"aldm "<<A._ldm<<endl;
     cout<<"bldm "<<B._ldm<<endl;
@@ -875,7 +875,7 @@ void processNN31(merssene31_t* h_C,
                                    rowA, cudaMemcpyHostToDevice, stream));
     cudaSafeCall(cudaMemcpy2DAsync(B._ptr, B._ldm * sizeof(merssene31_t),
                                    h_B, h_ldb * sizeof(merssene31_t), colB* sizeof(merssene31_t),
-                                   colA, cudaMemcpyHostToDevice, stream));
+                                   rowB, cudaMemcpyHostToDevice, stream));
     cudaSafeCall(cudaMemcpy2DAsync(C._ptr, C._ldm * sizeof(merssene31_t),
                                    h_C, h_ldc * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
                                    C._columns, cudaMemcpyHostToDevice, stream));
@@ -886,7 +886,7 @@ void processNN31(merssene31_t* h_C,
     cudaSafeCall(cudaEventCreate(&end));
     cudaSafeCall(cudaEventRecord(start));
 
-    cudaSafeCall(GemmNN31(rowA, colB, colA, merssene31_t::Accum_t(1),
+    cudaSafeCall(GemmNN31(colA, rowB, rowA, merssene31_t::Accum_t(1),
                           A._ptr, A._ldm, B._ptr, B._ldm, merssene31_t::Accum_t(1), C._ptr, C._ldm, stream));
 
     cudaSafeCall(cudaEventRecord(end));
