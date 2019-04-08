@@ -3002,10 +3002,10 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
    cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices((num_devices-1)*threads_per_device);
-    for (int device = 1; device < num_devices; ++device)
+    for (int device = 0; device < num_devices - 1; ++device)
     {
         for (int i = 0; i < threads_per_device; ++i){
-            devices[threads_per_device*device +i] = device;
+            devices[threads_per_device*device +i] = device + 1;
 		cout<<"vec is "<<device<<endl;
 	}
     }
