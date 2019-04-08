@@ -159,6 +159,10 @@ vector<FieldType> Client<FieldType>::makeInputVector(){
     vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->GetElement(prg.getRandom32());
 //    vals[2*(l*sqrtR) + sqrtR + sqrtU] = field->Random();
 
+//    cout<<"original msg:"<<endl;
+//    for (int i=0; i<l; i++){
+//        cout<<(long) msg[i].elem<<endl;
+//    }
 //    cout<<"original values:"<<endl;
 //    for (int i=0; i<vals.size(); i++){
 //        cout<<(long) vals[i].elem<<endl;

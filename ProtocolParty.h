@@ -4007,8 +4007,14 @@ int ProtocolParty<FieldType>::generateClearMatricesForTesting(vector<FieldType> 
 
     vector<vector<byte>> allHashes;
 
+    auto t1 = high_resolution_clock::now();
     commitOnMatrices(accMsgsMat, accCountersMat,allHashes);
+    auto t2 = high_resolution_clock::now();
 
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds commit on matrices: " << duration << endl;
+    }
     //compute just the open mats for debuging purpuses
 
     vector<FieldType> accMsgsMatOpened(accMsgsMat.size());
@@ -4046,6 +4052,7 @@ int ProtocolParty<FieldType>::generateClearMatricesForTesting(vector<FieldType> 
 //        cout << "counter num " << i << " is " << accCountersMat[i] << endl;
 //    }
 
+    t1 = high_resolution_clock::now();
     OpenSSLSHA256 hash;
     vector<byte> out;
     vector<byte> out2;
@@ -4068,6 +4075,13 @@ int ProtocolParty<FieldType>::generateClearMatricesForTesting(vector<FieldType> 
         if(out!=allHashes[i]) {
             return i;
         }
+    }
+
+    t2 = high_resolution_clock::now();
+
+    duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in milliseconds second hash: " << duration << endl;
     }
 
     return -1;
