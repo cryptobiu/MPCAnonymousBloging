@@ -2350,19 +2350,29 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
 */
 
+
+
     processNN31((merssene31_t *)sum1.data(),
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
-                (merssene31_t *)vecs.data(), batchSize, size,
+                (merssene31_t *)vecs.data(), batchSize/2, size,
+                     devices);
+    
+    processNN31((merssene31_t *)sum1.data() + sum1.size()/2,
+                (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
+                (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/2, size,
                      devices);
 
 
     processNN31((merssene31_t *)sum0.data(),
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
-                (merssene31_t *)vecs.data(), batchSize, size,
+                (merssene31_t *)vecs.data(), batchSize/2, size,
                      devices);
 
 
-
+    processNN31((merssene31_t *)sum0.data() + sum0.size()/2,
+                (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
+                (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/2, size,
+                     devices);
 
 
 //    for (int t=0; t<numThreads; t++) {
