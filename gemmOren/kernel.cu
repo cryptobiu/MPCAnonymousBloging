@@ -861,14 +861,6 @@ void processNN31(merssene31_t* h_C,
     Mat<merssene31_t> B(colB, rowB); // B is width_a rows by height_b columns
     Mat<merssene31_t> C(colA, rowB); // C is height_a rows by height_b columns
 
-    cout<<"aldm "<<A._ldm<<endl;
-    cout<<"bldm "<<B._ldm<<endl;
-    cout<<"cldm "<<C._ldm<<endl;
-    cout<<"h_lda "<<h_lda<<endl;
-    cout<<"h_ldb "<<h_ldb<<endl;
-    cout<<"h_ldc "<<h_ldc<<endl;
-    cout<<"RowA "<<rowA<<endl;
-
 
     cudaSafeCall(cudaMemcpy2DAsync(A._ptr, A._ldm  * sizeof(merssene31_t),
                                    h_A, h_lda * sizeof(merssene31_t), colA * sizeof(merssene31_t),

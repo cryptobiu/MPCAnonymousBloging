@@ -1826,8 +1826,11 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         cout << "time in milliseconds unitVectorsTest 1: " << duration << endl;
     }
 
-    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
 
+    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
+    memset((byte*)sum0.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
+    memset((byte*)sum1.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
+    
     cout<<"flag after first unit test is "<<flag<<endl;
 //    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
 //    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
