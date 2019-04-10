@@ -851,7 +851,10 @@ void processNN31(merssene31_t* h_C,
 
 
     //	printf("Starting merssene 31 gemm test\n");
-    cudaStream_t stream = NULL;
+    cudaSafeCall(cudaSetDevice(0));    
+    cudaStream_t stream;// = NULL;
+    cudaSafeCall(cudaStreamCreate(&stream));
+
     size_t h_lda = colA;
     size_t h_ldb = colB;
     size_t h_ldc = colA;
@@ -893,6 +896,7 @@ void processNN31(merssene31_t* h_C,
     cudaSafeCall(cudaMemcpy2DAsync(h_C, h_ldc * sizeof(merssene31_t),
                                    C._ptr, C._ldm * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
                                    C._columns, cudaMemcpyDeviceToHost, stream));
+    cudaSafeCall(cudaStreamDestroy(stream));
 }
 
 
