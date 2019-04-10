@@ -80,7 +80,7 @@ private:
 
     vector<FieldType> sum1;
     vector<FieldType> sum0;
-    vector<long> sum01;
+    //vector<long> sum01;
     vector<FieldType> sumOfElementsVecs;
     vector<FieldType> openedSumOfElementsVecs;
     vector<FieldType> sumsForConsistensyTestOpened;
@@ -623,7 +623,7 @@ void ProtocolParty<FieldType>::runOnline() {
         cout << "time in milliseconds outputPhase: " << duration << endl;
     }
 
-   // t.join();
+    //t.join();
 
 }
 
@@ -987,7 +987,7 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
 
     sum1.resize(batchSize*securityParamter);
     sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-    sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+    //sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
     sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
     openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
@@ -1827,9 +1827,9 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     }
 
 
-    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
-    memset((byte*)sum0.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
-    memset((byte*)sum1.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
+    //memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
+    //memset((byte*)sum0.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
+    //memset((byte*)sum1.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
     
     cout<<"flag after first unit test is "<<flag<<endl;
 //    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
@@ -2311,7 +2311,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     int threads_per_device = 2;
     int num_devices = 1;
-    cudaSafeCall(cudaGetDeviceCount(&num_devices));
+   // cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices(num_devices*threads_per_device);
     for (int device = 0; device < num_devices; ++device)
@@ -2366,13 +2366,13 @@ cout<<"--------- reg result ----------------------------"<<endl;
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/4, size,
                      devices);
-
+/*
     processNN31((merssene31_t *)sum1.data() + sum1.size()*3/4,
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()*3/4, batchSize/4, size,
                      devices);
 
-
+*/
     processNN31((merssene31_t *)sum0.data(),
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
                 (merssene31_t *)vecs.data(), batchSize/4, size,
@@ -2387,12 +2387,12 @@ cout<<"--------- reg result ----------------------------"<<endl;
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/4, size,
                      devices);
-    
+/*    
     processNN31((merssene31_t *)sum0.data() + sum0.size()*3/4,
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()*3/4, batchSize/4, size,
                      devices);
-
+*/
 //    for (int t=0; t<numThreads; t++) {
 //
 //        if ((t + 1) * sizeForEachThread <= batchSize) {
@@ -3016,21 +3016,21 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
     //     numClients,  l*sqrtR, sqrtU);
 
     int threads_per_device = 2;
-    int num_devices = 1;
-   cudaSafeCall(cudaGetDeviceCount(&num_devices));
+    int num_devices = 5;
+   //cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
-    std::vector<int> devices((num_devices)*threads_per_device);
-    for (int device = 0; device < num_devices ; ++device)
+    std::vector<int> devices((num_devices-1)*threads_per_device);
+    for (int device = 0; device < num_devices-1 ; ++device)
     {
         for (int i = 0; i < threads_per_device; ++i){
-            devices[threads_per_device*device +i] = device;
-		cout<<"vec is "<<device<<endl;
+            devices[threads_per_device*device +i] = device + 1;
+		cout<<"vec is "<<device + 1<<endl;
 	}
     }
 
 cout<<"after devices vec"<<endl;
     size_t tile_size = std::min(16384ULL, (unsigned long long) numClients / devices.size());
-
+cout<<"tile size = "<<tile_size<<endl;
     GemmTNTiles31(
                   (merssene31_t *) shiftedMsgsVectors.data(), l*sqrtR,
                   (merssene31_t *) shiftedUnitVectors.data(), sqrtU,

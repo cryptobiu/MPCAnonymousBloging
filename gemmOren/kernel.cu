@@ -882,7 +882,7 @@ void processNN31(merssene31_t* h_C,
     cudaSafeCall(cudaEventRecord(start));
 
     cudaSafeCall(GemmNN31(colA, rowB, rowA, merssene31_t::Accum_t(1),
-                          A._ptr, A._ldm, B._ptr, B._ldm, merssene31_t::Accum_t(1), C._ptr, C._ldm, stream));
+                          A._ptr, A._ldm, B._ptr, B._ldm, merssene31_t::Accum_t(0), C._ptr, C._ldm, stream));
 
     cudaSafeCall(cudaEventRecord(end));
     cudaSafeCall(cudaEventSynchronize(end));
