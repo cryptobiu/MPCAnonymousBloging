@@ -1356,7 +1356,7 @@ void ProtocolParty<FieldType>::readclientsinputs(vector<FieldType> &msgsVectorsF
 
     for(int i=0; i<numClients; i++){
 
-        readServerFile(string(getenv("HOME")) + "/files"+to_stirng(numClients) + "/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msgsVectorsFlat.data() +i*sqrtR*l, squaresVectorsFlat.data() +i*sqrtR*l, countersVectorsFlat.data() +i*sqrtR, unitVectorsFlat.data() + i*sqrtU, &e);
+        readServerFile(string(getenv("HOME")) + "/files"+to_string(numClients) + "/server" + to_string(m_partyId) + "ForClient" + to_string(i) + "inputs.bin", msgsVectorsFlat.data() +i*sqrtR*l, squaresVectorsFlat.data() +i*sqrtR*l, countersVectorsFlat.data() +i*sqrtR, unitVectorsFlat.data() + i*sqrtU, &e);
         
         if(i%10000==0) {
             cout<<i<<endl;
@@ -2354,25 +2354,25 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
     processNN31((merssene31_t *)sum1.data(),
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
-                (merssene31_t *)vecs.data(), batchSize/4, size,
+                (merssene31_t *)vecs.data(), batchSize/8, size,
                      devices);
-    
+/* 
+    processNN31((merssene31_t *)sum1.data() + sum1.size()/8,
+                (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
+                (merssene31_t *)vecs.data() + vecs.size()/8, batchSize/8, size,
+                     devices);
+
     processNN31((merssene31_t *)sum1.data() + sum1.size()/4,
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/4, size,
+                (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/8, size,
                      devices);
 
-    processNN31((merssene31_t *)sum1.data() + sum1.size()/2,
+    processNN31((merssene31_t *)sum1.data() + sum1.size()*3/8,
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/4, size,
-                     devices);
-/*
-    processNN31((merssene31_t *)sum1.data() + sum1.size()*3/4,
-                (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()*3/4, batchSize/4, size,
+                (merssene31_t *)vecs.data() + vecs.size()*3/8, batchSize/8, size,
                      devices);
 
-*/
+
     processNN31((merssene31_t *)sum0.data(),
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
                 (merssene31_t *)vecs.data(), batchSize/4, size,
@@ -2387,7 +2387,7 @@ cout<<"--------- reg result ----------------------------"<<endl;
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/4, size,
                      devices);
-/*    
+    
     processNN31((merssene31_t *)sum0.data() + sum0.size()*3/4,
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()*3/4, batchSize/4, size,
@@ -3017,14 +3017,14 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
 
     int threads_per_device = 2;
     int num_devices = 5;
-   //cudaSafeCall(cudaGetDeviceCount(&num_devices));
+   cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
-    std::vector<int> devices((num_devices-1)*threads_per_device);
-    for (int device = 0; device < num_devices-1 ; ++device)
+    std::vector<int> devices((num_devices)*threads_per_device);
+    for (int device = 0; device < num_devices ; ++device)
     {
         for (int i = 0; i < threads_per_device; ++i){
-            devices[threads_per_device*device +i] = device + 1;
-		cout<<"vec is "<<device + 1<<endl;
+            devices[threads_per_device*device +i] = device;
+		cout<<"vec is "<<device<<endl;
 	}
     }
 

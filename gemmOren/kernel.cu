@@ -854,7 +854,7 @@ void processNN31(merssene31_t* h_C,
     cudaSafeCall(cudaSetDevice(0));    
     cudaStream_t stream;// = NULL;
     cudaSafeCall(cudaStreamCreate(&stream));
-
+    
     size_t h_lda = colA;
     size_t h_ldb = colB;
     size_t h_ldc = colA;
@@ -884,18 +884,19 @@ void processNN31(merssene31_t* h_C,
     cudaSafeCall(GemmNN31(colA, rowB, rowA, merssene31_t::Accum_t(1),
                           A._ptr, A._ldm, B._ptr, B._ldm, merssene31_t::Accum_t(0), C._ptr, C._ldm, stream));
 
+   cudaSafeCall(cudaStreamSynchronize(stream));
     cudaSafeCall(cudaEventRecord(end));
     cudaSafeCall(cudaEventSynchronize(end));
 
     float average_ms = 0;
     cudaSafeCall(cudaEventElapsedTime(&average_ms, start, end));
-//	std::cout << "Mat size: M=" << m << ", N=" << width_a <<
-//		", K=" << width_b << ", Time: " << average_ms << "ms\n";
+	std::cout <<"Time: " << average_ms << "ms\n";
 
 
     cudaSafeCall(cudaMemcpy2DAsync(h_C, h_ldc * sizeof(merssene31_t),
                                    C._ptr, C._ldm * sizeof(merssene31_t), C._rows * sizeof(merssene31_t),
                                    C._columns, cudaMemcpyDeviceToHost, stream));
+   cudaSafeCall(cudaStreamSynchronize(stream));
     cudaSafeCall(cudaStreamDestroy(stream));
 }
 
