@@ -2348,51 +2348,54 @@ cout<<"--------- reg result ----------------------------"<<endl;
         cout<<"C[i] is "<<C[i];
     }
 
-*/
+
 
 
 
     processNN31((merssene31_t *)sum1.data(),
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
                 (merssene31_t *)vecs.data(), batchSize/8, size,
-                     devices);
-/* 
+                     0);
+
+
+
+
     processNN31((merssene31_t *)sum1.data() + sum1.size()/8,
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()/8, batchSize/8, size,
-                     devices);
+                     1);
 
-    processNN31((merssene31_t *)sum1.data() + sum1.size()/4,
+   processNN31((merssene31_t *)sum1.data() + sum1.size()/4,
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/8, size,
-                     devices);
+                     2);
 
     processNN31((merssene31_t *)sum1.data() + sum1.size()*3/8,
                 (merssene31_t *)constRandomBitsFor1.data(), size, securityParamter,
                 (merssene31_t *)vecs.data() + vecs.size()*3/8, batchSize/8, size,
-                     devices);
+                     3);
 
 
     processNN31((merssene31_t *)sum0.data(),
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
-                (merssene31_t *)vecs.data(), batchSize/4, size,
-                     devices);
+                (merssene31_t *)vecs.data(), batchSize/8, size,
+                     4);
+
+    processNN31((merssene31_t *)sum0.data() + sum0.size()/8,
+                (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
+                (merssene31_t *)vecs.data() + vecs.size()/8, batchSize/8, size,
+                     5);
 
     processNN31((merssene31_t *)sum0.data() + sum0.size()/4,
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/4, size,
-                     devices);
-
-    processNN31((merssene31_t *)sum0.data() + sum0.size()/2,
-                (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()/2, batchSize/4, size,
-                     devices);
+                (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/84, size,
+                     6);
     
-    processNN31((merssene31_t *)sum0.data() + sum0.size()*3/4,
+    processNN31((merssene31_t *)sum0.data() + sum0.size()*3/8,
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()*3/4, batchSize/4, size,
-                     devices);
-*/
+                (merssene31_t *)vecs.data() + vecs.size()*3/8, batchSize/8, size,
+                     7);
+
 //    for (int t=0; t<numThreads; t++) {
 //
 //        if ((t + 1) * sizeForEachThread <= batchSize) {

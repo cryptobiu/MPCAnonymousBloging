@@ -846,12 +846,12 @@ cudaError_t GemmNN31(
 void processNN31(merssene31_t* h_C,
                  merssene31_t* h_A, size_t rowA, size_t colA,
                  merssene31_t* h_B, size_t rowB, size_t colB,
-                 const std::vector<int>& devices)
+                 int deviceID)
 {
 
 
     //	printf("Starting merssene 31 gemm test\n");
-    cudaSafeCall(cudaSetDevice(0));    
+    cudaSafeCall(cudaSetDevice(deviceID));
     cudaStream_t stream;// = NULL;
     cudaSafeCall(cudaStreamCreate(&stream));
     
