@@ -75,7 +75,14 @@ cout<<"server = "<<server<<endl;
     SecretKey key(keyBytes,"");
     prg.setKey(key);
 
-
+    string dir = string(getenv("HOME")) + "/files"+to_string(numClients);
+    int check = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+    if (!check){
+        cout<<"Directory created"<<endl;
+    } else {
+        cout<<"Unable to create directory"<<endl;
+        exit(1);
+    }
 
     if(fieldType.compare("ZpMersenne31") == 0) {
         field = new TemplateField<FieldType>(2147483647);
@@ -216,7 +223,7 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
         if (field->getElementSizeInBytes() == 8) {
             long *serverShares = (long *) shares[server].data();
             outputFile.open(
-                    string(getenv("HOME")) + "/files/server" + to_string(server) + "ForClient" + to_string(clientID) +
+                    string(getenv("HOME")) + "/files"+to_string(numClients) + "/server" + to_string(server) + "ForClient" + to_string(clientID) +
                     "inputs.bin", ios::out | ios::binary);
 
             for (int j = 0; j < size; j++) {
@@ -226,7 +233,7 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
         if (field->getElementSizeInBytes() == 4) {
             int *serverShares = (int *) shares[server].data();
             outputFile.open(
-                    string(getenv("HOME")) + "/files/server" + to_string(server) + "ForClient" + to_string(clientID) +
+                    string(getenv("HOME")) + "/files"+to_string(numClients) + "/server" + to_string(server) + "ForClient" + to_string(clientID) +
                     "inputs.bin", ios::out | ios::binary);
 
             outputFile.write((char *) serverShares, 4 * size);
@@ -239,7 +246,7 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
 
             if (field->getElementSizeInBytes() == 8) {
                 long *serverShares = (long *) shares[i].data();
-                outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
+                outputFile.open(string(getenv("HOME")) + "/files"+to_string(numClients) + "/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
 
                 for (int j = 0; j < size; j++) {
                     outputFile << serverShares[j] << endl;
@@ -247,7 +254,7 @@ void Client<FieldType>::writeServersFiles(vector<vector<FieldType>> & shares, in
             }
             if (field->getElementSizeInBytes() == 4) {
                 int *serverShares = (int *) shares[i].data();
-                outputFile.open(string(getenv("HOME")) + "/files/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
+                outputFile.open(string(getenv("HOME")) + "/files"+to_string(numClients) + "/server" + to_string(i) + "ForClient" + to_string(clientID) + "inputs.bin", ios::out | ios::binary);
 
                 outputFile.write((char*)serverShares, 4*size);
 
