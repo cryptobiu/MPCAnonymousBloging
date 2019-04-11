@@ -22,6 +22,6 @@ void GemmTNTiles31(merssene31_t* h_A, size_t h_lda,
 void processNN31(merssene31_t* h_C,
                  merssene31_t* h_A, size_t rowA, size_t colA,
                  merssene31_t* h_B, size_t rowB, size_t colB,
-                 const std::vector<int>& devices);
+                 int devicesID);
 
 #endif //MPCANONYMOUSBLOGING_CUDAGEMM_H

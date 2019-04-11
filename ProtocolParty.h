@@ -2348,7 +2348,7 @@ cout<<"--------- reg result ----------------------------"<<endl;
         cout<<"C[i] is "<<C[i];
     }
 
-
+*/
 
 
 
@@ -2388,7 +2388,7 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
     processNN31((merssene31_t *)sum0.data() + sum0.size()/4,
                 (merssene31_t *)constRandomBitsFor0.data(), size, securityParamter,
-                (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/84, size,
+                (merssene31_t *)vecs.data() + vecs.size()/4, batchSize/8, size,
                      6);
     
     processNN31((merssene31_t *)sum0.data() + sum0.size()*3/8,
