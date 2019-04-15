@@ -19,6 +19,11 @@ struct Mat
 		cudaSafeCall(cudaMalloc(reinterpret_cast<void **>(&_ptr), sizeof_matrix));
 
 	}
+
+	~Mat(){
+		printf("in destructor of mat\n");
+		cudaSafeCall(cudafree(_ptr));
+	}
 	void SetZero(cudaStream_t& stream)
 	{
 		cudaSafeCall(cudaMemset2DAsync(_ptr, _ldm * sizeof(_type), 0, _rows * sizeof(_type), _columns, stream));
