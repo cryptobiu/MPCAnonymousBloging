@@ -219,7 +219,7 @@ public:
     void readServerFile(string fileName, FieldType* msg, FieldType* squares, FieldType* counters, FieldType* unitVector, FieldType * e);
 //    int validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     int validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors);
-    int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest);
+    int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 //    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
@@ -1819,7 +1819,7 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     t1 = high_resolution_clock::now();
 
 
-    flag = unitVectorsTestFlat(msgsVectorsForUnitTest, sqrtR, randomElements.data(), sumsForConsistensyTest);
+    flag = unitVectorsTestFlat(msgsVectorsForUnitTest, sqrtR, randomElements.data(), sumsForConsistensyTest, false);
     t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -1862,7 +1862,7 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     t1 = high_resolution_clock::now();
 
 
-    flag = unitVectorsTestFlat(unitVectors, sqrtU, randomElements.data(), sumsForConsistensyTest);
+    flag = unitVectorsTestFlat(unitVectors, sqrtU, randomElements.data(), sumsForConsistensyTest, true);
 
     t2 = high_resolution_clock::now();
 
@@ -2211,7 +2211,7 @@ int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &ve
 
 template <class FieldType>
 int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int size,
-                                              FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest) {
+                                              FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit) {
 
 
     int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
@@ -2310,18 +2310,7 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     //regMatrixMulTN(sum0.data(), vecs.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
 
 
-    int threads_per_device = 2;
-    int num_devices = 1;
-    cudaSafeCall(cudaGetDeviceCount(&num_devices));
-    printf("%d devices used\n", num_devices);
-    std::vector<int> devices((num_devices)*threads_per_device);
-    for (int device = 0; device < num_devices ; ++device)
-    {
-        for (int i = 0; i < threads_per_device; ++i){
-            devices[threads_per_device*device +i] = device;
-            cout<<"vec is "<<device<<endl;
-        }
-    }
+
 /*
     vector<FieldType> A{1, 2, 3,4,5,6 ,7,8,9};
     vector<FieldType> B{9,8,7,6,5,4,3,2,1};
@@ -2351,22 +2340,40 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
 */
 
-    vector<thread> threadsForGPU(devices.size());
-    for (int i=0; i<num_devices; i++) {
-        threads[i] = thread(&ProtocolParty::processSums, this, sum1.data() + sum1.size()*i/8,
-                                                constRandomBitsFor1.data(), size,
-                                               vecs.data() + vecs.size()*i/8,
-                                               devices[i]);
-    }
-    for (int i=0; i<num_devices; i++) {
-        threads[num_devices + i] = thread(&ProtocolParty::processSums, this, sum0.data() + sum0.size()*i/8,
-                                               constRandomBitsFor0.data(), size,
-                                               vecs.data() + vecs.size()*i/8,
-                                               devices[8+ i]);
-    }
+    if (toSplit) {
+        int threads_per_device = 2;
+        int num_devices = 1;
+        cudaSafeCall(cudaGetDeviceCount(&num_devices));
+        printf("%d devices used\n", num_devices);
+        std::vector<int> devices((num_devices)*threads_per_device);
+        for (int device = 0; device < num_devices ; ++device)
+        {
+            for (int i = 0; i < threads_per_device; ++i){
+                devices[threads_per_device*device +i] = device;
+                cout<<"vec is "<<device<<endl;
+            }
+        }
 
-    for (int t=0; t<16; t++){
-        threads[t].join();
+        vector<thread> threadsForGPU(devices.size());
+        for (int i = 0; i < num_devices; i++) {
+            threads[i] = thread(&ProtocolParty::processSums, this, sum1.data() + sum1.size() * i / 8,
+                                constRandomBitsFor1.data(), size,
+                                vecs.data() + vecs.size() * i / 8,
+                                devices[i]);
+        }
+        for (int i = 0; i < num_devices; i++) {
+            threads[num_devices + i] = thread(&ProtocolParty::processSums, this, sum0.data() + sum0.size() * i / 8,
+                                              constRandomBitsFor0.data(), size,
+                                              vecs.data() + vecs.size() * i / 8,
+                                              devices[8 + i]);
+        }
+
+        for (int t = 0; t < 16; t++) {
+            threads[t].join();
+        }
+    } else {
+        processSums(sum1.data(), constRandomBitsFor1.data(), size,  vecs.data(), 0);
+        processSums(sum0.data(), constRandomBitsFor0.data(), size,  vecs.data(), 1);
     }
 //    processSums(sum1, constRandomBitsFor1, size, vecs, devices, threadsForGPU, 0);
 //    processSums(sum0, constRandomBitsFor0, size, vecs, devices, threadsForGPU, 8);
@@ -3004,7 +3011,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &sh
     //     numClients,  l*sqrtR, sqrtU);
 
     int threads_per_device = 2;
-    int num_devices = 5;
+    int num_devices = 7;
    cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
     std::vector<int> devices((num_devices)*threads_per_device);
