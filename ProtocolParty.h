@@ -20,11 +20,11 @@
 #include <thread>
 #include <libscapi/include/primitives/HashOpenSSL.hpp>
 #include <omp.h>
-//#ifdef __NVCC__
+#ifdef __NVCC__
 #include "cudaGemm.h"
 #include "utils.h"
 #include <cuda_runtime.h>
-//#endif
+#endif
 #include <algorithm>
 
 
@@ -80,7 +80,7 @@ private:
 
     vector<FieldType> sum1;
     vector<FieldType> sum0;
-    //vector<long> sum01;
+    vector<long> sum01;
     vector<FieldType> sumOfElementsVecs;
     vector<FieldType> openedSumOfElementsVecs;
     vector<FieldType> sumsForConsistensyTestOpened;
@@ -220,7 +220,9 @@ public:
 //    int validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     int validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors);
     int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
+#ifdef __NVCC__
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
+#endif
 //    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
@@ -252,7 +254,7 @@ public:
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
 
-//#ifdef __NVCC__
+#ifdef __NVCC__
     int generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                         vector<FieldType> &shiftedMsgsVectorsSquares,
                                         vector<FieldType> &shiftedMsgsVectorsCounters,
@@ -260,7 +262,7 @@ public:
                                         vector<FieldType> &accMsgsMat,
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
-//#endif
+#endif
 
     void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
 
@@ -988,7 +990,7 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
 
     sum1.resize(batchSize*securityParamter);
     sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-    //sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+    sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
     sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
     openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
@@ -1828,9 +1830,9 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     }
 
 
-    //memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
-    //memset((byte*)sum0.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
-    //memset((byte*)sum1.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
+    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
+    memset((byte*)sum0.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
+    memset((byte*)sum1.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
     
     cout<<"flag after first unit test is "<<flag<<endl;
 //    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
@@ -2340,69 +2342,69 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
 */
 
-    if (toSplit) {
-        int threads_per_device = 2;
-        int num_devices = 1;
-        cudaSafeCall(cudaGetDeviceCount(&num_devices));
-        printf("%d devices used\n", num_devices);
-        std::vector<int> devices((num_devices)*threads_per_device);
-        for (int device = 0; device < num_devices ; ++device)
-        {
-            for (int i = 0; i < threads_per_device; ++i){
-                devices[threads_per_device*device +i] = device;
-                cout<<"vec is "<<device<<endl;
-            }
-        }
-
-        vector<thread> threadsForGPU(devices.size());
-        for (int i = 0; i < num_devices; i++) {
-            threads[i] = thread(&ProtocolParty::processSums, this, sum1.data() + sum1.size() * i / 8,
-                                constRandomBitsFor1.data(), size,
-                                vecs.data() + vecs.size() * i / 8,
-                                devices[i]);
-        }
-        for (int i = 0; i < num_devices; i++) {
-            threads[num_devices + i] = thread(&ProtocolParty::processSums, this, sum0.data() + sum0.size() * i / 8,
-                                              constRandomBitsFor0.data(), size,
-                                              vecs.data() + vecs.size() * i / 8,
-                                              devices[8 + i]);
-        }
-
-        for (int t = 0; t < 16; t++) {
-            threads[t].join();
-        }
-    } else {
-        processSums(sum1.data(), constRandomBitsFor1.data(), size,  vecs.data(), 0);
-        processSums(sum0.data(), constRandomBitsFor0.data(), size,  vecs.data(), 1);
-    }
+//    if (toSplit) {
+//        int threads_per_device = 2;
+//        int num_devices = 1;
+//        cudaSafeCall(cudaGetDeviceCount(&num_devices));
+//        printf("%d devices used\n", num_devices);
+//        std::vector<int> devices((num_devices)*threads_per_device);
+//        for (int device = 0; device < num_devices ; ++device)
+//        {
+//            for (int i = 0; i < threads_per_device; ++i){
+//                devices[threads_per_device*device +i] = device;
+//                cout<<"vec is "<<device<<endl;
+//            }
+//        }
+//
+//        vector<thread> threadsForGPU(devices.size());
+//        for (int i = 0; i < num_devices; i++) {
+//            threads[i] = thread(&ProtocolParty::processSums, this, sum1.data() + sum1.size() * i / 8,
+//                                constRandomBitsFor1.data(), size,
+//                                vecs.data() + vecs.size() * i / 8,
+//                                devices[i]);
+//        }
+//        for (int i = 0; i < num_devices; i++) {
+//            threads[num_devices + i] = thread(&ProtocolParty::processSums, this, sum0.data() + sum0.size() * i / 8,
+//                                              constRandomBitsFor0.data(), size,
+//                                              vecs.data() + vecs.size() * i / 8,
+//                                              devices[8 + i]);
+//        }
+//
+//        for (int t = 0; t < 16; t++) {
+//            threads[t].join();
+//        }
+//    } else {
+//        processSums(sum1.data(), constRandomBitsFor1.data(), size,  vecs.data(), 0);
+//        processSums(sum0.data(), constRandomBitsFor0.data(), size,  vecs.data(), 1);
+//    }
 //    processSums(sum1, constRandomBitsFor1, size, vecs, devices, threadsForGPU, 0);
 //    processSums(sum0, constRandomBitsFor0, size, vecs, devices, threadsForGPU, 8);
 
 
-//    for (int t=0; t<numThreads; t++) {
-//
-//        if ((t + 1) * sizeForEachThread <= batchSize) {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
-//                                ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
-//        } else {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
-//                                ref(randomVecs),  t * sizeForEachThread, batchSize);
-//        }
-//    }
-//    for (int t=0; t<numThreads; t++){
-//        threads[t].join();
-//    }
-//
-//    //turn the sum01 into sum0 and sum1 field elements
-//    for(int i=0; i<batchSize*securityParamter; i++) {
-//
-//
-//        //if(sum0[i]!=FieldType(sum01[i]))
-//         //   cout<<"this is one basa situation "<< i<<endl;
-//        //sum0[i] = FieldType(sum01[i]);
-//        //sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
-//
-//    }
+    for (int t=0; t<numThreads; t++) {
+
+        if ((t + 1) * sizeForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
+                                ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
+                                ref(randomVecs),  t * sizeForEachThread, batchSize);
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+
+    //turn the sum01 into sum0 and sum1 field elements
+    for(int i=0; i<batchSize*securityParamter; i++) {
+
+
+        //if(sum0[i]!=FieldType(sum01[i]))
+         //   cout<<"this is one basa situation "<< i<<endl;
+        //sum0[i] = FieldType(sum01[i]);
+        //sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
+
+    }
 
 
     t2 = high_resolution_clock::now();
@@ -2471,6 +2473,7 @@ cout<<"--------- reg result ----------------------------"<<endl;
     return flag;
 }
 
+#ifdef __NVCC__
 template <class FieldType>
 void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device){
 
@@ -2479,6 +2482,7 @@ void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRando
                     (merssene31_t *) vecs, batchSize / 8, size, device);
 
 }
+#endif
 
 
 template <class FieldType>
@@ -2996,7 +3000,7 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimizedFlat(vector<FieldTy
 
 }
 
-//#ifdef __NVCC__
+#ifdef __NVCC__
 template <class FieldType>
 int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
                                  vector<FieldType> &shiftedMsgsVectorsSquares,
@@ -3047,7 +3051,7 @@ cout<<"tile size = "<<tile_size<<endl;
 
 
 }
-//#endif
+#endif
 
 
 template <class FieldType>
@@ -4679,7 +4683,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-//#ifdef __NVCC__
+#ifdef __NVCC__
     //gpu version
 //-----------------------------------------------------//
 //    vector<FieldType> shiftedMsgsVectorsSquares;
@@ -4702,26 +4706,26 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-    vector<int> accIntCountersMat(sqrtR*sqrtU);
-
-
-    auto t1 = high_resolution_clock::now();
-    generateSharedMatricesForGPU(msgsVectorsShiftedFlat,
-                                 squaresVectorsShiftedFlat,
-                                 countersVectorsShiftedFlat,
-                                 unitVectorsShiftedFlat,
-                                 accMsgsMat,
-                                 accMsgsSquareMat,
-                                 accCountersMat);
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
-    }
+//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+//    vector<int> accIntCountersMat(sqrtR*sqrtU);
+//
+//
+//    auto t1 = high_resolution_clock::now();
+//    generateSharedMatricesForGPU(msgsVectorsShiftedFlat,
+//                                 squaresVectorsShiftedFlat,
+//                                 countersVectorsShiftedFlat,
+//                                 unitVectorsShiftedFlat,
+//                                 accMsgsMat,
+//                                 accMsgsSquareMat,
+//                                 accCountersMat);
+//    auto t2 = high_resolution_clock::now();
+//
+//    auto duration = duration_cast<milliseconds>(t2-t1).count();
+//    if(flag_print_timings) {
+//        cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
+//    }
 
 
 
@@ -4729,32 +4733,32 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
 
-//#else
+#else
 //cpu optimed version
 //-------------------------------------------------------//
 
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//    auto t1 = high_resolution_clock::now();
-//    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
-//                                    squaresVectorsShiftedFlat,
-//                                    countersVectorsShiftedFlat,
-//                                    unitVectorsShiftedFlat,
-//                                    accMsgsMat,
-//                                    accMsgsSquareMat,
-//                                    accCountersMat);
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateSharedMatricesOptimized: " << duration << endl;
-//    }
+    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+    vector<int> accIntCountersMat(sqrtR*sqrtU);
+
+    auto t1 = high_resolution_clock::now();
+    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
+                                    squaresVectorsShiftedFlat,
+                                    countersVectorsShiftedFlat,
+                                    unitVectorsShiftedFlat,
+                                    accMsgsMat,
+                                    accMsgsSquareMat,
+                                    accCountersMat);
+    auto t2 = high_resolution_clock::now();
+
+    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    if(flag_print_timings) {
+        cout << "time in miliseconds generateSharedMatricesOptimized: " << duration << endl;
+    }
     //-----------------------------------------------------//
 
-//#endif
+#endif
 
 
     t.join();
