@@ -2353,16 +2353,16 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
     vector<thread> threadsForGPU(devices.size());
     for (int i=0; i<num_devices; i++) {
-        threads[i] = thread(&processNN31((merssene31_t *) sum1.data() + sum1.size()*i/8,
-                                               (merssene31_t *) constRandomBitsFor1.data(), size, securityParamter,
-                                               (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
-                                               devices[i]));
+        threads[i] = thread(&ProtocolParty::processSums, this, sum1.data() + sum1.size()*i/8,
+                                                constRandomBitsFor1.data(), size,
+                                               vecs.data() + vecs.size()*i/8,
+                                               devices[i]);
     }
     for (int i=0; i<num_devices; i++) {
-        threads[num_devices + i] = thread(&processNN31((merssene31_t *) sum0.data() + sum0.size()*i/8,
-                                               (merssene31_t *) constRandomBitsFor0.data(), size, securityParamter,
-                                               (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
-                                               devices[i]));
+        threads[num_devices + i] = thread(&ProtocolParty::processSums, this, sum0.data() + sum0.size()*i/8,
+                                               constRandomBitsFor0.data(), size,
+                                               vecs.data() + vecs.size()*i/8,
+                                               devices[8+ i]);
     }
 
     for (int t=0; t<16; t++){
@@ -2469,7 +2469,7 @@ void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRando
 
 
     processNN31((merssene31_t *) sum, (merssene31_t *) constRandomBits, size, securityParamter,
-                    (merssene31_t *) vecs, batchSize / 8, size, device));
+                    (merssene31_t *) vecs, batchSize / 8, size, device);
 
 }
 
