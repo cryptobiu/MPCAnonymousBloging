@@ -2449,10 +2449,10 @@ template <class FieldType>
 void ProtocolParty<FieldType>::processSums(vector<FieldType> & sum, vector<FieldType> & constRandomBits, int size, vector<FieldType> & vecs, vector<int> & devices){
 
 
-    for (int i=0; i<4; i++) {
-        processNN31((merssene31_t *) sum.data() + sum.size()*i/4,
+    for (int i=0; i<8; i++) {
+        processNN31((merssene31_t *) sum.data() + sum.size()*i/8,
                     (merssene31_t *) constRandomBits.data(), size, securityParamter,
-                    (merssene31_t *) vecs.data() + vecs.size()*i/4, batchSize / 4, size,
+                    (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
                     devices[i%devices.size()]);
     }
 }
