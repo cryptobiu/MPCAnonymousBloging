@@ -220,7 +220,7 @@ public:
 //    int validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
     int validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors);
     int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest);
-    void processSums(vector<FieldType> & sum, vector<FieldType> & constRandomBits, int size, vector<FieldType> & vecs, vector<int> & devices);
+    void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 //    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
@@ -2314,11 +2314,13 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
     int num_devices = 1;
     cudaSafeCall(cudaGetDeviceCount(&num_devices));
     printf("%d devices used\n", num_devices);
-    std::vector<int> devices(num_devices);
-    for (int device = 0; device < num_devices; ++device)
+    std::vector<int> devices((num_devices)*threads_per_device);
+    for (int device = 0; device < num_devices ; ++device)
     {
-        devices[device] = device;
-        cout<<"vec is "<<device<<endl;
+        for (int i = 0; i < threads_per_device; ++i){
+            devices[threads_per_device*device +i] = device;
+            cout<<"vec is "<<device<<endl;
+        }
     }
 /*
     vector<FieldType> A{1, 2, 3,4,5,6 ,7,8,9};
@@ -2349,8 +2351,25 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
 */
 
-    processSums(sum1, constRandomBitsFor1, size, vecs, devices);
-    processSums(sum0, constRandomBitsFor0, size, vecs, devices);
+    vector<thread> threadsForGPU(devices.size());
+    for (int i=0; i<num_devices; i++) {
+        threads[i] = thread(&processNN31((merssene31_t *) sum1.data() + sum1.size()*i/8,
+                                               (merssene31_t *) constRandomBitsFor1.data(), size, securityParamter,
+                                               (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
+                                               devices[i]));
+    }
+    for (int i=0; i<num_devices; i++) {
+        threads[num_devices + i] = thread(&processNN31((merssene31_t *) sum0.data() + sum0.size()*i/8,
+                                               (merssene31_t *) constRandomBitsFor0.data(), size, securityParamter,
+                                               (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
+                                               devices[i]));
+    }
+
+    for (int t=0; t<16; t++){
+        threads[t].join();
+    }
+//    processSums(sum1, constRandomBitsFor1, size, vecs, devices, threadsForGPU, 0);
+//    processSums(sum0, constRandomBitsFor0, size, vecs, devices, threadsForGPU, 8);
 
 
 //    for (int t=0; t<numThreads; t++) {
@@ -2446,15 +2465,12 @@ cout<<"--------- reg result ----------------------------"<<endl;
 }
 
 template <class FieldType>
-void ProtocolParty<FieldType>::processSums(vector<FieldType> & sum, vector<FieldType> & constRandomBits, int size, vector<FieldType> & vecs, vector<int> & devices){
+void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device){
 
 
-    for (int i=0; i<8; i++) {
-        processNN31((merssene31_t *) sum.data() + sum.size()*i/8,
-                    (merssene31_t *) constRandomBits.data(), size, securityParamter,
-                    (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
-                    devices[i%devices.size()]);
-    }
+    processNN31((merssene31_t *) sum, (merssene31_t *) constRandomBits, size, securityParamter,
+                    (merssene31_t *) vecs, batchSize / 8, size, device));
+
 }
 
 
