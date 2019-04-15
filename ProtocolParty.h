@@ -2449,10 +2449,10 @@ template <class FieldType>
 void ProtocolParty<FieldType>::processSums(vector<FieldType> & sum, vector<FieldType> & constRandomBits, int size, vector<FieldType> & vecs, vector<int> & devices){
 
 
-    for (int i=0; i<8; i++) {
-        processNN31((merssene31_t *) sum.data() + sum.size()*i/8,
+    for (int i=0; i<4; i++) {
+        processNN31((merssene31_t *) sum.data() + sum.size()*i/4,
                     (merssene31_t *) constRandomBits.data(), size, securityParamter,
-                    (merssene31_t *) vecs.data() + vecs.size()*i/8, batchSize / 8, size,
+                    (merssene31_t *) vecs.data() + vecs.size()*i/4, batchSize / 4, size,
                     devices[i%devices.size()]);
     }
 }
@@ -4776,7 +4776,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
-    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+    //printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     t2 = high_resolution_clock::now();
 

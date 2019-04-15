@@ -21,7 +21,6 @@ struct Mat
 	}
 
 	~Mat(){
-		printf("in destructor of mat\n");
 		cudaSafeCall(cudaFree(_ptr));
 	}
 	void SetZero(cudaStream_t& stream)

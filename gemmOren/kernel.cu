@@ -850,7 +850,7 @@ void processNN31(merssene31_t* h_C,
 {
 
 
-    //	printf("Starting merssene 31 gemm test\n");
+    	printf("Starting merssene 31 gemm test. deviceId = %d\n", deviceID);
     cudaSafeCall(cudaSetDevice(deviceID));
     cudaStream_t stream;// = NULL;
     cudaSafeCall(cudaStreamCreate(&stream));
