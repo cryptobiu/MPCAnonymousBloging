@@ -22,7 +22,7 @@ struct Mat
 
 	~Mat(){
 		printf("in destructor of mat\n");
-		cudaSafeCall(cudafree(_ptr));
+		cudaSafeCall(cudaFree(_ptr));
 	}
 	void SetZero(cudaStream_t& stream)
 	{
