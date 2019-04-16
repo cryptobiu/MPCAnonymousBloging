@@ -222,7 +222,7 @@ public:
     int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 
-    processSumsThreads(int start, int end, int deviceID);
+    void processSumsThreads(int start, int end, int deviceID);
 //    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
@@ -2357,16 +2357,16 @@ cout<<"--------- reg result ----------------------------"<<endl;
             sizeForEachThread = (8 + numThreads - 1)/ numThreads;
         }
 
-        vector<thread> threadsForGPU(devices.size());
+        vector<thread> threadsForGPU(num_devices);
 
-        for (int i = 0; i < num_devices; i++) {
+        for (int t = 0; t < num_devices; t++) {
             if ((t + 1) * sizeForEachThread <= 8) {
                 threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this, t * sizeForEachThread,
-                                          (t + 1) * sizeForEachThread, i);
+                                          (t + 1) * sizeForEachThread, t);
             }
             else{
                 threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this, t * sizeForEachThread,
-                                          8, i);
+                                          8, t);
             }
         }
 
