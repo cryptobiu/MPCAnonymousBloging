@@ -2351,11 +2351,11 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
 
         int sizeForEachThread;
-        if (8 <= numThreads){
-            numThreads = 8;
+        if (8 <= num_devices){
+            num_devices = 8;
             sizeForEachThread = 1;
         } else{
-            sizeForEachThread = (8 + numThreads - 1)/ numThreads;
+            sizeForEachThread = (8 + num_devices - 1)/ numThreads;
         }
 
         vector<thread> threadsForGPU(num_devices);
@@ -2380,38 +2380,41 @@ cout<<"--------- reg result ----------------------------"<<endl;
         for (int t = 0; t < num_devices; t++) {
             threadsForGPU[t].join();
         }
-    } else {
-        processSums(sum1.data(), constRandomBitsFor1.data(), size,  vecs.data(), 0);
-        processSums(sum0.data(), constRandomBitsFor0.data(), size,  vecs.data(), 1);
-    }
+    } else {//do it in cpu
+//        processSums(sum1.data(), constRandomBitsFor1.data(), size,  vecs.data(), 0);
+//        processSums(sum0.data(), constRandomBitsFor0.data(), size,  vecs.data(), 1);
+//    }
 //    processSums(sum1, constRandomBitsFor1, size, vecs, devices, threadsForGPU, 0);
 //    processSums(sum0, constRandomBitsFor0, size, vecs, devices, threadsForGPU, 8);
 
 
-//    for (int t=0; t<numThreads; t++) {
-//
-//        if ((t + 1) * sizeForEachThread <= batchSize) {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
-//                                ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
-//        } else {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
-//                                ref(randomVecs),  t * sizeForEachThread, batchSize);
-//        }
-//    }
-//    for (int t=0; t<numThreads; t++){
-//        threads[t].join();
-//    }
-//
-//    //turn the sum01 into sum0 and sum1 field elements
-//    for(int i=0; i<batchSize*securityParamter; i++) {
-//
-//
-//        //if(sum0[i]!=FieldType(sum01[i]))
-//         //   cout<<"this is one basa situation "<< i<<endl;
-//        //sum0[i] = FieldType(sum01[i]);
-//        //sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
-//
-//    }
+        for (int t = 0; t < numThreads; t++) {
+
+            if ((t + 1) * sizeForEachThread <= batchSize) {
+                threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size,
+                                    ref(constRandomBitsPrim),
+                                    ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
+            } else {
+                threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size,
+                                    ref(constRandomBitsPrim),
+                                    ref(randomVecs), t * sizeForEachThread, batchSize);
+            }
+        }
+        for (int t = 0; t < numThreads; t++) {
+            threads[t].join();
+        }
+
+        //turn the sum01 into sum0 and sum1 field elements
+        for (int i = 0; i < batchSize * securityParamter; i++) {
+
+
+            //if(sum0[i]!=FieldType(sum01[i]))
+            //   cout<<"this is one basa situation "<< i<<endl;
+            sum0[i] = FieldType(sum01[i]);
+            sum1[i] = FieldType(sum01[batchSize * securityParamter + i]);
+
+        }
+    }
 
 
     t2 = high_resolution_clock::now();
