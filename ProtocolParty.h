@@ -223,7 +223,7 @@ public:
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 
     void processSumsThreads(vector<FieldType> & sum0, vector<FieldType> & constRandomBits0,
-                            vector<FieldType> & sum1, vector<FieldType> & constRandomBits1,vector<FieldType> & vecs,int start, int end, int deviceID);
+                            vector<FieldType> & sum1, vector<FieldType> & constRandomBits1,vector<FieldType> & vecs ,int size,int start, int end, int deviceID);
 //    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
@@ -2365,14 +2365,14 @@ cout<<"--------- reg result ----------------------------"<<endl;
                 threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this,
                                           ref(sum1), ref(constRandomBitsFor1),
                                           ref(sum0), ref(constRandomBitsFor0),
-                                          ref(vecs),
+                                          ref(vecs), size
                                           t * sizeForEachThread, (t + 1) * sizeForEachThread, t);
             }
             else{
                 threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this,
                                           ref(sum1), ref(constRandomBitsFor1),
                                           ref(sum0), ref(constRandomBitsFor0),
-                                          ref(vecs),
+                                          ref(vecs), size,
                                           t * sizeForEachThread, 8, t);
             }
         }
@@ -2492,10 +2492,11 @@ void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRando
 
 template <class FieldType>
 void ProtocolParty<FieldType>::processSumsThreads(vector<FieldType> & sum0, vector<FieldType> & constRandomBitsFor0,
-                                                  vector<FieldType> & sum1, vector<FieldType> & constRandomBitsFor1,vector<FieldType> & vecs, int start, int end, int deviceID){
+                                                  vector<FieldType> & sum1, vector<FieldType> & constRandomBitsFor1,vector<FieldType> & vecs,
+                                                  int size, int start, int end, int deviceID){
 
 
-    for(int i=start, i<end; i++){
+    for(int i=start; i<end; i++){
 
 
     processNN31((merssene31_t *)sum1.data() + sum1.size()*i/8,
