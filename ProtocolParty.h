@@ -222,7 +222,8 @@ public:
     int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 
-    void processSumsThreads(int start, int end, int deviceID);
+    void processSumsThreads(FieldType* sum0, FieldType* constRandomBits0,
+                            FieldType* sum1, FieldType* constRandomBits1,FieldType* vecs,int start, int end, int deviceID);
 //    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
     int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
@@ -2361,12 +2362,18 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
         for (int t = 0; t < num_devices; t++) {
             if ((t + 1) * sizeForEachThread <= 8) {
-                threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this, t * sizeForEachThread,
-                                          (t + 1) * sizeForEachThread, t);
+                threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this,
+                                          sum1.data(), constRandomBitsFor1.data(),
+                                          sum0.data(), constRandomBitsFor0.data(),
+                                          vecs.data(),
+                                          t * sizeForEachThread, (t + 1) * sizeForEachThread, t);
             }
             else{
-                threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this, t * sizeForEachThread,
-                                          8, t);
+                threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this,
+                                          sum1.data(), constRandomBitsFor1.data(),
+                                          sum0.data(), constRandomBitsFor0.data(),
+                                          vecs.data(),
+                                          t * sizeForEachThread, 8, t);
             }
         }
 
@@ -2484,7 +2491,8 @@ void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRando
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::processSumsThreads(int start, int end, int deviceID){
+void ProtocolParty<FieldType>::processSumsThreads(FieldType* sum0, FieldType* constRandomBits0,
+                                                  FieldType* sum1, FieldType* constRandomBits1,FieldType* vecs, int start, int end, int deviceID){
 
 
     for(int i=start, i<end; i++){
