@@ -2491,8 +2491,8 @@ void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRando
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::processSumsThreads(vector<FieldType> & sum0, vector<FieldType> & constRandomBits0,
-                                                  vector<FieldType> & sum1, vector<FieldType> & constRandomBits1,vector<FieldType> & vecs, int start, int end, int deviceID){
+void ProtocolParty<FieldType>::processSumsThreads(vector<FieldType> & sum0, vector<FieldType> & constRandomBitsFor0,
+                                                  vector<FieldType> & sum1, vector<FieldType> & constRandomBitsFor1,vector<FieldType> & vecs, int start, int end, int deviceID){
 
 
     for(int i=start, i<end; i++){
