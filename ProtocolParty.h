@@ -80,7 +80,7 @@ private:
 
     vector<FieldType> sum1;
     vector<FieldType> sum0;
-    //vector<long> sum01;
+    vector<long> sum01;
     vector<FieldType> sumOfElementsVecs;
     vector<FieldType> openedSumOfElementsVecs;
     vector<FieldType> sumsForConsistensyTestOpened;
@@ -296,8 +296,8 @@ public:
     void multiplyVectorsPerThreadFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors, vector<long> & outputDouble,
                                   int newNumRows, int newNumCols, int start, int end);
 
-//    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
-//                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
+    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
+                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
 
     void multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,
                               FieldType* randomElements, int size, int start, int end);
@@ -991,7 +991,7 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
 
     sum1.resize(batchSize*securityParamter);
     sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-    //sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
+    sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
     sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
     openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
