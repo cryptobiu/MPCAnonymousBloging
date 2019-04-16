@@ -2362,14 +2362,14 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
         for (int t = 0; t < num_devices; t++) {
             if ((t + 1) * sizeForEachThread <= 8) {
-                threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this,
+                threadsForGPU[t] = thread(&ProtocolParty::processSumsThreads, this,
                                           ref(sum1), ref(constRandomBitsFor1),
                                           ref(sum0), ref(constRandomBitsFor0),
-                                          ref(vecs), size
+                                          ref(vecs), size,
                                           t * sizeForEachThread, (t + 1) * sizeForEachThread, t);
             }
             else{
-                threadsForGPU[i] = thread(&ProtocolParty::processSumsThreads, this,
+                threadsForGPU[t] = thread(&ProtocolParty::processSumsThreads, this,
                                           ref(sum1), ref(constRandomBitsFor1),
                                           ref(sum0), ref(constRandomBitsFor0),
                                           ref(vecs), size,
