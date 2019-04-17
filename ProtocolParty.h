@@ -604,8 +604,8 @@ void ProtocolParty<FieldType>::runOnline() {
 
     t1 = high_resolution_clock::now();
     timer->startSubTask("VerificationPhase", iteration);
-    t = thread(&ProtocolParty::verificationPhase, this);
-    //auto flag = verificationPhase();
+   // t = thread(&ProtocolParty::verificationPhase, this);
+    auto flag = verificationPhase();
     timer->endSubTask("VerificationPhase", iteration);
     t2 = high_resolution_clock::now();
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -3331,6 +3331,7 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
     for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++) { //go over each row
 
         __m256i row = _mm256_maskload_epi32((int *) (unitVectors.data() +i*sqrtU) + rowIndex * 8, mask);
+
         auto int0 = _mm256_extract_epi32(row, 0);
         auto int1 = _mm256_extract_epi32(row, 1);
         auto int2 = _mm256_extract_epi32(row, 2);
@@ -3783,6 +3784,9 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 //        }
     }
 
+
+    auto start = high_resolution_clock::now();
+
     int numClientsForEachThread;
     if (batchSize <= numThreads){
         numThreads = batchSize;
@@ -3794,6 +3798,12 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 
     vector<vector<long>> outputDoublePerThread(numThreads, vector<long>(newNumRows*newNumCols));
     vector<long> outputDouble(newNumRows*newNumCols);
+
+    auto end = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(end-start).count();
+    cout << "create matrices took: " << duration << endl;
+
+    start = high_resolution_clock::now();
 
     for (int t=0; t<numThreads; t++) {
 
@@ -3807,7 +3817,11 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
         threads[t].join();
     }
 
+    end = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(end-start).count();
+    cout << "all threads work took: " << duration << endl;
 
+    start = high_resolution_clock::now();
     for(int t=0; t<numThreads; t++){//go over each client
 
         for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++){ //go over each row
@@ -3867,6 +3881,10 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
         }
 
     }
+
+    end = high_resolution_clock::now();
+    duration = duration_cast<milliseconds>(end-start).count();
+    cout << "reduce took: " << duration << endl;
 //    cout<<"output double:"<<endl;
 //    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++) { //go over each row
 //        for (int colIndex = 0; colIndex < newNumCols; colIndex++) {//go over each message
@@ -3898,7 +3916,7 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 
     auto t2 = high_resolution_clock::now();
 
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
+    duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
         cout << "time in milliseconds copy output: " << duration << endl;
     }
@@ -4761,7 +4779,7 @@ void ProtocolParty<FieldType>::outputPhase()
 #endif
 
 
-    t.join();
+   // t.join();
     t1 = high_resolution_clock::now();
 
     int flag =  generateClearMatricesForTesting(accMsgsMat,
