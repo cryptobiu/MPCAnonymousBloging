@@ -3327,10 +3327,14 @@ void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int ro
 template <class FieldType>
 void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors,
                                             vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask){
-
+long durationL = 0;
+long durationS = 0;
     for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++) { //go over each row
-
+        auto start = high_resolution_clock::now();
         __m256i row = _mm256_maskload_epi32((int *) (unitVectors.data() +i*sqrtU) + rowIndex * 8, mask);
+
+        auto end = high_resolution_clock::now();
+        durationL += duration_cast<milliseconds>(end-start).count();
 
         auto int0 = _mm256_extract_epi32(row, 0);
         auto int1 = _mm256_extract_epi32(row, 1);
@@ -3353,7 +3357,9 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
         for (int colIndex = 0; colIndex < newNumCols / 64; colIndex++) {//go over each message
 
             //load 8 vectors for 8 small matrices
+            auto start0 = high_resolution_clock::now();
             auto start = (int *) (input.data() + i*inputSize) + colIndex * 64;
+
             __m256i col0 = _mm256_maskload_epi32(start, mask);
             __m256i col1 = _mm256_maskload_epi32(start + 8, mask);
             __m256i col2 = _mm256_maskload_epi32(start + 16, mask);
@@ -3362,6 +3368,8 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
             __m256i col5 = _mm256_maskload_epi32(start + 40, mask);
             __m256i col6 = _mm256_maskload_epi32(start + 48, mask);
             __m256i col7 = _mm256_maskload_epi32(start + 56, mask);
+            end = high_resolution_clock::now();
+            durationL += duration_cast<milliseconds>(end-start0).count();
 
             __m256i colHigh0 = _mm256_srli_epi64(col0, 32);
             __m256i colHigh1 = _mm256_srli_epi64(col1, 32);
@@ -3376,9 +3384,10 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
             for (int j = 0; j < 8; j++) {
 
                 //load 8 vectors for 8 small matrices
-
+                start0 = high_resolution_clock::now();
                 long *startD =
                         (long *) outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
+
                 __m256i outputLow0 = _mm256_maskload_epi64((long long int *) startD, mask);
                 __m256i outputHigh0 = _mm256_maskload_epi64((long long int *) startD + 4, mask);
                 __m256i outputLow1 = _mm256_maskload_epi64((long long int *) startD + 8, mask);
@@ -3396,6 +3405,8 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
                 __m256i outputLow7 = _mm256_maskload_epi64((long long int *) startD + 56, mask);
                 __m256i outputHigh7 = _mm256_maskload_epi64((long long int *) startD + 60, mask);
 
+                end = high_resolution_clock::now();
+                durationL += duration_cast<milliseconds>(end-start0).count();
                 __m256i rowI;
                 if (j == 0) rowI = row0;
                 else if (j == 1) rowI = row1;
@@ -3442,6 +3453,7 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
                 outputHigh6 = _mm256_add_epi64(outputHigh6, c6);
                 outputHigh7 = _mm256_add_epi64(outputHigh7, c7);
 
+                start0 = high_resolution_clock::now();
                 _mm256_maskstore_epi64((long long int *) startD, mask, outputLow0);
                 _mm256_maskstore_epi64((long long int *) startD + 4, mask, outputHigh0);
                 _mm256_maskstore_epi64((long long int *) startD + 8, mask, outputLow1);
@@ -3459,10 +3471,15 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
                 _mm256_maskstore_epi64((long long int *) startD + 56, mask, outputLow7);
                 _mm256_maskstore_epi64((long long int *) startD + 60, mask, outputHigh7);
 
+                end = high_resolution_clock::now();
+                durationS += duration_cast<milliseconds>(end-start0).count();
             }
 
         }
     }
+
+    cout<<"all load operations took "<<durationL<<endl;
+    cout<<"all store operations took "<<durationS<<endl;
 }
 
 
