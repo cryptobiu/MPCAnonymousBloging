@@ -3964,15 +3964,20 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
     int toReduce = 0;
 
     for(int i=start; i<end; i++){//go over each client
-
+        auto start = high_resolution_clock::now();
         multMatricesFlat(input, inputSize, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
-
+        auto end = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(end-start).count();
+        cout << "multMatricesFlat took: " << duration << endl;
         toReduce += 2;
 
         if (toReduce == 4 || i == batchSize - 1){
 //            //reduce all matrix
+            start = high_resolution_clock::now();
             reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
-
+            end = high_resolution_clock::now();
+            duration = duration_cast<milliseconds>(end-start).count();
+            cout << "reduce took: " << duration << endl;
             toReduce = 0;
         }
 
