@@ -26,6 +26,7 @@
 #include <cuda_runtime.h>
 #endif
 #include <algorithm>
+#include <boost/align/aligned_allocator.hpp>
 
 
 #define flag_print false
@@ -73,10 +74,10 @@ private:
     vector<FieldType> squaresVectorsFlat;
     vector<FieldType> countersVectorsFlat;
     vector<FieldType> unitVectorsFlat;
-    vector<FieldType> msgsVectorsShiftedFlat;
-    vector<FieldType> squaresVectorsShiftedFlat;
-    vector<FieldType> countersVectorsShiftedFlat;
-    vector<FieldType> unitVectorsShiftedFlat;
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> msgsVectorsShiftedFlat;
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> squaresVectorsShiftedFlat;
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> countersVectorsShiftedFlat;
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> unitVectorsShiftedFlat;
 
     vector<FieldType> sum1;
     vector<FieldType> sum0;
@@ -3800,8 +3801,8 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
     }
     vector<thread> threads(numThreads);
 
-    vector<vector<long>> outputDoublePerThread(numThreads, vector<long>(newNumRows*newNumCols));
-    vector<long> outputDouble(newNumRows*newNumCols);
+    vector<vector<long, boost::alignment::aligned_allocator<long, 32>>> outputDoublePerThread(numThreads, vector<long, boost::alignment::aligned_allocator<long, 32>>(newNumRows*newNumCols));
+    vector<long, boost::alignment::aligned_allocator<long, 32>> outputDouble(newNumRows*newNumCols);
 
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start).count();
@@ -3812,9 +3813,9 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * numClientsForEachThread <= batchSize) {
-            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref((vector<long>&)outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, batchSize);
+            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref((vector<long>&)outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, batchSize);
         }
     }
     for (int t=0; t<numThreads; t++){
@@ -3880,7 +3881,7 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 
         if (toReduce == 32 || t == numThreads - 1){
 //            //reduce all matrix
-            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
+            reduceMatrix((vector<long>&)outputDouble, newNumRows, newNumCols, mask, p);
             toReduce = 0;
         }
 
@@ -4356,7 +4357,7 @@ void ProtocolParty<FieldType>::offlineDNForMultiplication(int numOfTriples){
 template <class FieldType>
 void ProtocolParty<FieldType>::inputPhase() {
     splitShiftFlat(msgsVectorsFlat, squaresVectorsFlat, countersVectorsFlat, unitVectorsFlat,
-            msgsVectorsShiftedFlat, squaresVectorsShiftedFlat, countersVectorsShiftedFlat, unitVectorsShiftedFlat);
+                   (vector<FieldType>&)msgsVectorsShiftedFlat, (vector<FieldType>&)squaresVectorsShiftedFlat, (vector<FieldType>&)countersVectorsShiftedFlat, (vector<FieldType>&)unitVectorsShiftedFlat);
 //    copyBackToVectors();
 }
 
@@ -4369,7 +4370,7 @@ int ProtocolParty<FieldType>::verificationPhase() {
 
 
 //    auto flag =  validMsgsTest(msgsVectors, unitVectors);
-    auto flag =  validMsgsTestFlat(msgsVectorsShiftedFlat, squaresVectorsShiftedFlat, countersVectorsShiftedFlat, unitVectorsShiftedFlat);
+    auto flag =  validMsgsTestFlat((vector<FieldType>&)msgsVectorsShiftedFlat, (vector<FieldType>&)squaresVectorsShiftedFlat, (vector<FieldType>&)countersVectorsShiftedFlat, (vector<FieldType>&)unitVectorsShiftedFlat);
 
     cout<<"flag is : "<<flag<<endl;
 
@@ -4771,19 +4772,19 @@ void ProtocolParty<FieldType>::outputPhase()
 //cpu optimed version
 //-------------------------------------------------------//
 
-    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-    vector<FieldType> accCountersMat(sqrtR*sqrtU);
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> accCountersMat(sqrtR*sqrtU);
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
     auto t1 = high_resolution_clock::now();
-    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
-                                    squaresVectorsShiftedFlat,
-                                    countersVectorsShiftedFlat,
-                                    unitVectorsShiftedFlat,
-                                    accMsgsMat,
-                                    accMsgsSquareMat,
-                                    accCountersMat);
+    generateSharedMatricesOptimizedFlat((vector<FieldType>&)msgsVectorsShiftedFlat,
+                                        (vector<FieldType>&)squaresVectorsShiftedFlat,
+                                        (vector<FieldType>&)countersVectorsShiftedFlat,
+                                        (vector<FieldType>&)unitVectorsShiftedFlat,
+                                        (vector<FieldType>&)accMsgsMat,
+                                        (vector<FieldType>&)accMsgsSquareMat,
+                                        (vector<FieldType>&)accCountersMat);
     auto t2 = high_resolution_clock::now();
 
     auto duration = duration_cast<milliseconds>(t2-t1).count();
@@ -4798,9 +4799,9 @@ void ProtocolParty<FieldType>::outputPhase()
    // t.join();
     t1 = high_resolution_clock::now();
 
-    int flag =  generateClearMatricesForTesting(accMsgsMat,
-                                                accMsgsSquareMat,
-                                                accCountersMat,
+    int flag =  generateClearMatricesForTesting((vector<FieldType>&)accMsgsMat,
+                                                (vector<FieldType>&)accMsgsSquareMat,
+                                                (vector<FieldType>&)accCountersMat,
                                                 accIntCountersMat);
     t2 = high_resolution_clock::now();
 
@@ -4823,8 +4824,8 @@ void ProtocolParty<FieldType>::outputPhase()
     }
 
     t1 = high_resolution_clock::now();
-    extractMessagesForTesting(accMsgsMat,
-                              accMsgsSquareMat,
+    extractMessagesForTesting((vector<FieldType>&)accMsgsMat,
+                              (vector<FieldType>&)accMsgsSquareMat,
                               accIntCountersMat,
                               accIntCountersMat.size());
 
