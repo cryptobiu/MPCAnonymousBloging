@@ -3966,18 +3966,33 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
     __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
     __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
     int toReduce = 0;
-
+    auto multstart = high_resolution_clock::now();
+    auto multend = high_resolution_clock::now();
+    long multduration = 0;
+    auto reducestart = high_resolution_clock::now();
+    auto reduceend = high_resolution_clock::now();
+    long reduceduration = 0;
     for(int i=start; i<end; i++){//go over each client
+        multstart = high_resolution_clock::now();
         multMatricesFlat(input, inputSize, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
+        multend = high_resolution_clock::now();
+        multduration += duration_cast<milliseconds>(multend-multstart).count();
+
+
         toReduce += 2;
 
         if (toReduce == 4 || i == batchSize - 1){
 //            //reduce all matrix
+            reducestart = high_resolution_clock::now();
             reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
+            reduceend = high_resolution_clock::now();
+            reduceduration += duration_cast<milliseconds>(multend-multstart).count();
             toReduce = 0;
         }
 
     }
+    cout << "time in milliseconds for protocol: " << multduration << endl;
+    cout << "time in milliseconds for protocol: " << reduceduration << endl;
 }
 
 template <class FieldType>
