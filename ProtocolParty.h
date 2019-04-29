@@ -3976,7 +3976,7 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
         multstart = high_resolution_clock::now();
         multMatricesFlat(input, inputSize, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
         multend = high_resolution_clock::now();
-        multduration += duration_cast<milliseconds>(multend-multstart).count();
+        multduration += duration_cast<nanoseconds>(multend-multstart).count();
 
 
         toReduce += 2;
@@ -3986,13 +3986,13 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
             reducestart = high_resolution_clock::now();
             reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
             reduceend = high_resolution_clock::now();
-            reduceduration += duration_cast<milliseconds>(reduceend-reducestart).count();
+            reduceduration += duration_cast<nanoseconds>(reduceend-reducestart).count();
             toReduce = 0;
         }
 
     }
-    cout << "time in milliseconds for mult: " << multduration << endl;
-    cout << "time in milliseconds for reduce: " << reduceduration << endl;
+    cout << "time in milliseconds for mult: " << multduration/1000 << endl;
+    cout << "time in milliseconds for reduce: " << reduceduration/1000 << endl;
 }
 
 template <class FieldType>
