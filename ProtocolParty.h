@@ -3986,13 +3986,13 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
             reducestart = high_resolution_clock::now();
             reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
             reduceend = high_resolution_clock::now();
-            reduceduration += duration_cast<milliseconds>(multend-multstart).count();
+            reduceduration += duration_cast<milliseconds>(reduceend-reducestart).count();
             toReduce = 0;
         }
 
     }
-    cout << "time in milliseconds for protocol: " << multduration << endl;
-    cout << "time in milliseconds for protocol: " << reduceduration << endl;
+    cout << "time in milliseconds for mult: " << multduration << endl;
+    cout << "time in milliseconds for reduce: " << reduceduration << endl;
 }
 
 template <class FieldType>
