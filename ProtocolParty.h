@@ -26,7 +26,6 @@
 #include <cuda_runtime.h>
 #endif
 #include <algorithm>
-#include <boost/align/aligned_allocator.hpp>
 
 
 #define flag_print false
@@ -74,10 +73,10 @@ private:
     vector<FieldType> squaresVectorsFlat;
     vector<FieldType> countersVectorsFlat;
     vector<FieldType> unitVectorsFlat;
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> msgsVectorsShiftedFlat;
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> squaresVectorsShiftedFlat;
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> countersVectorsShiftedFlat;
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> unitVectorsShiftedFlat;
+    vector<FieldType> msgsVectorsShiftedFlat;
+    vector<FieldType> squaresVectorsShiftedFlat;
+    vector<FieldType> countersVectorsShiftedFlat;
+    vector<FieldType> unitVectorsShiftedFlat;
 
     vector<FieldType> sum1;
     vector<FieldType> sum0;
@@ -3801,8 +3800,8 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
     }
     vector<thread> threads(numThreads);
 
-    vector<vector<long, boost::alignment::aligned_allocator<long, 32>>> outputDoublePerThread(numThreads, vector<long, boost::alignment::aligned_allocator<long, 32>>(newNumRows*newNumCols));
-    vector<long, boost::alignment::aligned_allocator<long, 32>> outputDouble(newNumRows*newNumCols);
+    vector<vector<long>> outputDoublePerThread(numThreads, vector<long>(newNumRows*newNumCols));
+    vector<long> outputDouble(newNumRows*newNumCols);
 
     auto end = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(end-start).count();
@@ -3813,9 +3812,9 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
     for (int t=0; t<numThreads; t++) {
 
         if ((t + 1) * numClientsForEachThread <= batchSize) {
-            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref((vector<long>&)outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
+            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, (t + 1) * numClientsForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref((vector<long>&)outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, batchSize);
+            threads[t] = thread(&ProtocolParty::multiplyVectorsPerThreadFlat, this, ref(input), inputSize, ref(unitVectors), ref(outputDoublePerThread[t]), newNumRows, newNumCols,  t * numClientsForEachThread, batchSize);
         }
     }
     for (int t=0; t<numThreads; t++){
@@ -3834,45 +3833,45 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
             for(int colIndex=0; colIndex<newNumCols / 32; colIndex++) {//go over each message
 
                 //load 8 vectors for 8 small matrices
-                __m256i* threadRow = (__m256i *) outputDoublePerThread[t].data() + rowIndex * newNumCols + colIndex * 32;
-                __m256i* outputRow = (__m256i *) outputDouble.data() + rowIndex * newNumCols + colIndex * 32;
+                auto threadRow = (long *) outputDoublePerThread[t].data() + rowIndex * newNumCols + colIndex * 32;
+                auto outputRow = (long *) outputDouble.data() + rowIndex * newNumCols + colIndex * 32;
 
-//                __m256i threadRow0 = _mm256_maskload_epi64((long long int *) threadRow, mask);
-//                __m256i threadRow1 = _mm256_maskload_epi64((long long int *) threadRow + 4, mask);
-//                __m256i threadRow2 = _mm256_maskload_epi64((long long int *) threadRow + 8, mask);
-//                __m256i threadRow3 = _mm256_maskload_epi64((long long int *) threadRow + 12, mask);
-//                __m256i threadRow4 = _mm256_maskload_epi64((long long int *) threadRow + 16, mask);
-//                __m256i threadRow5 = _mm256_maskload_epi64((long long int *) threadRow + 20, mask);
-//                __m256i threadRow6 = _mm256_maskload_epi64((long long int *) threadRow + 24, mask);
-//                __m256i threadRow7 = _mm256_maskload_epi64((long long int *) threadRow + 28, mask);
+                __m256i threadRow0 = _mm256_maskload_epi64((long long int *) threadRow, mask);
+                __m256i threadRow1 = _mm256_maskload_epi64((long long int *) threadRow + 4, mask);
+                __m256i threadRow2 = _mm256_maskload_epi64((long long int *) threadRow + 8, mask);
+                __m256i threadRow3 = _mm256_maskload_epi64((long long int *) threadRow + 12, mask);
+                __m256i threadRow4 = _mm256_maskload_epi64((long long int *) threadRow + 16, mask);
+                __m256i threadRow5 = _mm256_maskload_epi64((long long int *) threadRow + 20, mask);
+                __m256i threadRow6 = _mm256_maskload_epi64((long long int *) threadRow + 24, mask);
+                __m256i threadRow7 = _mm256_maskload_epi64((long long int *) threadRow + 28, mask);
 
 
-//                __m256i outputRow0 = _mm256_maskload_epi64((long long int *) outputRow, mask);
-//                __m256i outputRow1 = _mm256_maskload_epi64((long long int *) outputRow + 4, mask);
-//                __m256i outputRow2 = _mm256_maskload_epi64((long long int *) outputRow + 8, mask);
-//                __m256i outputRow3 = _mm256_maskload_epi64((long long int *) outputRow + 12, mask);
-//                __m256i outputRow4 = _mm256_maskload_epi64((long long int *) outputRow + 16, mask);
-//                __m256i outputRow5 = _mm256_maskload_epi64((long long int *) outputRow + 20, mask);
-//                __m256i outputRow6 = _mm256_maskload_epi64((long long int *) outputRow + 24, mask);
-//                __m256i outputRow7 = _mm256_maskload_epi64((long long int *) outputRow + 28, mask);
+                __m256i outputRow0 = _mm256_maskload_epi64((long long int *) outputRow, mask);
+                __m256i outputRow1 = _mm256_maskload_epi64((long long int *) outputRow + 4, mask);
+                __m256i outputRow2 = _mm256_maskload_epi64((long long int *) outputRow + 8, mask);
+                __m256i outputRow3 = _mm256_maskload_epi64((long long int *) outputRow + 12, mask);
+                __m256i outputRow4 = _mm256_maskload_epi64((long long int *) outputRow + 16, mask);
+                __m256i outputRow5 = _mm256_maskload_epi64((long long int *) outputRow + 20, mask);
+                __m256i outputRow6 = _mm256_maskload_epi64((long long int *) outputRow + 24, mask);
+                __m256i outputRow7 = _mm256_maskload_epi64((long long int *) outputRow + 28, mask);
 
-                outputRow[0] = _mm256_add_epi64(threadRow[0], outputRow[0]);
-                outputRow[1] = _mm256_add_epi64(threadRow[1], outputRow[1]);
-                outputRow[2] = _mm256_add_epi64(threadRow[2], outputRow[2]);
-                outputRow[3] = _mm256_add_epi64(threadRow[3], outputRow[3]);
-                outputRow[4] = _mm256_add_epi64(threadRow[4], outputRow[4]);
-                outputRow[5] = _mm256_add_epi64(threadRow[5], outputRow[5]);
-                outputRow[6] = _mm256_add_epi64(threadRow[6], outputRow[6]);
-                outputRow[7] = _mm256_add_epi64(threadRow[7], outputRow[7]);
+                outputRow0 = _mm256_add_epi64(threadRow0, outputRow0);
+                outputRow1 = _mm256_add_epi64(threadRow1, outputRow1);
+                outputRow2 = _mm256_add_epi64(threadRow2, outputRow2);
+                outputRow3 = _mm256_add_epi64(threadRow3, outputRow3);
+                outputRow4 = _mm256_add_epi64(threadRow4, outputRow4);
+                outputRow5 = _mm256_add_epi64(threadRow5, outputRow5);
+                outputRow6 = _mm256_add_epi64(threadRow6, outputRow6);
+                outputRow7 = _mm256_add_epi64(threadRow7, outputRow7);
 
-                _mm256_maskstore_epi64((long long int *) outputRow, mask, outputRow[0]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 4, mask, outputRow[1]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 8, mask, outputRow[2]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 12, mask, outputRow[3]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 16, mask, outputRow[4]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 20, mask, outputRow[5]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 24, mask, outputRow[6]);
-                _mm256_maskstore_epi64((long long int *) outputRow + 28, mask, outputRow[7]);
+                _mm256_maskstore_epi64((long long int *) outputRow, mask, outputRow0);
+                _mm256_maskstore_epi64((long long int *) outputRow + 4, mask, outputRow1);
+                _mm256_maskstore_epi64((long long int *) outputRow + 8, mask, outputRow2);
+                _mm256_maskstore_epi64((long long int *) outputRow + 12, mask, outputRow3);
+                _mm256_maskstore_epi64((long long int *) outputRow + 16, mask, outputRow4);
+                _mm256_maskstore_epi64((long long int *) outputRow + 20, mask, outputRow5);
+                _mm256_maskstore_epi64((long long int *) outputRow + 24, mask, outputRow6);
+                _mm256_maskstore_epi64((long long int *) outputRow + 28, mask, outputRow7);
 
             }
         }
@@ -4772,9 +4771,9 @@ void ProtocolParty<FieldType>::outputPhase()
 //cpu optimed version
 //-------------------------------------------------------//
 
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> accMsgsMat(sqrtR*sqrtU*l);
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> accMsgsSquareMat(sqrtR*sqrtU*l);
-    vector<FieldType, boost::alignment::aligned_allocator<FieldType, 32>> accCountersMat(sqrtR*sqrtU);
+    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
+    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
+    vector<FieldType> accCountersMat(sqrtR*sqrtU);
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
     auto t1 = high_resolution_clock::now();
@@ -4838,7 +4837,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
-    printOutputMessagesForTesting((vector<FieldType>&)accMsgsMat, (vector<FieldType>&)accMsgsSquareMat, accIntCountersMat,numClients);
+    //printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     t2 = high_resolution_clock::now();
 
