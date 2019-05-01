@@ -279,8 +279,10 @@ public:
 //    void multMatrices(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
 //                      vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask);
     void multMatricesFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors,
-                        vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask);
+                        vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask, bool toReduce, __m256i & p);
 
+    void reduce(__m256i & output0, __m256i & output1, __m256i & output2, __m256i & output3, __m256i & output4,
+            __m256i & output5, __m256i & output6, __m256i & output7, __m256i & p);
     void reduceMatrix(vector<long> & outputDouble, int newNumRows, int newNumCols, __m256i mask, __m256i p);
 
 //    void multiplyVectorsWithThreads(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
@@ -3326,7 +3328,7 @@ void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int ro
 
 template <class FieldType>
 void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors,
-                                            vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask){
+                                            vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask, bool toReduce, __m256i & p){
 
     for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++) { //go over each row
         __m256i row = _mm256_maskload_epi32((int *) (unitVectors.data() +i*sqrtU) + rowIndex * 8, mask);
@@ -3443,6 +3445,12 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
                 outputHigh6 = _mm256_add_epi64(outputHigh6, c6);
                 outputHigh7 = _mm256_add_epi64(outputHigh7, c7);
 
+                if (toReduce){
+                    reduce(outputLow0, outputLow1, outputLow2, outputLow3, outputLow4,
+                           outputLow5, outputLow6, outputLow7, p);
+                    reduce(outputHigh0, outputHigh1, outputHigh2, outputHigh3, outputHigh4,
+                           outputHigh5, outputHigh6, outputHigh7, p);
+                }
 
                 _mm256_maskstore_epi64((long long int *) startD, mask, outputLow0);
                 _mm256_maskstore_epi64((long long int *) startD + 4, mask, outputHigh0);
@@ -3467,6 +3475,115 @@ void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int i
         }
     }
 
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::reduce(__m256i & output0, __m256i & output1, __m256i & output2, __m256i & output3,
+                                      __m256i & output4, __m256i & output5, __m256i & output6, __m256i & output7,
+                                      __m256i & p) {
+//get the bottom 31 bit
+    __m256i bottom0 = _mm256_and_si256(output0, p);
+    __m256i bottom1 = _mm256_and_si256(output1, p);
+    __m256i bottom2 = _mm256_and_si256(output2, p);
+    __m256i bottom3 = _mm256_and_si256(output3, p);
+    __m256i bottom4 = _mm256_and_si256(output4, p);
+    __m256i bottom5 = _mm256_and_si256(output5, p);
+    __m256i bottom6 = _mm256_and_si256(output6, p);
+    __m256i bottom7 = _mm256_and_si256(output7, p);
+//                    unsigned int bottom = multLong & p;
+
+    //get the top 31 bits
+
+    __m256i top0 = _mm256_srli_epi64(output0, 31);
+    __m256i top1 = _mm256_srli_epi64(output1, 31);
+    __m256i top2 = _mm256_srli_epi64(output2, 31);
+    __m256i top3 = _mm256_srli_epi64(output3, 31);
+    __m256i top4 = _mm256_srli_epi64(output4, 31);
+    __m256i top5 = _mm256_srli_epi64(output5, 31);
+    __m256i top6 = _mm256_srli_epi64(output6, 31);
+    __m256i top7 = _mm256_srli_epi64(output7, 31);
+
+
+    top0 = _mm256_and_si256(top0, p);
+    top1 = _mm256_and_si256(top1, p);
+    top2 = _mm256_and_si256(top2, p);
+    top3 = _mm256_and_si256(top3, p);
+    top4 = _mm256_and_si256(top4, p);
+    top5 = _mm256_and_si256(top5, p);
+    top6 = _mm256_and_si256(top6, p);
+    top7 = _mm256_and_si256(top7, p);
+//                    unsigned int top = (multLong>>31);
+
+    __m256i res0 = _mm256_add_epi64(bottom0, top0);
+    __m256i res1 = _mm256_add_epi64(bottom1, top1);
+    __m256i res2 = _mm256_add_epi64(bottom2, top2);
+    __m256i res3 = _mm256_add_epi64(bottom3, top3);
+    __m256i res4 = _mm256_add_epi64(bottom4, top4);
+    __m256i res5 = _mm256_add_epi64(bottom5, top5);
+    __m256i res6 = _mm256_add_epi64(bottom6, top6);
+    __m256i res7 = _mm256_add_epi64(bottom7, top7);
+
+
+    top0 = _mm256_srli_epi64(output0, 62);
+    top1 = _mm256_srli_epi64(output1, 62);
+    top2 = _mm256_srli_epi64(output2, 62);
+    top3 = _mm256_srli_epi64(output3, 62);
+    top4 = _mm256_srli_epi64(output4, 62);
+    top5 = _mm256_srli_epi64(output5, 62);
+    top6 = _mm256_srli_epi64(output6, 62);
+    top7 = _mm256_srli_epi64(output7, 62);
+
+
+    top0 = _mm256_and_si256(top0, p);
+    top1 = _mm256_and_si256(top1, p);
+    top2 = _mm256_and_si256(top2, p);
+    top3 = _mm256_and_si256(top3, p);
+    top4 = _mm256_and_si256(top4, p);
+    top5 = _mm256_and_si256(top5, p);
+    top6 = _mm256_and_si256(top6, p);
+    top7 = _mm256_and_si256(top7, p);
+//                    unsigned int top = (multLong>>31);
+
+    res0 = _mm256_add_epi64(res0, top0);
+    res1 = _mm256_add_epi64(res1, top1);
+    res2 = _mm256_add_epi64(res2, top2);
+    res3 = _mm256_add_epi64(res3, top3);
+    res4 = _mm256_add_epi64(res4, top4);
+    res5 = _mm256_add_epi64(res5, top5);
+    res6 = _mm256_add_epi64(res6, top6);
+    res7 = _mm256_add_epi64(res7, top7);
+
+    //maximim the value of 2p-2
+//                    if(answer.elem>=p)
+//                        answer.elem-=p;
+//
+////                    }
+    __m256i test0 = _mm256_cmpgt_epi32(res0, p);
+    __m256i test1 = _mm256_cmpgt_epi32(res1, p);
+    __m256i test2 = _mm256_cmpgt_epi32(res2, p);
+    __m256i test3 = _mm256_cmpgt_epi32(res3, p);
+    __m256i test4 = _mm256_cmpgt_epi32(res4, p);
+    __m256i test5 = _mm256_cmpgt_epi32(res5, p);
+    __m256i test6 = _mm256_cmpgt_epi32(res6, p);
+    __m256i test7 = _mm256_cmpgt_epi32(res7, p);
+
+    __m256i sub0 = _mm256_and_si256(test0, p);
+    __m256i sub1 = _mm256_and_si256(test1, p);
+    __m256i sub2 = _mm256_and_si256(test2, p);
+    __m256i sub3 = _mm256_and_si256(test3, p);
+    __m256i sub4 = _mm256_and_si256(test4, p);
+    __m256i sub5 = _mm256_and_si256(test5, p);
+    __m256i sub6 = _mm256_and_si256(test6, p);
+    __m256i sub7 = _mm256_and_si256(test7, p);
+
+    output0 = _mm256_sub_epi32(res0, sub0);
+    output1 = _mm256_sub_epi32(res1, sub1);
+    output2 = _mm256_sub_epi32(res2, sub2);
+    output3 = _mm256_sub_epi32(res3, sub3);
+    output4 = _mm256_sub_epi32(res4, sub4);
+    output5 = _mm256_sub_epi32(res5, sub5);
+    output6 = _mm256_sub_epi32(res6, sub6);
+    output7 = _mm256_sub_epi32(res7, sub7);
 }
 
 
@@ -3965,7 +4082,8 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
 
     __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
     __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
-    int toReduce = 0;
+//    int toReduce = 0;
+    bool toReduce = false;
     auto multstart = high_resolution_clock::now();
     auto multend = high_resolution_clock::now();
     long multduration = 0;
@@ -3974,21 +4092,22 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
     long reduceduration = 0;
     for(int i=start; i<end; i++){//go over each client
         multstart = high_resolution_clock::now();
-        multMatricesFlat(input, inputSize, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
+        if (i == batchSize - 1) toReduce = true;
+        multMatricesFlat(input, inputSize, unitVectors, outputDouble, newNumRows, newNumCols, i, mask, toReduce, p);
         multend = high_resolution_clock::now();
         multduration += duration_cast<nanoseconds>(multend-multstart).count();
 
 
-        toReduce += 2;
+        toReduce = !toReduce;
 
-        if (toReduce == 4 || i == batchSize - 1){
-//            //reduce all matrix
-            reducestart = high_resolution_clock::now();
-            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
-            reduceend = high_resolution_clock::now();
-            reduceduration += duration_cast<nanoseconds>(reduceend-reducestart).count();
-            toReduce = 0;
-        }
+//        if (toReduce == 4 || i == batchSize - 1){
+////            //reduce all matrix
+//            reducestart = high_resolution_clock::now();
+//            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
+//            reduceend = high_resolution_clock::now();
+//            reduceduration += duration_cast<nanoseconds>(reduceend-reducestart).count();
+//            toReduce = 0;
+//        }
 
     }
     cout << "time in milliseconds for mult: " << multduration/1000 << endl;
@@ -4255,7 +4374,7 @@ void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &
 
     for(int i=0; i<accIntCountersMat.size(); i++){
 
-        if(i%100000==0) {
+        if(i%500==0) {
             cout << "accIntCountersMat[" << i << "]" << accIntCountersMat[i] << endl;
             if (accIntCountersMat[i] == 1) {
                 for (int l1 = 0; l1 < l; l1++) {
@@ -4837,7 +4956,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
-    //printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     t2 = high_resolution_clock::now();
 
