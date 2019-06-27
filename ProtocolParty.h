@@ -30,7 +30,6 @@
 
 #define flag_print false
 #define flag_print_timings true
-#define flag_print_output true
 
 
 using namespace std;
@@ -4956,7 +4955,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
-    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
 
     t2 = high_resolution_clock::now();
 
