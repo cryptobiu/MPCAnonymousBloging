@@ -2,4 +2,4 @@
 
 cd MPCAnonymousBloggingClient && cmake . && make
 
-cmake . && make
+cd ../ && cmake . && make
