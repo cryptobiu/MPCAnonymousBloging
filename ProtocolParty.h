@@ -336,7 +336,7 @@ public:
                          vector<FieldType> &accMsgsSquareMat,
                          vector<int> &accIntCountersMat, int numMsgs);
 
-    void calcPairMessages(FieldType & a, FieldType & b, int counter);
+    void calcPairMessages(FieldType & a, FieldType & b, int counter, int i, int j);
 
     void printOutputMessages(vector<FieldType> &accMats, vector<int> &accIntCountersMat);
 
@@ -2257,10 +2257,10 @@ int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int s
 
     int sizeForEachThread;
     if (vecs.size() <= numThreads){
-        numThreads = batchSize;
+        numThreads = vecs.size();
         sizeForEachThread = 1;
     } else{
-        sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
+        sizeForEachThread = (vecs.size() + numThreads - 1)/ numThreads;
     }
     vector<thread> threads(numThreads);
     cout<<"num threads = "<< numThreads<< endl;
@@ -2402,8 +2402,8 @@ cout<<"--------- reg result ----------------------------"<<endl;
 
         //if(sum0[i]!=FieldType(sum01[i]))
          //   cout<<"this is one basa situation "<< i<<endl;
-        //sum0[i] = FieldType(sum01[i]);
-        //sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
+        sum0[i] = FieldType(sum01[i]);
+        sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
 
     }
 
@@ -3906,7 +3906,7 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 
 
     auto start = high_resolution_clock::now();
-
+//numThreads = 4;
     int numClientsForEachThread;
     if (batchSize <= numThreads){
         numThreads = batchSize;
@@ -3994,11 +3994,12 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 
         toReduce ++;
 
-        if (toReduce == 32 || t == numThreads - 1){
+//        if (toReduce == 32 || t == numThreads - 1){
+//            cout<<"in reduce"<<endl;
 //            //reduce all matrix
             reduceMatrix((vector<long>&)outputDouble, newNumRows, newNumCols, mask, p);
             toReduce = 0;
-        }
+//        }
 
     }
 
@@ -4048,6 +4049,7 @@ void ProtocolParty<FieldType>::multiplyVectorsWithThreadsFlat(vector<FieldType> 
 //        }
 //        cout<<endl;
 //    }
+//numThreads=4;
 }
 //
 //template <class FieldType>
@@ -4083,19 +4085,9 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
     __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
 //    int toReduce = 0;
     bool toReduce = false;
-    auto multstart = high_resolution_clock::now();
-    auto multend = high_resolution_clock::now();
-    long multduration = 0;
-    auto reducestart = high_resolution_clock::now();
-    auto reduceend = high_resolution_clock::now();
-    long reduceduration = 0;
     for(int i=start; i<end; i++){//go over each client
-        multstart = high_resolution_clock::now();
         if (i == batchSize - 1) toReduce = true;
         multMatricesFlat(input, inputSize, unitVectors, outputDouble, newNumRows, newNumCols, i, mask, toReduce, p);
-        multend = high_resolution_clock::now();
-        multduration += duration_cast<nanoseconds>(multend-multstart).count();
-
 
         toReduce = !toReduce;
 
@@ -4109,8 +4101,7 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
 //        }
 
     }
-    cout << "time in milliseconds for mult: " << multduration/1000 << endl;
-    cout << "time in milliseconds for reduce: " << reduceduration/1000 << endl;
+
 }
 
 template <class FieldType>
@@ -4411,18 +4402,20 @@ void ProtocolParty<FieldType>::extractMessagesForTesting(vector<FieldType> &accM
     for (int i=0; i<numMsgs; i++){
         totalNumber += accIntCountersMat[i];
         for (int j=0; j<l;j++) {
-            calcPairMessages(accMsgsMat[i * l + j], accMsgsSquareMat[i * l + j], accIntCountersMat[i]);
+            calcPairMessages(accMsgsMat[i * l + j], accMsgsSquareMat[i * l + j], accIntCountersMat[i], i, j);
         }
     }
 
     if (totalNumber > numClients){
         cout<<"CHEATING total counter number!!!"<<endl;
     }
+
+    cout<<"sqrtR" <<sqrtR<<endl;
 }
 
 
 template<class FieldType>
-void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, int counter){
+void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, int counter, int i, int j){
 
     //If there is no element in this index, check that both values are zero.
     if (counter == 0){
@@ -4430,6 +4423,8 @@ void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, in
             cout<<"CHEATING counter == 0!!!"<<endl;
             cout<<"a = "<<a<<endl;
             cout<<"b = "<<b<<endl;
+            cout<<"i = "<<i<<endl;
+            cout<<"j = "<<j<<endl;
         }
         //If there is one element in this index, check that x = x^2.
     } else if (counter == 1){
@@ -4438,6 +4433,8 @@ void ProtocolParty<FieldType>::calcPairMessages(FieldType & a, FieldType & b, in
             b = *(field->GetZero());
         } else {
             cout<<"CHEATING counter == 1!!!"<<endl;
+            cout<<"i = "<<i<<endl;
+            cout<<"j = "<<j<<endl;
         }
         //If there are two elements in this index, calculate them
     } else if (counter == 2){
