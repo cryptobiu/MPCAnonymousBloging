@@ -1865,7 +1865,7 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     t1 = high_resolution_clock::now();
 
 
-    flag = unitVectorsTestFlat(unitVectors, sqrtU, randomElements.data(), sumsForConsistensyTest, true);
+    flag = unitVectorsTestFlat(unitVectors, sqrtU, randomElements.data(), sumsForConsistensyTest, false);
 
     t2 = high_resolution_clock::now();
 
