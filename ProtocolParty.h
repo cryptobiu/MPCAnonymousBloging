@@ -984,10 +984,25 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
     countersVectorsFlat.resize(numClients*sqrtR);
     unitVectorsFlat.resize(numClients*sqrtU);
 
-    msgsVectorsShiftedFlat.resize(batchSize*sqrtR*l);
-    squaresVectorsShiftedFlat.resize(batchSize*sqrtR*l);
-    countersVectorsShiftedFlat.resize(batchSize*sqrtR);
-    unitVectorsShiftedFlat.resize(batchSize*sqrtU);
+    int uvSize = batchSize*sqrtU;
+    if (uvSize % 8 != 0) {
+        uvSize = (uvSize / 8)*8 + 8;
+    }
+
+    int size = batchSize*sqrtR*l;
+    if (size % 64 != 0) {
+        size = (size / 64)*64 + 64;
+    }
+
+    int cSize = batchSize*sqrtR;
+    if (cSize % 64 != 0) {
+        cSize = (cSize / 64)*64 + 64;
+    }
+
+    msgsVectorsShiftedFlat.resize(size);
+    squaresVectorsShiftedFlat.resize(size);
+    countersVectorsShiftedFlat.resize(cSize);
+    unitVectorsShiftedFlat.resize(uvSize);
 
     sum1.resize(batchSize*securityParamter);
     sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
