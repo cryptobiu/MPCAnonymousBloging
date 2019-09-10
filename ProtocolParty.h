@@ -441,7 +441,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
 
     N = numServers;
-    T = (numServers+1)/2 - 1;
+    T = (numServers+1)/4 - 1;
     //this->inputsFile = this->getParser().getValueByKey(arguments, "inputFile");
     //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
 
