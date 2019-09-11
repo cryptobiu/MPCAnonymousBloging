@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [ $5 = "1" ]; then
+if [ $6 = "true" ]; then
 rm -rf ~/files*
 cd ../MPCAnonymousBloggingClient && ./MPCAnonymousBloggingClient -server ${1} -numServers ${2} -numClients ${3} \
    -fieldType ZpMersenne31 -l ${4}
