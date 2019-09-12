@@ -66,11 +66,8 @@ Client<FieldType>::Client(int argc, char **argv){
 cout<<"server = "<<server<<endl;
     sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
     sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
-    T = (numServers+1)/4 - 1;
+    T = stoi(parser.getValueByKey(arguments, "T"));
 
-
-
-//    auto key = prg.generateKey(128);
     vector<byte> keyBytes(32, 0);
     SecretKey key(keyBytes,"");
     prg.setKey(key);
