@@ -66,7 +66,7 @@ Client<FieldType>::Client(int argc, char **argv){
 cout<<"server = "<<server<<endl;
     sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
     sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
-    T = (numServers+1)/2 - 1;
+    T = parser.getValueByKey(arguments, "T");
 
 
 
