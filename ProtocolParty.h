@@ -441,7 +441,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
 
     N = numServers;
-    T = stoi(parser.getValueByKey(arguments, "T"));
+    T = stoi(this->getParser().getValueByKey(arguments, "T"));
     //this->inputsFile = this->getParser().getValueByKey(arguments, "inputFile");
     //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
 
