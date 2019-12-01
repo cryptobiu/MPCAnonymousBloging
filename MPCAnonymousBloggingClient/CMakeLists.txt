@@ -14,4 +14,4 @@ add_executable(MPCAnonymousBloggingClient ${SOURCE_FILES})
 
 TARGET_LINK_LIBRARIES(MPCAnonymousBloggingClient $ENV{HOME}/libscapi/libscapi.a gmp
         libntl.a
-        libboost_system.a libboost_thread.a pthread crypto dl ssl z)
+        boost_system boost_thread pthread crypto dl ssl z)
