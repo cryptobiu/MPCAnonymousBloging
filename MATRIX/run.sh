@@ -6,5 +6,5 @@ cd ../MPCAnonymousBloggingClient && ./MPCAnonymousBloggingClient -server "${1}" 
    -fieldType ZpMersenne31 -l "${4}" -T "${8}"
 fi
 
-cd ../ && ./MPCAnonymousBloging -partyID "${1}" -numServers "${2}" -numClients "${3}" \
+./MPCAnonymousBloging -partyID "${1}" -numServers "${2}" -numClients "${3}" \
    -fieldType ZpMersenne31 -l "${4}" -partiesFile "${5}" -internalIterationsNumber "${6}" -numThreads "${7}" -T "${8}"
