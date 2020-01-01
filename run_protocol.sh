@@ -1,6 +1,6 @@
 #! /bin/bash
-for i in $(seq "${1}" 1 "${2}");
+for i in `seq $1 1 $2`;
 do
-	./MATRIX/run.sh "${i}" "${3}" "${4}" "${5}" "${6}" "${7}" "${8}" "${9}" "${10}" &
+	./MPCAnonymousBloging  -l 40 -partyID $i -numServers $3 -numClients $4   -fieldType ZpMersenne31 -partiesFile Parties.txt  -internalIterationsNumber 1 -numThreads $5 -T $6&
 	echo "Running $i..."
 done

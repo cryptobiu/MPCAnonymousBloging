@@ -73,13 +73,13 @@ cout<<"server = "<<server<<endl;
     prg.setKey(key);
 
     string dir = string(getenv("HOME")) + "/files"+to_string(numClients);
-    int check = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-    if (!check){
-        cout<<"Directory created"<<endl;
-    } else {
-        cout<<"Unable to create directory"<<endl;
-        exit(1);
-    }
+    //int check = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+//    if (!check){
+//        cout<<"Directory created"<<endl;
+//    } else {
+//        cout<<"Unable to create directory"<<endl;
+//        exit(1);
+//    }
 
     if(fieldType.compare("ZpMersenne31") == 0) {
         field = new TemplateField<FieldType>(2147483647);
