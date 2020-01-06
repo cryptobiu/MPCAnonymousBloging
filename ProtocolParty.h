@@ -2218,6 +2218,64 @@ void ProtocolParty<FieldType>::prepareForUnitTestFlat(vector<FieldType> &randomE
 //}
 
 template <class FieldType>
+int ProtocolParty<FieldType>::fasterUnitVectorsTestFlat(vector<FieldType> &vecs, int size,
+                                                        FieldType *randomElements){
+    int flag = -1;
+
+    int sizeForEachThread;
+    if (vecs.size() <= numThreads){
+        numThreads = vecs.size();
+        sizeForEachThread = 1;
+    } else{
+        sizeForEachThread = (vecs.size() + numThreads - 1)/ numThreads;
+    }
+    vector<thread> threads(numThreads);
+
+    vector<vector<FieldType>> randomVecs(batchSize, vector<FieldType>(size));
+    vector<FieldType> messagesShare(batchSize);
+    vector<FieldType> shouldBeZero(batchSize);
+    vector<FieldType> openedShouldBeZero(batchSize);
+    vector<FieldType> msgByRandomSum(batchSize);
+    vector<FieldType> VecByRandomSum(batchSize);
+
+    auto t1 = high_resolution_clock::now();
+    for (int t=0; t<numThreads; t++) {
+
+        if ((t + 1) * sizeForEachThread <= batchSize) {
+            threads[t] = thread(&ProtocolParty::prepareVecsForUnitTestThreads, this, ref(randomVecs), ref(vecs), ref(messagesShare),
+                                ref(msgByRandomSum), ref(VecByRandomSum),randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
+        } else {
+            threads[t] = thread(&ProtocolParty::prepareVecsForUnitTestThreads, this, ref(randomVecs), ref(vecs), ref(messagesShare),
+                                ref(msgByRandomSum), ref(VecByRandomSum),randomElements, size, t * sizeForEachThread, batchSize);
+        }
+    }
+    for (int t=0; t<numThreads; t++){
+        threads[t].join();
+    }
+
+    for(int i=0; i<batchSize; i++){
+        shouldBeZero[i] = VecByRandomSum[i]*VecByRandomSum[i] - messagesShare[i]*msgByRandomSum[i];
+    }
+
+    //now open shouldBeZero with degree 2d
+    openShare(shouldBeZero.size(), shouldBeZero, openedShouldBeZero, 2*T);
+
+    for(int i=0; i<batchSize; i++){
+
+        if(!(openedShouldBeZero[i]==* field->GetZero() ) ){
+
+            flag = i;
+            return flag;
+        }
+    }
+
+
+    return flag;
+
+
+}
+
+template <class FieldType>
 void ProtocolParty<FieldType>::processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device){
 
 
