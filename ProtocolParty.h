@@ -72,17 +72,9 @@ private:
     vector<FieldType> squaresVectorsFlat;
     vector<FieldType> countersVectorsFlat;
     vector<FieldType> unitVectorsFlat;
-//    vector<FieldType> msgsVectorsShiftedFlat;
-//    vector<FieldType> squaresVectorsShiftedFlat;
-//    vector<FieldType> countersVectorsShiftedFlat;
-//    vector<FieldType> unitVectorsShiftedFlat;
 
-//    vector<FieldType> sum1;
-//    vector<FieldType> sum0;
-//    vector<long> sum01;
     vector<FieldType> sumOfElementsVecs;
     vector<FieldType> openedSumOfElementsVecs;
-    vector<FieldType> sumsForConsistensyTestOpened;
     vector<FieldType> bigRVec;
 
     Measurement* timer;
@@ -216,15 +208,13 @@ public:
 
     void readclientsinputs(vector<FieldType> &msgsVectorsFlat, vector<FieldType> &squaresVectorsFlat, vector<FieldType> &countersVectorsFlat, vector<FieldType> &unitVectorsFlat);
     void readServerFile(string fileName, FieldType* msg, FieldType* squares, FieldType* counters, FieldType* unitVector, FieldType * e);
-//    int validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors);
+
     int validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors);
-//    int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
-    int fasterUnitVectorsTestFlat(vector<FieldType> &vecs, int size,FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
+
+    int fasterUnitVectorsTestFlat(vector<FieldType> &vecs, int size,FieldType *randomElements);
 #ifdef __NVCC__
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 #endif
-//    int unitVectorsTest(vector<vector<FieldType>> &vecs, FieldType *randomElements,vector<FieldType> &sumsForConsistensyTest);
-    int unitWith1VectorsTest(vector<vector<FieldType>> &vecs);
 
 //    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
 //                               vector<FieldType> &accMats,
@@ -238,13 +228,6 @@ public:
 //                                           vector<FieldType> &accMsgsSquareMat,
 //                                           vector<FieldType> &accCountersMat);
 
-//    int generateSharedMatricesOptimized(vector<vector<FieldType>> &shiftedMsgsVectors,
-//                                         vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
-//                                         vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
-//                                         vector<vector<FieldType>> &shiftedUnitVectors,
-//                                         vector<FieldType> &accMsgsMat,
-//                                         vector<FieldType> &accMsgsSquareMat,
-//                                         vector<FieldType> &accCountersMat);
 
     int generateSharedMatricesOptimizedFlat(vector<FieldType> &shiftedMsgsVectors,
                                         vector<FieldType> &shiftedMsgsVectorsSquares,
@@ -276,8 +259,7 @@ public:
 //                            int numOfRows,
 //                            int numOfCols);
 //
-//    void multMatrices(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
-//                      vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask);
+
     void multMatricesFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors,
                         vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask, bool toReduce, __m256i & p);
 
@@ -297,12 +279,6 @@ public:
     void multiplyVectorsPerThreadFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors, vector<long> & outputDouble,
                                   int newNumRows, int newNumCols, int start, int end);
 
-//    void assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
-//                                                       vector<vector<FieldType>> & randomVecs, int start, int end);
-
-    void multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs,
-                              FieldType* randomElements, int size, int start, int end);
-
     void prepareVecsForUnitTestThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, vector<FieldType> & messagesShares,
                                        vector<FieldType>& msgByRandomSum, vector<FieldType>& VecByRandomSum, FieldType* randomElements, int size, int start, int end);
 
@@ -317,9 +293,6 @@ public:
 
     void generateRandomShiftingindices(vector<int> &randomShiftingVec);
 
-//    void splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-//                    vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter);
-
     void splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors);
 
     void splitShiftByThreads(vector<int> & randomShiftingIndices, vector<FieldType> & originalArr, long size, long l, long position, long start, long end);
@@ -327,11 +300,6 @@ public:
 //        void copyBackToVectors();
 
 
-//#ifdef __NVCC__
-//    void splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-//                                                    vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
-//                                                    vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter);
-//#endif
 
     void commitOnMatrices(vector<FieldType> &accMats, vector<FieldType> &accFieldCountersMat,
                                                    vector<vector<byte>> &recBufsBytes);
@@ -341,8 +309,6 @@ public:
                          vector<int> &accIntCountersMat, int numMsgs);
 
     void calcPairMessages(FieldType & a, FieldType & b, int counter, int i, int j);
-
-    void printOutputMessages(vector<FieldType> &accMats, vector<int> &accIntCountersMat);
 
     void printOutputMessagesForTesting(vector<FieldType> &accMsgsMat,
                                                                  vector<FieldType> &accMsgsMat2,
@@ -357,12 +323,9 @@ public:
      * Then, all the shares are sent to the relevant party
      */
 
-//    void prepareForUnitTest(vector<FieldType> &randomElements, vector<vector<FieldType>> &msgsVectors,
-//                            vector<FieldType> &sumXandSqaure, vector<vector<FieldType>> &msgsVectorsForUnitTest, int start, int end);
 
     void prepareForUnitTestFlat(vector<FieldType> &randomElements, vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters,
                                                       vector<FieldType> &sumXandSqaure, vector<FieldType> &msgsVectorsForUnitTest, int start, int end);
-
     void generateRandomShares(int numOfRandoms, vector<FieldType> &randomElementsToFill);
     void getRandomShares(int numOfRandoms, vector<FieldType> &randomElementsToFill);
     void generateRandomSharesWithCheck(int numOfRnadoms, vector<FieldType>& randomElementsToFill);
@@ -446,55 +409,13 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
     N = numServers;
     T = stoi(this->getParser().getValueByKey(arguments, "T"));
-    //this->inputsFile = this->getParser().getValueByKey(arguments, "inputFile");
-    //this->outputFile = this->getParser().getValueByKey(arguments, "outputFile");
-
 
     sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
     sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
 
+
     batchSize = numClients;
     s = to_string(m_partyId);
-/*
-    int threads_per_device = 2;
-    int num_devices = 1;
-    cudaSafeCall(cudaGetDeviceCount(&num_devices));
-    printf("%d devices used\n", num_devices);
-    std::vector<int> devices(num_devices*threads_per_device);
-    for (int device = 0; device < num_devices; ++device)
-    {
-        for (int i = 0; i < threads_per_device; ++i){
-            devices[threads_per_device*device +i] = device;
-            cout<<"vec is "<<device<<endl;
-        }
-    }
-
-    vector<FieldType> A{1, 2, 3,4,5,6};
-    vector<FieldType> B{9,8,7,6,5,4, 3, 2};
-    vector<FieldType> C(12);
-
-
-    processNN31((merssene31_t *)C.data(),
-                (merssene31_t *)B.data(), 2, 4,
-                (merssene31_t *)A.data(), 3, 2,
-                devices);
-
-    for(int i=0; i<C.size(); i++){
-
-        cout<<"C[i] is "<<C[i];
-    }
-
-    cout<<"--------- reg result ----------------------------"<<endl;
-    regMatrixMulTN(C.data(),
-                   A.data(), 3, 3,
-                   B.data(), 3,3);
-
-
-    for(int i=0; i<C.size(); i++){
-
-        cout<<"C[i] is "<<C[i];
-    }
-*/
 
     MPCCommunication comm;
     string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
@@ -525,14 +446,12 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     if(flag_print_timings) {
         cout << "time in milliseconds initializationPhase: " << duration << endl;
     }
-//
-//
+
     shiftbyOne.resize(securityParamter);
     for(int i=0; i<securityParamter; i++){
         shiftbyOne[i] = 1 << i;
     }
-//
-//
+
     string tmp = "init times";
     //cout<<"before sending any data"<<endl;
     byte tmpBytes[20];
@@ -981,8 +900,7 @@ void ProtocolParty<FieldType>::initializationPhase()
 {
     bigR.resize(1);
 
-cout<<"max size is "<<msgsVectorsFlat.max_size()<<endl;
-cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
+cout<<"requested size is "<<numClients*sqrtR*l<<endl;
 //    msgsVectorsFlat.resize(numClients*sqrtR*l);
 //    squaresVectorsFlat.resize(numClients*sqrtR*l);
 //    countersVectorsFlat.resize(numClients*sqrtR);
@@ -1020,7 +938,7 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
 
     sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
     openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
-    sumsForConsistensyTestOpened.resize(batchSize);
+
 
     beta.resize(1);
     y_for_interpolate.resize(N);
@@ -1104,6 +1022,8 @@ cout<<"requested sie is "<<numClients*sqrtR*l<<endl;
     }
 
 
+    cout <<"sqrtR = "<<sqrtR<<endl;
+    cout <<"sqrtU = "<<sqrtU<<endl;
 }
 
 template <class FieldType>
@@ -1544,151 +1464,14 @@ void ProtocolParty<FieldType>::readServerFile(string fileName, FieldType* msg, F
 //        bigRVec.resize(3*l*batchSize);
 //        fill(bigRVec.begin() + size, bigRVec.end(), bigR[0]);
 //    }
-//    vector<FieldType> RTimesSumXandSqaure(sumXandSqaure.size());
+//    vect
 //
-//    t1 = high_resolution_clock::now();
+//template <class FieldType>
+//int ProtocolParty<FieldType>::validMsgsTest(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors){
 //
-//    cout<< "size of mult in validate is : "<<sumXandSqaure.size()<<endl;
+//    //prepare the random elements for the unit vectors test
+//    auto key = generateCommonKey();
 //
-//
-//    DNHonestMultiplication(sumXandSqaure.data(), bigRVec.data(), RTimesSumXandSqaure,sumXandSqaure.size());
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in milliseconds DNHonestMultiplication RTimesSumXandSqaure: " << duration << endl;
-//    }
-//
-//
-//    //check the validity of the inputs
-//    //open v1^2 - v2 and Rv1^2 - Rv2
-//
-//    //prepare vector for opening
-//    vector<FieldType> subs(batchSize*l*2);
-//    vector<FieldType> openedSubs(batchSize*l*2);
-//
-//
-//    for(int i=0; i<batchSize;i++){
-//
-//        for(int l1 = 0; l1<l; l1++) {
-//            subs[i*l + l1] = sumXandSqaure[batchSize*l * 2 + i*l + l1] -
-//                                    sumXandSqaure[batchSize*l + i*l + l1];
-//
-//            subs[batchSize * l + i*l + l1] = RTimesSumXandSqaure[batchSize*l * 2 + i*l + l1] -
-//                                                                     RTimesSumXandSqaure[batchSize*l + i*l + l1];
-//
-//
-//        }
-//    }
-//
-//
-//    int flag = -1;
-//    openShare(subs.size(), subs, openedSubs, T);
-//
-//    //now check that all subs are zero
-//    for(int i=0; i<batchSize; i++){
-//
-//        for(int l1 = 0; l1 < l; l1++){
-//
-//            if(openedSubs[i*l + l1] != *field->GetZero() ||
-//               openedSubs[batchSize*l + i*l + l1] != *field->GetZero()){
-//
-//                return i;
-//            }
-//
-//        }
-//    }
-//
-//
-//    vector<FieldType> sumsForConsistensyTest(batchSize);
-//    t1 = high_resolution_clock::now();
-//
-//
-//    flag = unitVectorsTest(msgsVectorsForUnitTest, randomElements.data(), sumsForConsistensyTest);
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in milliseconds unitVectorsTest 1: " << duration << endl;
-//    }
-//
-//    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
-//    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
-//
-//    //flag = -1;//remove after fix
-//    if(flag==-1) {//all vectors passed the test
-//
-//        for(int i = 0; i<batchSize; i++) {
-//
-//            for (int k = 0; k < sqrtR; k++) {
-//
-//                sumOfElementsVecs[i] += msgsVectors[i][sqrtR*l*2 + k] ;
-//
-//            }
-//        }
-//
-//    }
-//    else{
-//       // return flag;
-//    }
-//
-//    //open the sums and check that they are equal to 1. This is the counter and should have one in the relevant entry.
-//
-//
-//    //lastly, check that the unit vectors are indeed unit vector. We can use the same random elements that were already created
-//
-//    //vector<FieldType> sumsForConsistensyTest(batchSize);
-//    t1 = high_resolution_clock::now();
-//
-//
-//    flag = unitVectorsTest(unitVectors, randomElements.data(), sumsForConsistensyTest);
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in milliseconds unitVectorsTest 2: " << duration << endl;
-//    }
-//
-//    vector<FieldType> sumsForConsistensyTestOpened(batchSize);
-//
-//    //invoke a consistency test, need to return the index of a cheating client
-//    openShare(sumsForConsistensyTest.size(), sumsForConsistensyTest, sumsForConsistensyTestOpened, T);
-//
-//    //do the same check for the unit vectors
-//
-//    if(flag==-1) {//all vectors passed the test
-//
-//        for(int i = 0; i<batchSize; i++) {
-//
-//            for (int k = 0; k < sqrtU; k++) {
-//
-//                sumOfElementsVecs[i+batchSize] += unitVectors[i][k] ;
-//
-//            }
-//        }
-//
-//    }
-//    else{
-//        //return flag;
-//    }
-//
-//    //open the sums and check that they are equal to 1. This is the counter and should have one in the relevant entry.
-//
-//    openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
-//
-//    for(int i=0; i<batchSize; i++){
-//
-//        if(openedSumOfElementsVecs[i]!= *field->GetOne()){
-//
-//            return i;
-//        }
-//    }
-//
-//    return flag;
-//
-//}
-
 
 template <class FieldType>
 int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors){
@@ -1843,12 +1626,11 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     }
 
 
-    vector<FieldType> sumsForConsistensyTest(batchSize);
     t1 = high_resolution_clock::now();
 
 
-    flag = fasterUnitVectorsTestFlat(msgsVectorsForUnitTest, sqrtR, randomElements.data(), sumsForConsistensyTest, false);
-//    flag = unitVectorsTestFlat(msgsVectorsForUnitTest, sqrtR, randomElements.data(), sumsForConsistensyTest, false);
+    flag = fasterUnitVectorsTestFlat(msgsVectorsForUnitTest, sqrtR, randomElements.data());
+
     t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -1887,11 +1669,10 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
 
     //lastly, check that the unit vectors are indeed unit vector. We can use the same random elements that were already created
 
-    //vector<FieldType> sumsForConsistensyTest(batchSize);
     t1 = high_resolution_clock::now();
 
 
-    flag = fasterUnitVectorsTestFlat(unitVectors, sqrtU, randomElements.data(), sumsForConsistensyTest, true);
+    flag = fasterUnitVectorsTestFlat(unitVectors, sqrtU, randomElements.data());
 
     t2 = high_resolution_clock::now();
 
@@ -1899,11 +1680,6 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
     if(flag_print_timings) {
         cout << "time in milliseconds unitVectorsTest 2: " << duration << endl;
     }
-
-//    vector<FieldType> sumsForConsistensyTestOpened(batchSize);
-
-    //invoke a consistency test, need to return the index of a cheating client
-    openShare(sumsForConsistensyTest.size(), sumsForConsistensyTest, sumsForConsistensyTestOpened, T);
 
     //do the same check for the unit vectors
 
@@ -2007,239 +1783,11 @@ void ProtocolParty<FieldType>::prepareForUnitTestFlat(vector<FieldType> &randomE
 //    }
 //}
 
-template <class FieldType>
-int ProtocolParty<FieldType>::unitWith1VectorsTest(vector<vector<FieldType>> &vecs) {
 
-    //prepare the random elements for the unit vectors test
-    auto key = generateCommonKey();
-
-
-    vector<FieldType> randomElements(vecs[0].size(0));
-    generatePseudoRandomElements(key, randomElements, randomElements.size());
-
-    //check that the vectors are all unit vectors
-    int flag = unitVectorsTest(vecs, randomElements.data());
-
-
-    vector<FieldType> sumOfElementsVecs(vecs.size(0), *field->GetZero());
-    vector<FieldType> openedSumOfElementsVecs(vecs.size(0), *field->GetZero());
-
-    if(flag==-1) {//all vectors passed the test
-
-        for(int i = 0; i<vecs.size(); i++) {
-
-            for (int j = 0; j < vecs[0].size(); j++) {
-
-                sumOfElementsVecs[i] += vecs[i][j];
-            }
-        }
-
-    }
-    else{
-        return flag;
-    }
-
-    //open the sums and check that they are equal to 1
-
-    openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
-
-    for(int i=0; i<vecs.size(); i++){
-
-        if(openedSumOfElementsVecs[i]!= field->GetOne()){
-
-            return i;
-        }
-    }
-
-
-    return flag;
-
-
-}
-
-//
-//template <class FieldType>
-//int ProtocolParty<FieldType>::unitVectorsTest(vector<vector<FieldType>> &vecs,
-//        FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest) {
-//
-//    vector<FieldType> flattenVec;
-//
-//    //turn to one vector for the gpu multiplication. NOTE make sure to pass the flatten vector after testing.
-//    for(int i=0; i<vecs.size(); i++){
-//
-//        //generate the shifted message and assign that back to the msgsVectors
-//
-//        flattenVec.insert(flattenVec.end(), vecs[i].begin() , vecs[i].end());
-//        //msgsVectors[i].resize(0);
-//
-//    }
-//
-//
-//    int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
-//    vector<vector<FieldType>> randomVecs(vecs.size());
-//
-//    vector<FieldType> sum1(vecs.size()*securityParamter);
-//    vector<FieldType> sum0(vecs.size()*securityParamter);//do in a 1 dimension array for multiplication
-//
-//    vector<long> sum01(2*vecs.size()*securityParamter);//do in a 1 dimension array for multiplication
-//
-//    //use the random elements for the bits. This is ok since the random elements were chosen after the input
-//    //was set.
-//    long * randomBits = (long *)randomElements;
-//
-//    vector<FieldType> constRandomBitsFor1(vecs[0].size()*securityParamter);//we do not use bit set since this is
-//                                                                            //better performance wise rather than memory wise
-//
-//
-//    vector<FieldType> constRandomBitsFor0(vecs[0].size()*securityParamter);//we do not use bit set since this is
-//    //better performance wise rather than memory wise
-//
-//    vector<byte> constRandomBits(vecs[0].size()*securityParamter);
-//
-//
-//    byte **constRandomBitsMat = new byte*[securityParamter];
-//
-//    //fill the random bits once and use it without shifting for every client
-//    for (int j = 0; j < securityParamter; j++) {
-//
-//        constRandomBitsMat[j] = new byte[vecs[0].size()];
-//        for (int k = 0; k < vecs[0].size(); k++) {
-//
-//            constRandomBitsFor1[vecs[0].size()*j + k] = ((randomBits[k] >> j)&1);
-//            constRandomBits[vecs[0].size()*j + k] = ((randomBits[k] >> j)&1);
-//            constRandomBitsFor0[vecs[0].size()*j + k] = (1 - (randomBits[k] >> j)&1);
-//            constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
-//        }
-//    }
-//
-//    byte *constRandomBitsPrim = constRandomBits.data();
-//
-//    auto t1 = high_resolution_clock::now();
-//    //generate msg array that is the multiplication of an element with the related random share.
-//    for(int i = 0; i < vecs.size(); i++){
-//        randomVecs[i].resize(vecs[0].size());
-//
-//        for(int j=0; j<vecs[0].size() ; j++){
-//
-//            randomVecs[i][j] = vecs[i][j] * randomElements[j];
-//        }
-//    }
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in mult by randoms: " << duration << endl;
-//    }
-//
-////    regMatrixMulTN(sum1.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor1.data(), vecs[0].size(), securityParamter);
-////
-////    regMatrixMulTN(sum0.data(), flattenVec.data(), vecs.size(), vecs[0].size(), constRandomBitsFor0.data(), vecs[0].size(), securityParamter);
-//
-//
-//
-//    t1 = high_resolution_clock::now();
-//
-//    int sizeForEachThread;
-//    if (vecs.size() <= numThreads){
-//        numThreads = vecs.size();
-//        sizeForEachThread = 1;
-//    } else{
-//        sizeForEachThread = (vecs.size() + numThreads - 1)/ numThreads;
-//    }
-//
-//    for (int t=0; t<numThreads; t++) {
-//
-//        if ((t + 1) * sizeForEachThread <= vecs.size()) {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThread, this, ref(sum01), ref(vecs), ref(constRandomBitsPrim),
-//                                ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
-//        } else {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThread, this, ref(sum01), ref(vecs), ref(constRandomBitsPrim),
-//                                ref(randomVecs),  t * sizeForEachThread, vecs.size());
-//        }
-//    }
-//    for (int t=0; t<numThreads; t++){
-//        threads[t].join();
-//    }
-//
-//    //turn the sum01 into sum0 and sum1 field elements
-//    for(int i=0; i<vecs.size()*securityParamter; i++) {
-//
-//        sum0[i] = FieldType(sum01[i]);
-//        sum1[i] = FieldType(sum01[vecs.size()*securityParamter + i]);
-//
-//    }
-//
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for add to sums01: " << duration << endl;
-//    }
-//
-//    t1 = high_resolution_clock::now();
-//    vector<FieldType> Rsum0Vec(sum0.size());
-//    //vector<FieldType> Rsum01Vec(sum01.size());
-//    //run the semi honest multiplication to get the second part of each share
-//    DNHonestMultiplication(sum0.data(), bigRVec.data(),Rsum0Vec, sum0.size());
-//    //DNHonestMultiplication(sum01.data(), bigRVec.data(),Rsum01Vec, sum01.size());
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for DNHonestMultiplication in unittest: " << duration << endl;
-//    }
-//
-//    vector<FieldType> SOPandRSOP(vecs.size()*2);
-//    vector<FieldType> openedSOPandRSOP(vecs.size()*2);
-//    //prepare the values for the sumo of products
-//    t1 = high_resolution_clock::now();
-//    for(int i = 0; i<vecs.size(); i++){
-//
-//        sumsForConsistensyTest[i] += sum0[i*securityParamter ] + sum1[i*securityParamter ];
-//
-//        for(int j = 0; j<securityParamter; j++){
-//
-//            //perform local sum of products
-//            SOPandRSOP[2*i] += sum0[i*securityParamter + j] * sum1[i*securityParamter + j];
-//            SOPandRSOP[2*i + 1] += Rsum0Vec[i*securityParamter + j] * sum1[i*securityParamter + j];
-//        }
-//    }
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for SOPandRSOP in unittest: " << duration << endl;
-//    }
-//
-//    openShare(SOPandRSOP.size(), SOPandRSOP, openedSOPandRSOP, 2*T);
-//
-//    //perform the following check:
-//    //1. check the  SOP = 0 and that RtimesSOP = 0 for each
-//    //2. check that the points have degree t.
-//
-//
-//
-//    for(int i=0; i<vecs.size(); i++){
-//
-//        if(!(openedSOPandRSOP[2*i]==* field->GetZero() &&
-//           openedSOPandRSOP[2*i+1]==* field->GetZero())) {
-//
-//            flag = i;
-//            return flag;
-//        }
-//    }
-//
-//
-//    return flag;
-//}
 
 template <class FieldType>
 int ProtocolParty<FieldType>::fasterUnitVectorsTestFlat(vector<FieldType> &vecs, int size,
-                                                  FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit){
+                                                  FieldType *randomElements){
     int flag = -1;
 
     int sizeForEachThread;
@@ -2294,268 +1842,7 @@ int ProtocolParty<FieldType>::fasterUnitVectorsTestFlat(vector<FieldType> &vecs,
 
 
 }
-//
-//template <class FieldType>
-//int ProtocolParty<FieldType>::unitVectorsTestFlat(vector<FieldType> &vecs, int size,
-//                                              FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit) {
-//
-//
-//    int flag = -1;// -1 if the test passed, otherwise, return the first index of the not unit vector
-//    vector<vector<FieldType>> randomVecs(batchSize, vector<FieldType>(size));
-//
-////    vector<FieldType> sum1(batchSize*securityParamter);
-////    vector<FieldType> sum0(batchSize*securityParamter);//do in a 1 dimension array for multiplication
-////
-////    vector<long> sum01(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
-//
-//    //use the random elements for the bits. This is ok since the random elements were chosen after the input
-//    //was set.
-//    long * randomBits = (long *)randomElements;
-//
-//    vector<FieldType> constRandomBitsFor1(size*securityParamter);//we do not use bit set since this is
-//    //better performance wise rather than memory wise
-//
-//
-//    vector<FieldType> constRandomBitsFor0(size*securityParamter);//we do not use bit set since this is
-//    //better performance wise rather than memory wise
-//
-//    vector<byte> constRandomBits(size*securityParamter);
-//
-//
-////    byte **constRandomBitsMat = new byte*[securityParamter];
-//
-//    //fill the random bits once and use it without shifting for every client
-//    for (int j = 0; j < securityParamter; j++) {
-//
-////        constRandomBitsMat[j] = new byte[size];
-//        for (int k = 0; k < size; k++) {
-//
-//            constRandomBitsFor1[size*j + k] = ((randomBits[k] >> j)&1);
-//            constRandomBits[size*j + k] = ((randomBits[k] >> j)&1);
-//            constRandomBitsFor0[size*j + k] = (1 - (randomBits[k] >> j)&1);
-////            constRandomBitsMat[j][k] = (randomBits[k] >> j)&1;
-//        }
-//
-//    }
-//
-//    int sizeForEachThread;
-//    if (vecs.size() <= numThreads){
-//        numThreads = vecs.size();
-//        sizeForEachThread = 1;
-//    } else{
-//        sizeForEachThread = (vecs.size() + numThreads - 1)/ numThreads;
-//    }
-//    vector<thread> threads(numThreads);
-//    cout<<"num threads = "<< numThreads<< endl;
-//
-//    byte *constRandomBitsPrim = constRandomBits.data();
-//
-////
-//////    for(int i = 0; i < batchSize; i++){
-//////        randomVecs[i].resize(size);
-////////
-////////        for(int j=0; j<size ; j++){
-////////
-////////            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
-////////        }
-//////    }
-//    auto t1 = high_resolution_clock::now();
-//    for (int t=0; t<numThreads; t++) {
-//
-//        if ((t + 1) * sizeForEachThread <= batchSize) {
-//            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, (t + 1) * sizeForEachThread);
-//        } else {
-//            threads[t] = thread(&ProtocolParty::multRandomsByThreads, this, ref(randomVecs), ref(vecs), randomElements, size, t * sizeForEachThread, batchSize);
-//        }
-//    }
-//    for (int t=0; t<numThreads; t++){
-//        threads[t].join();
-//    }
-////    //generate msg array that is the multiplication of an element with the related random share.
-////    for(int i = 0; i < batchSize; i++){
-////        randomVecs[i].resize(size);
-////
-////        for(int j=0; j<size ; j++){
-////
-////            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
-////        }
-////    }
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in mult by randoms: " << duration << endl;
-//    }
-//
-//    t1 = high_resolution_clock::now();
-//
-//
-//    //regMatrixMulTN(sum1.data(), vecs.data(), batchSize, size, constRandomBitsFor1.data(), size, securityParamter);
-//
-//    //regMatrixMulTN(sum0.data(), vecs.data(), batchSize, size, constRandomBitsFor0.data(), size, securityParamter);
-//
-//
-//
-///*
-//    vector<FieldType> A{1, 2, 3,4,5,6 ,7,8,9};
-//    vector<FieldType> B{9,8,7,6,5,4,3,2,1};
-//    vector<FieldType> C(9);
-//
-//
-//    processNN31((merssene31_t *)C.data(),
-//                (merssene31_t *)B.data(), 3, 3,
-//                (merssene31_t *)A.data(), 3, 3,
-//                devices);
-//
-//    for(int i=0; i<C.size(); i++){
-//
-//        cout<<"C[i] is "<<C[i];
-//    }
-//
-//cout<<"--------- reg result ----------------------------"<<endl;
-//    regMatrixMulTN(C.data(),
-//                   A.data(), 3, 3,
-//                   B.data(), 3,3);
-//
-//
-//    for(int i=0; i<C.size(); i++){
-//
-//        cout<<"C[i] is "<<C[i];
-//    }
-//
-//*/
-//
-////    if (toSplit) {
-////        int threads_per_device = 2;
-////        int num_devices = 1;
-////        cudaSafeCall(cudaGetDeviceCount(&num_devices));
-////        printf("%d devices used\n", num_devices);
-////        std::vector<int> devices((num_devices)*threads_per_device);
-////        for (int device = 0; device < num_devices ; ++device)
-////        {
-////            for (int i = 0; i < threads_per_device; ++i){
-////                devices[threads_per_device*device +i] = device;
-////                cout<<"vec is "<<device<<endl;
-////            }
-////        }
-////
-////        vector<thread> threadsForGPU(devices.size());
-////        for (int i = 0; i < num_devices; i++) {
-////            threads[i] = thread(&ProtocolParty::processSums, this, sum1.data() + sum1.size() * i / 8,
-////                                constRandomBitsFor1.data(), size,
-////                                vecs.data() + vecs.size() * i / 8,
-////                                devices[i]);
-////        }
-////        for (int i = 0; i < num_devices; i++) {
-////            threads[num_devices + i] = thread(&ProtocolParty::processSums, this, sum0.data() + sum0.size() * i / 8,
-////                                              constRandomBitsFor0.data(), size,
-////                                              vecs.data() + vecs.size() * i / 8,
-////                                              devices[8 + i]);
-////        }
-////
-////        for (int t = 0; t < 16; t++) {
-////            threads[t].join();
-////        }
-////    } else {
-////        processSums(sum1.data(), constRandomBitsFor1.data(), size,  vecs.data(), 0);
-////        processSums(sum0.data(), constRandomBitsFor0.data(), size,  vecs.data(), 1);
-////    }
-////    processSums(sum1, constRandomBitsFor1, size, vecs, devices, threadsForGPU, 0);
-////    processSums(sum0, constRandomBitsFor0, size, vecs, devices, threadsForGPU, 8);
-//
-//
-//    for (int t=0; t<numThreads; t++) {
-//
-//        if ((t + 1) * sizeForEachThread <= batchSize) {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
-//                                ref(randomVecs), t * sizeForEachThread, (t + 1) * sizeForEachThread);
-//        } else {
-//            threads[t] = thread(&ProtocolParty::assignSumsPerThreadFlat, this, ref(sum01), ref(vecs), size, ref(constRandomBitsPrim),
-//                                ref(randomVecs),  t * sizeForEachThread, batchSize);
-//        }
-//    }
-//    for (int t=0; t<numThreads; t++){
-//        threads[t].join();
-//    }
-//
-//    //turn the sum01 into sum0 and sum1 field elements
-//    for(int i=0; i<batchSize*securityParamter; i++) {
-//
-//
-//        //if(sum0[i]!=FieldType(sum01[i]))
-//         //   cout<<"this is one basa situation "<< i<<endl;
-//        sum0[i] = FieldType(sum01[i]);
-//        sum1[i] = FieldType(sum01[batchSize*securityParamter + i]);
-//
-//    }
-//
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for add to sums01: " << duration << endl;
-//    }
-//
-//    t1 = high_resolution_clock::now();
-//    vector<FieldType> Rsum0Vec(sum0.size());
-//    //vector<FieldType> Rsum01Vec(sum01.size());
-//    //run the semi honest multiplication to get the second part of each share
-//    DNHonestMultiplication(sum0.data(), bigRVec.data(),Rsum0Vec, sum0.size());
-//    //DNHonestMultiplication(sum01.data(), bigRVec.data(),Rsum01Vec, sum01.size());
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for DNHonestMultiplication in unittest: " << duration << endl;
-//    }
-//
-//    vector<FieldType> SOPandRSOP(batchSize*2);
-//    vector<FieldType> openedSOPandRSOP(batchSize*2);
-//    //prepare the values for the sumo of products
-//    t1 = high_resolution_clock::now();
-//    for(int i = 0; i<batchSize; i++){
-//
-//        sumsForConsistensyTest[i] += sum0[i*securityParamter ] + sum1[i*securityParamter ];
-//
-//        for(int j = 0; j<securityParamter; j++){
-//
-//            //perform local sum of products
-//            SOPandRSOP[2*i] += sum0[i*securityParamter + j] * sum1[i*securityParamter + j];
-//            SOPandRSOP[2*i + 1] += Rsum0Vec[i*securityParamter + j] * sum1[i*securityParamter + j];
-//        }
-//    }
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time for SOPandRSOP in unittest: " << duration << endl;
-//    }
-//
-//    openShare(SOPandRSOP.size(), SOPandRSOP, openedSOPandRSOP, 2*T);
-//
-//    //perform the following check:
-//    //1. check the  SOP = 0 and that RtimesSOP = 0 for each
-//    //2. check that the points have degree t.
-//
-//
-//
-//    for(int i=0; i<batchSize; i++){
-//
-//        if(!(openedSOPandRSOP[2*i]==* field->GetZero() &&
-//             openedSOPandRSOP[2*i+1]==* field->GetZero())) {
-//
-//            flag = i;
-//            return flag;
-//        }
-//    }
-//
-//
-//    return flag;
-//}
+
 
 #ifdef __NVCC__
 template <class FieldType>
@@ -2587,35 +1874,7 @@ void ProtocolParty<FieldType>::prepareVecsForUnitTestThreads(vector<vector<Field
     }
 }
 
-template <class FieldType>
-void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, FieldType* randomElements, int size, int start, int end){
 
-    for(long i = start; i < end; i++){
-//        randomVecs[i].resize(size);
-
-        for(long j=0; j<size ; j++){
-
-            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
-        }
-    }
-}
-//
-//template <class FieldType>
-//void ProtocolParty<FieldType>::assignSumsPerThread(vector<long> & sum01, vector<vector<FieldType>> & vecs, byte* constRandomBitsPrim,
-//        vector<vector<FieldType>> & randomVecs, int start, int end){
-//
-//    for(int i=start; i<end; i++) {
-//        for (int j = 0; j < securityParamter; j++) {
-//
-//            for(int k = 0; k<vecs[0].size();k++) {
-//
-//                //if related bit is zero, accume the sum in sum 0
-//                sum01[(i*securityParamter + j) + vecs.size()*securityParamter*constRandomBitsPrim[vecs[0].size()* j + k]] +=  randomVecs[i][k].elem;
-//
-//            }
-//        }
-//    }
-//}
 
 template <class FieldType>
 void ProtocolParty<FieldType>::assignSumsPerThreadFlat(vector<long> & sum01, vector<FieldType> & vecs, int size, byte* constRandomBitsPrim,
@@ -2637,10 +1896,6 @@ void ProtocolParty<FieldType>::assignSumsPerThreadFlat(vector<long> & sum01, vec
 template <class FieldType>
 void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors){
 
-//    msgsVectorsShifted.resize(batchSize*sqrtR*l);
-//    squaresVectorsShifted.resize(batchSize*sqrtR*l);
-//    countersVectorsShifted.resize(batchSize*sqrtR);
-//    unitVectorsShifted.resize(batchSize*sqrtU);
 
     //generate random shifting for all servers
     vector<int> randomShiftingIndices;
@@ -2670,19 +1925,7 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
     }
 
     int typeSize = field->getElementSizeInBytes();
-//    for(int i=0; i<batchSize; i++){
-//
-//        //get the row and col shift
-//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-//
-//        //generate the shifted message and assign that back to the msgsVectors
-//        memcpy(msgsVectorsShifted.data() + i*sqrtR*l, msgsVectors.data() + i*sqrtR*l+ shiftRow*l, l*(sqrtR-shiftRow)*typeSize);
-//        memcpy(msgsVectorsShifted.data() + i*sqrtR*l + l*(sqrtR-shiftRow), msgsVectors.data() + i*sqrtR*l, shiftRow*l*typeSize);
-//
-//    }
-//
-//    msgsVectors.clear();
-//    msgsVectors.shrink_to_fit();
+
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2695,20 +1938,7 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
-//    for(int i=0; i<batchSize; i++){
-//
-//        //get the row and col shift
-//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-//
-//        //generate the shifted message square
-//        memcpy(squaresVectorsShifted.data() + i*sqrtR*l, squaresVectors.data() + i*sqrtR*l + shiftRow*l, l*(sqrtR-shiftRow)*typeSize);
-//        memcpy(squaresVectorsShifted.data() + i*sqrtR*l + l*(sqrtR-shiftRow), squaresVectors.data() + i*sqrtR*l, shiftRow*l*typeSize);
-//
-//
-//    }
-//
-//    squaresVectors.clear();
-//    squaresVectors.shrink_to_fit();
+
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2721,18 +1951,7 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
-//    for(int i=0; i<batchSize; i++){
-//
-//        //get the row and col shift
-//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-//
-//        //generate the shifted counter
-//        memcpy(countersVectorsShifted.data() + i*sqrtR, countersVectors.data() + i*sqrtR + shiftRow, (sqrtR-shiftRow)*typeSize);
-//        memcpy(countersVectorsShifted.data() + i*sqrtR + sqrtR-shiftRow, countersVectors.data() + i*sqrtR, shiftRow*typeSize);
-//    }
-//
-//    countersVectors.clear();
-//    countersVectors.shrink_to_fit();
+
 
     for (int t=0; t<numThreads; t++) {
 
@@ -2745,19 +1964,6 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
-//    for(int i=0; i<batchSize; i++){
-//
-//        //get the row and col shift
-//        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
-//
-//        //generate the shifted unit vector, assign back to the unit vector
-//        memcpy(unitVectorsShifted.data() + i*sqrtU, unitVectors.data() + i*sqrtU + shiftCol, (sqrtU-shiftCol)*typeSize);
-//        memcpy(unitVectorsShifted.data() + i*sqrtU + sqrtU-shiftCol, unitVectors.data() + i*sqrtU, shiftCol*typeSize);
-//
-//    }
-//
-//    unitVectorsFlat.clear();
-//    unitVectorsFlat.shrink_to_fit();
 }
 
 template <class FieldType>
@@ -2779,201 +1985,7 @@ void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingI
 
     }
 }
-//
-//template <class FieldType>
-//void ProtocolParty<FieldType>::copyBackToVectors(){
-//    int typeSize = field->getElementSizeInBytes();
-//    cout<<"in copy back"<<endl;
-//    for(int i=0; i<batchSize; i++){
-//
-//        memcpy(msgsVectors[i].data(), msgsVectorsNewFlat.data() + i*sqrtR*l, sqrtR*l*typeSize);
-//        memcpy(msgsVectors[i].data() + sqrtR*l, msgsVectorsSquareFlat.data() + i*sqrtR*l, sqrtR*l*typeSize);
-//        memcpy(msgsVectors[i].data() + sqrtR*l*2, msgsVectorsCounterFlat.data() + i*sqrtR, sqrtR*typeSize);
-//
-//        memcpy(unitVectors[i].data(), unitVectorsNewFlat.data() + i*sqrtU, sqrtU*typeSize);
-//
-//    }
-//cout<<"end copy"<<endl;
-//
-//}
-//
-//template <class FieldType>
-//void ProtocolParty<FieldType>::splitShift(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-//                vector<vector<FieldType>> &msgsVectorsSquare, vector<vector<FieldType>> &msgsVectorsCounter){
-//
-//
-//    msgsVectorsSquare.resize(numClients);
-//    msgsVectorsCounter.resize(numClients);
-//
-//    //generate random shifting for all servers
-//    vector<int> randomShiftingIndices;
-//    generateRandomShiftingindices(randomShiftingIndices);
-//
-//    int shiftRow, shiftCol;
-//    for(int i=0; i<batchSize; i++){
-//
-//        //get the row and col shift
-//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-//        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
-//
-//        //generate the shifted message square
-//        vector<FieldType> shiftedSquare(msgsVectors[i].begin() + sqrtR*l + shiftRow*l, msgsVectors[i].begin()  + sqrtR*2*l);
-//        shiftedSquare.insert(shiftedSquare.end(), msgsVectors[i].begin()+ sqrtR*l, msgsVectors[i].begin() + sqrtR*l+ shiftRow*l);
-//        msgsVectorsSquare[i] = move(shiftedSquare);
-//
-//        //generate the shifted counter
-//        vector<FieldType> shiftedCounter(msgsVectors[i].begin() + sqrtR*2*l + shiftRow, msgsVectors[i].begin()  + sqrtR*2*l + sqrtR);
-//        shiftedCounter.insert(shiftedCounter.end(), msgsVectors[i].begin()+ sqrtR*2*l, msgsVectors[i].begin() + sqrtR*2*l+ shiftRow);
-//        msgsVectorsCounter[i] = move(shiftedCounter);
-//
-//
-//        //generate the shifted unit vector, assign back to the unit vector
-//        vector<FieldType> shiftedUnit(unitVectors[i].begin() + shiftCol, unitVectors[i].end());
-//        shiftedUnit.insert(shiftedUnit.end(), unitVectors[i].begin(), unitVectors[i].begin() +  shiftCol);
-//        unitVectors[i] = move(shiftedUnit);
-//
-//        //generate the shifted message and assign that back to the msgsVectors
-//        vector<FieldType> shiftedX(msgsVectors[i].begin() + shiftRow*l, msgsVectors[i].begin() + sqrtR*l);
-//        shiftedX.insert(shiftedX.end(), msgsVectors[i].begin(), msgsVectors[i].begin() + shiftRow*l);
-//        msgsVectors[i] = move(shiftedX);
-//
-//
-//    }
-//
-//}
-//
-//#ifdef __NVCC__
-//template <class FieldType>
-//void ProtocolParty<FieldType>::splitShiftForGPU(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-//                                                vector<FieldType> &msgsVectorsVec, vector<FieldType> &unitVectorsVec,
-//                                          vector<FieldType> &msgsVectorsSquare, vector<FieldType> &msgsVectorsCounter){
-//
-//
-//    //msgsVectorsSquare.resize(batchSize*sqrtR*l);
-//    //msgsVectorsCounter.resize(batchSize*sqrtR);
-//    //msgsVectorsVec.resize(batchSize*sqrtR*l);
-//    //unitVectorsVec.resize(batchSize*sqrtU);
-//
-//
-//    //generate random shifting for all servers
-//    vector<int> randomShiftingIndices;
-//    generateRandomShiftingindices(randomShiftingIndices);
-//
-//    int shiftRow, shiftCol;
-//    for(int i=0; i<batchSize; i++){
-//
-//        //get the row and col shift
-//        shiftRow = randomShiftingIndices[2*i];//this is for the message , the square and the counter
-//        shiftCol = randomShiftingIndices[2*i+1];//this is for the unit vectors
-//
-//        //generate the shifted message square
-//        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin() + sqrtR*l + shiftRow*l, msgsVectors[i].begin()  + sqrtR*2*l);
-//        msgsVectorsSquare.insert(msgsVectorsSquare.end(), msgsVectors[i].begin()+ sqrtR*l, msgsVectors[i].begin() + sqrtR*l+ shiftRow*l);
-//
-//        //generate the shifted counter
-//        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin() + sqrtR*2*l + shiftRow, msgsVectors[i].begin()  + sqrtR*2*l + sqrtR);
-//        msgsVectorsCounter.insert(msgsVectorsCounter.end(), msgsVectors[i].begin()+ sqrtR*2*l, msgsVectors[i].begin() + sqrtR*2*l+ shiftRow);
-//
-//
-//        //generate the shifted unit vector, assign back to the unit vector
-//        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin() + shiftCol, unitVectors[i].end());
-//        unitVectorsVec.insert(unitVectorsVec.end(), unitVectors[i].begin(), unitVectors[i].begin() +  shiftCol);
-//        unitVectors[i].resize(0);
-//
-//        //generate the shifted message and assign that back to the msgsVectors
-//        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin() + shiftRow*l, msgsVectors[i].begin() + sqrtR*l);
-//        msgsVectorsVec.insert(msgsVectorsVec.end(), msgsVectors[i].begin(), msgsVectors[i].begin() + shiftRow*l);
-//        msgsVectors[i].resize(0);
-//
-//    }
-//
-//}
-//
-//#endif
 
-//
-//template <class FieldType>
-//int ProtocolParty<FieldType>::generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-//                                                     vector<FieldType> &accMats,
-//                                                     vector<FieldType> &accFieldCountersMat){
-//
-//    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
-//    //and the second part is the addition of the sqaure of each message of that cell.
-//
-//    int numOfCols = msgsVectors[0].size()/(2*l + 1);
-//    int numOfRows = unitVectors[0].size();
-//    int size = numOfCols*numOfRows;//the size of the final 2D matrix
-//    vector<int> accCountersMat(size);
-//
-//    vector<int> randomShiftingIndices;
-//    generateRandomShiftingindices(randomShiftingIndices);
-//
-//
-//    int posRow, posCol;
-//    int shiftRow, shiftCol;
-//
-//
-//
-//    for(int i=0; i<batchSize; i++){//go over each client
-//
-//        //get the value for which we need to shift-rotate the row and col for this client
-//        shiftRow = randomShiftingIndices[2*i];
-//        shiftCol = randomShiftingIndices[2*i+1];
-//
-//        cout<<"shiftRow for "<<i << "is "<<shiftRow<<endl;
-//        cout<<"shiftCol for "<<i << "is "<<shiftCol<<endl;
-//
-//        for(int row = 0; row<numOfRows; row++){ //go over each row
-//
-//            posRow = row + shiftRow;
-//            if(posRow>=numOfRows)
-//                posRow-=numOfRows;
-//
-//
-//            for(int col=0; col<numOfCols; col++){//go over each message
-//
-//                posCol = col + shiftCol;
-//                if(posCol>=numOfCols)
-//                    posCol-=numOfCols;
-//
-//                for(int l1=0; l1<l; l1++){
-//
-//                    //accume message
-//                    accMats[ 2*l*(row * numOfCols + col) + l1] +=
-//                            msgsVectors[i][l*posCol + l1] *  unitVectors[i][posRow];
-//
-//                    //accume the square of the message
-//                    accMats[ 2*l*(row * numOfCols + col) + l + l1] +=
-//                            msgsVectors[i][numOfCols* l +l*posCol + l1] *  unitVectors[i][posRow];
-//
-//
-//
-//                }
-//
-//                accFieldCountersMat[row * numOfCols + col] +=
-//                        msgsVectors[i][numOfCols* l*2 + posCol] *  unitVectors[i][posRow];
-//
-//
-//            }
-//        }
-//
-//    }
-//
-//    //print matrices
-//
-//    for(int i=0; i<size; i++){
-//
-//        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accFieldCountersMat[i]<<endl;
-//
-//    }
-//
-//    for(int i=0; i<size; i++){
-//
-//        cout<<"accMats[i] = " <<accMats[i]<<endl;
-//
-//    }
-//
-//}
 
 //
 //template <class FieldType>
@@ -3041,42 +2053,6 @@ void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingI
 //
 //}
 
-//
-//template <class FieldType>
-//int ProtocolParty<FieldType>::generateSharedMatricesOptimized(vector<vector<FieldType>> &shiftedMsgsVectors,
-//                                                               vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
-//                                                               vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
-//                                                               vector<vector<FieldType>> &shiftedUnitVectors,
-//                                                               vector<FieldType> &accMsgsMat,
-//                                                               vector<FieldType> &accMsgsSquareMat,
-//                                                               vector<FieldType> &accCountersMat){
-//
-//    int numOfCols = shiftedMsgsVectorsCounters[0].size();
-//    int numOfRows = unitVectors[0].size();
-//
-//// auto t1 = high_resolution_clock::now();
-////    multiplyVectors(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
-////    multiplyVectors(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
-////    multiplyVectors(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
-//// auto t2 = high_resolution_clock::now();
-////
-////    auto duration = duration_cast<milliseconds>(t2-t1).count();
-////    if(flag_print_timings) {
-////        cout << "time in milliseconds without threads: " << duration << endl;
-////    }
-//
-////    t1 = high_resolution_clock::now();
-//    multiplyVectorsWithThreads(shiftedMsgsVectors, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
-//    multiplyVectorsWithThreads(shiftedMsgsVectorsSquares, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
-//    multiplyVectorsWithThreads(shiftedMsgsVectorsCounters, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
-////     t2 = high_resolution_clock::now();
-////
-////     duration = duration_cast<milliseconds>(t2-t1).count();
-////    if(flag_print_timings) {
-////        cout << "time in milliseconds with threads: " << duration << endl;
-////    }
-//
-//}
 
 
 template <class FieldType>
@@ -4428,36 +3404,6 @@ int ProtocolParty<FieldType>::generateClearMatrices(vector<FieldType> &accMats, 
 }
 
 
-
-template<class FieldType>
-void ProtocolParty<FieldType>::printOutputMessages(vector<FieldType> &accMats,
-                                                   vector<int> &accIntCountersMat){
-
-    int counter = 0;
-
-    for(int i=0; i<accIntCountersMat.size(); i++){
-
-        if(accIntCountersMat[i]==1){
-            cout<<"\033[1;31mmessage #"<<counter<< " is "<< accMats[2*i]<<"\033[0m"<<endl;
-            counter++;
-        }
-        else if(accIntCountersMat[i]==2){
-
-            cout<<"\033[1;31mmessage #"<<counter<< " is "<< accMats[2*i]<<"\033[0m"<<endl;
-            counter++;
-
-            cout<<"\033[1;31mmessage #"<<counter<< " is "<< accMats[2*i]<<"\033[0m"<<endl;
-            counter++;
-
-        }
-        else{
-            //no messages to extract
-        }
-
-    }
-
-}
-
 template<class FieldType>
 void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &accMsgsMat,
                                                              vector<FieldType> &accMsgsMat2,
@@ -4725,175 +3671,6 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
     }
 
 }
-
-
-//
-///**
-// * the function Walk through the circuit and reconstruct output gates.
-// * @param circuit
-// * @param gateShareArr
-// * @param alpha
-// */
-//template <class FieldType>
-//void ProtocolParty<FieldType>::outputPhase()
-//{
-//
-//    //cpu not optimized version
-//    //------------------------------------------------------------//
-////    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
-////    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
-////    vector<int> accIntCountersMat(sqrtR*sqrtR);
-////
-//
-////    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
-////
-////    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
-////
-////    if(flag==-1){
-////
-////        cout<<"all hashes are correct"<<endl;
-////    }
-////    else
-////    {
-////        cout<<"basssssssssssssssssa you " <<flag <<endl;
-////
-////    }
-////
-////    extractMessages(accMats, accIntCountersMat, numClients);
-//
-////    printOutputMessages(accMats, accIntCountersMat);
-//
-////---------------------------------------------------------------------//
-//
-//
-//
-//#ifdef __NVCC__
-////gpu version
-////-----------------------------------------------------//
-//    vector<FieldType> shiftedMsgsVectorsSquares;
-//    vector<FieldType> shiftedMsgsVectorsCounters;
-//    vector<FieldType> shiftedMsgsVec;
-//    vector<FieldType> shiftedMsgsUnits;
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    splitShiftForGPU(msgsVectors, unitVectors,
-//                     shiftedMsgsVec, shiftedMsgsUnits,
-//                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
-//    }
-//
-//
-//
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//
-//    t1 = high_resolution_clock::now();
-//    generateSharedMatricesForGPU(shiftedMsgsVec,
-//                                 shiftedMsgsVectorsSquares,
-//                                 shiftedMsgsVectorsCounters,
-//                                 shiftedMsgsUnits,
-//                                 accMsgsMat,
-//                                 accMsgsSquareMat,
-//                                 accCountersMat);
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
-//    }
-//
-//
-//
-////----------------------------------------------------------//
-//
-//
-//
-//#else
-////cpu optimed version
-////-------------------------------------------------------//
-//    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
-//    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
-//    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//    generateSharedMatricesOptimized(msgsVectors,
-//                                    shiftedMsgsVectorsSquares,
-//                                    shiftedMsgsVectorsCounters,
-//                                    unitVectors,
-//                                    accMsgsMat,
-//                                    accMsgsSquareMat,
-//                                    accCountersMat);
-//
-//    //-----------------------------------------------------//
-//
-//#endif
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    int flag =  generateClearMatricesForTesting(accMsgsMat,
-//                                                accMsgsSquareMat,
-//                                                accCountersMat,
-//                                                accIntCountersMat);
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateClearMatricesForTesting: " << duration << endl;
-//    }
-//
-//
-//    cout<<"flag for clear is "<<flag<<endl;
-//
-//    if(flag==-1){
-//
-//        cout<<"all hashes are correct"<<endl;
-//    }
-//    else
-//    {
-//        cout<<"basssssssssssssssssa you " <<flag <<endl;
-//
-//    }
-//
-//    t1 = high_resolution_clock::now();
-//    extractMessagesForTesting(accMsgsMat,
-//                              accMsgsSquareMat,
-//                              accIntCountersMat,
-//                              accIntCountersMat.size());
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds extractMessagesForTesting: " << duration << endl;
-//    }
-//
-//
-//    t1 = high_resolution_clock::now();
-//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds printOutputMessagesForTesting: " << duration << endl;
-//    }
-//
-//    cout<<"passed with distinction"<<endl;
-//}
-
 
 /**
  * the function Walk through the circuit and reconstruct output gates.
