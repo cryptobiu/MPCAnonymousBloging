@@ -221,6 +221,8 @@ public:
     int validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors);
 //    int unitVectorsTestFlat(vector<FieldType> &vecs, int size, FieldType *randomElements, vector<FieldType> &sumsForConsistensyTest, bool toSplit);
     int fasterUnitVectorsTestFlat(vector<FieldType> &vecs, int size,FieldType *randomElements);
+    void prepareVecsForUnitTestThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, vector<FieldType> & messagesShares,
+                                       vector<FieldType>& msgByRandomSum, vector<FieldType>& VecByRandomSum, FieldType* randomElements, int size, int start, int end);
     void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
 
     void processSumsThreads(vector<FieldType> & sum0, vector<FieldType> & constRandomBits0,
@@ -2273,6 +2275,25 @@ int ProtocolParty<FieldType>::fasterUnitVectorsTestFlat(vector<FieldType> &vecs,
     return flag;
 
 
+}
+
+template <class FieldType>
+void ProtocolParty<FieldType>::prepareVecsForUnitTestThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, vector<FieldType> & messagesShares,
+                                                             vector<FieldType>& msgByRandomSum, vector<FieldType>& VecByRandomSum, FieldType* randomElements, int size, int start, int end){
+
+    for(long i = start; i < end; i++){
+
+        messagesShares[i] = *field->GetZero();
+        msgByRandomSum[i] = *field->GetZero();
+        VecByRandomSum[i] = *field->GetZero();
+        for(long j=0; j<size ; j++){
+
+            randomVecs[i][j] = vecs[i*size + j] * randomElements[j];
+            VecByRandomSum[i] += randomVecs[i][j];
+            messagesShares[i] += vecs[i*size + j];
+            msgByRandomSum[i]+= vecs[i*size + j]*randomElements[j]*randomElements[j];
+        }
+    }
 }
 
 template <class FieldType>
