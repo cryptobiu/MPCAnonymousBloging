@@ -2375,7 +2375,7 @@ void ProtocolParty<FieldType>::multRandomsByThreads(vector<vector<FieldType>> & 
 //    }
 //}
 
-ttemplate <class FieldType>
+template <class FieldType>
 void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, vector<FieldType> &squaresVectors, vector<FieldType> &countersVectors, vector<FieldType> &unitVectors){
 
 
