@@ -1968,7 +1968,7 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
         threads[t].join();
     }
 
-    thread ti([](bool toUmount, int numClients) {
+    thread ti([&]() {
         if(toUmount) {
             string dir = string(getenv("HOME")) + "/files" + to_string(numClients);
             string command = "umount " + dir;
@@ -1990,7 +1990,8 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
                        dir.c_str(), strerror(errno), errno);
             }
         }
-    }, toUmount, numClients);
+    });
+    ti.detach();
 
 
 }
