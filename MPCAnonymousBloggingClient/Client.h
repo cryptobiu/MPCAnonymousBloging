@@ -5,6 +5,7 @@
 #ifndef MPCANONYMOUSBLOGGINGCLIENT_CLIENT_H
 #define MPCANONYMOUSBLOGGINGCLIENT_CLIENT_H
 
+#include <stdlib.h>
 #include <libscapi/include/primitives/Mersenne.hpp>
 #include <libscapi/include/primitives/Matrix.hpp>
 #include <libscapi/include/primitives/Prg.hpp>
@@ -63,7 +64,8 @@ Client<FieldType>::Client(int argc, char **argv){
     string fieldType = parser.getValueByKey(arguments, "fieldType");
     server = stoi(parser.getValueByKey(arguments, "server"));
     cout<<"parser.getValueByKey(arguments, \"server\") = "<<parser.getValueByKey(arguments, "server")<<endl;
-cout<<"server = "<<server<<endl;
+    bool toMount = (parser.getValueByKey(arguments, "toMount").compare("true") == 0);
+    cout<<"server = "<<server<<endl;
     sqrtR = (int)((sqrt(l*2.7 * numClients)))/l+1;
     sqrtU = (int)(sqrt(l*2.7 * numClients))+1;
     T = stoi(parser.getValueByKey(arguments, "T"));
@@ -73,13 +75,26 @@ cout<<"server = "<<server<<endl;
     prg.setKey(key);
 
     string dir = string(getenv("HOME")) + "/files"+to_string(numClients);
-    //int check = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
-//    if (!check){
-//        cout<<"Directory created"<<endl;
-//    } else {
-//        cout<<"Unable to create directory"<<endl;
-//        exit(1);
-//    }
+    int check = mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO);
+    if (!check){
+        cout<<"Directory created"<<endl;
+    } else {
+        cout<<"Unable to create directory"<<endl;
+        exit(1);
+    }
+    if (toMount) {
+        string command = "mount -t tmpfs tmpfs " + dir;
+        check = system(command.c_str());
+        if (!check) {
+            cout << "mount created" << endl;
+        } else {
+            printf("Error : Failed to mount %s\n"
+                   "Reason: %s [%d]\n",
+                   dir.c_str(), strerror(errno), errno);
+        }
+    }
+
+
 
     if(fieldType.compare("ZpMersenne31") == 0) {
         field = new TemplateField<FieldType>(2147483647);

@@ -108,6 +108,7 @@ private:
 
 
     thread t;
+    bool toUmount;
 
 public:
 
@@ -396,8 +397,10 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
+//    toUmount = (this->getParser().getValueByKey(arguments, "toUmount").compare("true") == 0);
 
-    vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
+    vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase",
+                                "VerificationPhase", "outputPhase"};
     timer = new Measurement(*this, subTaskNames);
 
     if(fieldType.compare("ZpMersenne31") == 0) {
@@ -1964,6 +1967,32 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
     for (int t=0; t<numThreads; t++){
         threads[t].join();
     }
+
+    thread ti([](bool toUmount, int numClients) {
+        if(toUmount) {
+            string dir = string(getenv("HOME")) + "/files" + to_string(numClients);
+            string command = "umount " + dir;
+            int check = system(command.c_str());
+            if (!check) {
+                cout << "umount succeeded" << endl;
+            } else {
+                printf("Error : Failed to umount %s\n"
+                       "Reason: %s [%d]\n",
+                       dir.c_str(), strerror(errno), errno);
+            }
+            command = "rm -rf " + dir;
+            check = system(command.c_str());
+            if (!check) {
+                cout << "dir termination succeeded" << endl;
+            } else {
+                printf("Error : Failed to terminate dir %s\n"
+                       "Reason: %s [%d]\n",
+                       dir.c_str(), strerror(errno), errno);
+            }
+        }
+    }, toUmount, numClients);
+
+
 }
 
 template <class FieldType>
