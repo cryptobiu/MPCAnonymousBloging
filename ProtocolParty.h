@@ -3340,6 +3340,7 @@ void ProtocolParty<FieldType>::outputPhase()
     vector<int> accIntCountersMat(sqrtR*sqrtU);
 
     auto t1 = high_resolution_clock::now();
+    timer->startSubTask("generateSharedMatricesOptimized", iteration);
     generateSharedMatricesOptimizedFlat((vector<FieldType>&)msgsVectorsFlat,
                                         (vector<FieldType>&)squaresVectorsFlat,
                                         (vector<FieldType>&)countersVectorsFlat,
@@ -3347,22 +3348,22 @@ void ProtocolParty<FieldType>::outputPhase()
                                         (vector<FieldType>&)accMsgsMat,
                                         (vector<FieldType>&)accMsgsSquareMat,
                                         (vector<FieldType>&)accCountersMat);
+    timer->endSubTask("generateSharedMatricesOptimized", iteration);
     auto t2 = high_resolution_clock::now();
 
     auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
+    if(flag_print_timings)
         cout << "time in miliseconds generateSharedMatricesOptimized: " << duration << endl;
-    }
-    //-----------------------------------------------------//
 
-
-   // t.join();
     t1 = high_resolution_clock::now();
+    timer->startSubTask("extractMessagesForTesting", iteration);
 
     int flag =  generateClearMatricesForTesting((vector<FieldType>&)accMsgsMat,
                                                 (vector<FieldType>&)accMsgsSquareMat,
                                                 (vector<FieldType>&)accCountersMat,
                                                 accIntCountersMat);
+    timer->endSubTask("extractMessagesForTesting", iteration);
+
     t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -3398,8 +3399,9 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
+    timer->startSubTask("printOutputMessagesForTesting", iteration);
     printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
-
+    timer->endSubTask("printOutputMessagesForTesting", iteration);
     t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -3412,8 +3414,6 @@ void ProtocolParty<FieldType>::outputPhase()
 
 template <class FieldType>
 void ProtocolParty<FieldType>::roundFunctionSync(vector<vector<byte>> &sendBufs, vector<vector<byte>> &recBufs, int round) {
-
-    //cout<<"in roundFunctionSync "<< round<< endl;
 
     int numThreads = parties.size();
     int numPartiesForEachThread;
@@ -3430,25 +3430,24 @@ void ProtocolParty<FieldType>::roundFunctionSync(vector<vector<byte>> &sendBufs,
     //recieve the data using threads
     vector<thread> threads(numThreads);
     for (int t=0; t<numThreads; t++) {
-        if ((t + 1) * numPartiesForEachThread <= parties.size()) {
+        if ((t + 1) * numPartiesForEachThread <= parties.size())
             threads[t] = thread(&ProtocolParty::exchangeData, this, ref(sendBufs), ref(recBufs),
                                 t * numPartiesForEachThread, (t + 1) * numPartiesForEachThread);
-        } else {
-            threads[t] = thread(&ProtocolParty::exchangeData, this, ref(sendBufs), ref(recBufs), t * numPartiesForEachThread, parties.size());
-        }
-    }
-    for (int t=0; t<numThreads; t++){
-        threads[t].join();
+        else
+            threads[t] = thread(&ProtocolParty::exchangeData, this, ref(sendBufs), ref(recBufs),
+                    t * numPartiesForEachThread, parties.size());
+
     }
 
+    for (int t=0; t<numThreads; t++)
+        threads[t].join();
 }
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::exchangeData(vector<vector<byte>> &sendBufs, vector<vector<byte>> &recBufs, int first, int last){
+void ProtocolParty<FieldType>::exchangeData(vector<vector<byte>> &sendBufs, vector<vector<byte>> &recBufs,
+        int first, int last){
 
-
-    //cout<<"in exchangeData";
     for (int i=first; i < last; i++) {
 
         if ((m_partyId) < parties[i]->getID()) {
@@ -3486,9 +3485,8 @@ void ProtocolParty<FieldType>::exchangeData(vector<vector<byte>> &sendBufs, vect
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::roundFunctionSyncElements(vector<vector<FieldType>> &sendBufs, vector<vector<FieldType>> &recBufs, int round) {
-
-    //cout<<"in roundFunctionSync "<< round<< endl;
+void ProtocolParty<FieldType>::roundFunctionSyncElements(vector<vector<FieldType>> &sendBufs,
+        vector<vector<FieldType>> &recBufs, int round) {
 
     int numThreads = parties.size();
     int numPartiesForEachThread;
@@ -3509,7 +3507,8 @@ void ProtocolParty<FieldType>::roundFunctionSyncElements(vector<vector<FieldType
             threads[t] = thread(&ProtocolParty::exchangeDataElements, this, ref(sendBufs), ref(recBufs),
                                 t * numPartiesForEachThread, (t + 1) * numPartiesForEachThread);
         } else {
-            threads[t] = thread(&ProtocolParty::exchangeDataElements, this, ref(sendBufs), ref(recBufs), t * numPartiesForEachThread, parties.size());
+            threads[t] = thread(&ProtocolParty::exchangeDataElements, this, ref(sendBufs), ref(recBufs),
+                    t * numPartiesForEachThread, parties.size());
         }
     }
     for (int t=0; t<numThreads; t++){
@@ -3520,10 +3519,9 @@ void ProtocolParty<FieldType>::roundFunctionSyncElements(vector<vector<FieldType
 
 
 template <class FieldType>
-void ProtocolParty<FieldType>::exchangeDataElements(vector<vector<FieldType>> &sendBufs, vector<vector<FieldType>> &recBufs, int first, int last) {
+void ProtocolParty<FieldType>::exchangeDataElements(vector<vector<FieldType>> &sendBufs,
+        vector<vector<FieldType>> &recBufs, int first, int last) {
 
-
-    //cout<<"in exchangeData";
     for (int i = first; i < last; i++) {
 
         if ((m_partyId) < parties[i]->getID()) {
