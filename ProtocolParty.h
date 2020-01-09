@@ -213,24 +213,9 @@ public:
     int validMsgsTestFlat(vector<FieldType> &msgsVectors, vector<FieldType> &msgsVectorsSquares, vector<FieldType> & counters, vector<FieldType> &unitVectors);
 
     int fasterUnitVectorsTestFlat(vector<FieldType> &vecs, int size,FieldType *randomElements);
-#ifdef __NVCC__
-    void processSums(FieldType* sum, FieldType* constRandomBits, int size, FieldType* vecs, int device);
-#endif
-
-//    int generateSharedMatrices(vector<vector<FieldType>> &msgsVectors, vector<vector<FieldType>> &unitVectors,
-//                               vector<FieldType> &accMats,
-//                               vector<FieldType> &accFieldCountersMat);
-
-//    int generateSharedMatricesForTesting(vector<vector<FieldType>> &shiftedMsgsVectors,
-//                                           vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
-//                                           vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
-//                                           vector<vector<FieldType>> &shiftedUnitVectors,
-//                                           vector<FieldType> &accMsgsMat,
-//                                           vector<FieldType> &accMsgsSquareMat,
-//                                           vector<FieldType> &accCountersMat);
 
 
-    int generateSharedMatricesOptimizedFlat(vector<FieldType> &shiftedMsgsVectors,
+    void generateSharedMatricesOptimizedFlat(vector<FieldType> &shiftedMsgsVectors,
                                         vector<FieldType> &shiftedMsgsVectorsSquares,
                                         vector<FieldType> &shiftedMsgsVectorsCounters,
                                         vector<FieldType> &shiftedUnitVectors,
@@ -238,17 +223,9 @@ public:
                                         vector<FieldType> &accMsgsSquareMat,
                                         vector<FieldType> &accCountersMat);
 
-#ifdef __NVCC__
-    int generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
-                                        vector<FieldType> &shiftedMsgsVectorsSquares,
-                                        vector<FieldType> &shiftedMsgsVectorsCounters,
-                                        vector<FieldType> &shiftedUnitVectors,
-                                        vector<FieldType> &accMsgsMat,
-                                        vector<FieldType> &accMsgsSquareMat,
-                                        vector<FieldType> &accCountersMat);
-#endif
 
-    void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB);
+    void matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb,
+            int hA, int wA, int wB);
 
     void regMatrixMulTN(FieldType *C, FieldType *A, int rowa, int cola, FieldType *B, int rowb,  int colb);
 
@@ -397,10 +374,11 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
-//    toUmount = (this->getParser().getValueByKey(arguments, "toUmount").compare("true") == 0);
+    toUmount = (this->getParser().getValueByKey(arguments, "toUmount").compare("true") == 0);
 
     vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase",
-                                "VerificationPhase", "outputPhase"};
+                                "VerificationPhase", "outputPhase", "generateSharedMatricesOptimized",
+                                "extractMessagesForTesting", "printOutputMessagesForTesting"};
     timer = new Measurement(*this, subTaskNames);
 
     if(fieldType.compare("ZpMersenne31") == 0) {
@@ -1154,12 +1132,7 @@ template <class FieldType>
 FieldType ProtocolParty<FieldType>::reconstructShare(vector<FieldType>& x, int d){
 
     if (!checkConsistency(x, d))
-    {
-        // someone cheated!
-
-            cout << "cheating reconstruct!!!" << '\n';
-        //exit(0);
-    }
+        cout << "cheating reconstruct!!!" << endl;
     else
         return interpolate(x);
 }
@@ -2016,77 +1989,8 @@ void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingI
     }
 }
 
-
-//
-//template <class FieldType>
-//int ProtocolParty<FieldType>::generateSharedMatricesForTesting(vector<vector<FieldType>> &shiftedMsgsVectors,
-//                                                               vector<vector<FieldType>> &shiftedMsgsVectorsSquares,
-//                                                               vector<vector<FieldType>> &shiftedMsgsVectorsCounters,
-//                                                               vector<vector<FieldType>> &shiftedUnitVectors,
-//                                                               vector<FieldType> &accMsgsMat,
-//                                                               vector<FieldType> &accMsgsSquareMat,
-//                                                               vector<FieldType> &accCountersMat){
-//
-//    //we create a matrix that is composed of 2 parts. The first part is the linear combination of the messages of that cell
-//    //and the second part is the addition of the sqaure of each message of that cell.
-//
-//    int numOfCols = sqrtR;
-//    int numOfRows = sqrtU;
-//    int size = numOfCols*numOfRows;//the size of the final 2D matrix
-//
-//    for(int i=0; i<batchSize; i++){//go over each client
-//
-//
-//         for(int row = 0; row<numOfRows; row++){ //go over each row
-//
-//
-//
-//            for(int col=0; col<numOfCols*l; col++){//go over each message
-//
-//
-//                    //accume message
-//                    accMsgsMat[ (row * numOfCols*l + col)] +=
-//                            shiftedMsgsVectors[i][col] *  shiftedUnitVectors[i][row];
-//
-//                    //accume the square of the message
-//                    accMsgsSquareMat[ (row * numOfCols*l + col)] +=
-//                            shiftedMsgsVectorsSquares[i][col] *  shiftedUnitVectors[i][row];
-//
-//
-//
-//            }
-//
-//             for(int col=0; col<numOfCols; col++){
-//                 accCountersMat[ (row * numOfCols + col)] +=
-//                         shiftedMsgsVectorsCounters[i][col] *  shiftedUnitVectors[i][row];
-//
-//
-//
-//             }
-//        }
-//
-//    }
-//
-//    //print matrices
-//
-////    for(int i=0; i<size; i++){
-////
-////        cout<<"sever "<< m_partyId<< "accFieldCountersMat["<<i<<"] = " <<accCountersMat[i]<<endl;
-////
-////    }
-////
-////    for(int i=0; i<size; i++){
-////
-////        cout<<"accMats[i] = " <<accMsgsMat[i]<<endl;
-////
-////    }
-//
-//}
-
-
-
 template <class FieldType>
-int ProtocolParty<FieldType>::generateSharedMatricesOptimizedFlat(vector<FieldType> &shiftedMsgsVectors,
+void ProtocolParty<FieldType>::generateSharedMatricesOptimizedFlat(vector<FieldType> &shiftedMsgsVectors,
                                                               vector<FieldType> &shiftedMsgsVectorsSquares,
                                                               vector<FieldType> &shiftedMsgsVectorsCounters,
                                                               vector<FieldType> &shiftedUnitVectors,
@@ -2097,75 +2001,19 @@ int ProtocolParty<FieldType>::generateSharedMatricesOptimizedFlat(vector<FieldTy
     int numOfCols = sqrtR;
     int numOfRows = sqrtU;
 
-//    t1 = high_resolution_clock::now();
-    multiplyVectorsWithThreadsFlat(shiftedMsgsVectors, sqrtR*l, shiftedUnitVectors, accMsgsMat, numOfRows, numOfCols*l);
-    multiplyVectorsWithThreadsFlat(shiftedMsgsVectorsSquares, sqrtR*l, shiftedUnitVectors, accMsgsSquareMat, numOfRows, numOfCols*l);
-    multiplyVectorsWithThreadsFlat(shiftedMsgsVectorsCounters, sqrtR, shiftedUnitVectors, accCountersMat, numOfRows, numOfCols);
-//     t2 = high_resolution_clock::now();
-//
-//     duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in milliseconds with threads: " << duration << endl;
-//    }
+    multiplyVectorsWithThreadsFlat(shiftedMsgsVectors, sqrtR*l, shiftedUnitVectors,
+            accMsgsMat, numOfRows, numOfCols*l);
+    multiplyVectorsWithThreadsFlat(shiftedMsgsVectorsSquares, sqrtR*l, shiftedUnitVectors,
+            accMsgsSquareMat, numOfRows, numOfCols*l);
+    multiplyVectorsWithThreadsFlat(shiftedMsgsVectorsCounters, sqrtR, shiftedUnitVectors,
+            accCountersMat, numOfRows, numOfCols);
 
 }
 
-#ifdef __NVCC__
-template <class FieldType>
-int ProtocolParty<FieldType>::generateSharedMatricesForGPU(vector<FieldType> &shiftedMsgsVectors,
-                                 vector<FieldType> &shiftedMsgsVectorsSquares,
-                                 vector<FieldType> &shiftedMsgsVectorsCounters,
-                                 vector<FieldType> &shiftedUnitVectors,
-                                 vector<FieldType> &accMsgsMat,
-                                 vector<FieldType> &accMsgsSquareMat,
-                                 vector<FieldType> &accCountersMat){
-
-
-    //matrixMulTN(accMsgsMat.data(), l*sqrtR,  shiftedMsgsVectors.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
-    //     numClients,  l*sqrtR, sqrtU);
-
-    int threads_per_device = 2;
-    int num_devices = 7;
-   cudaSafeCall(cudaGetDeviceCount(&num_devices));
-    printf("%d devices used\n", num_devices);
-    std::vector<int> devices((num_devices)*threads_per_device);
-    for (int device = 0; device < num_devices ; ++device)
-    {
-        for (int i = 0; i < threads_per_device; ++i){
-            devices[threads_per_device*device +i] = device;
-		cout<<"vec is "<<device<<endl;
-	}
-    }
-
-cout<<"after devices vec"<<endl;
-    size_t tile_size = std::min(16384ULL, (unsigned long long) numClients / devices.size());
-cout<<"tile size = "<<tile_size<<endl;
-    GemmTNTiles31(
-                  (merssene31_t *) shiftedMsgsVectors.data(), l*sqrtR,
-                  (merssene31_t *) shiftedUnitVectors.data(), sqrtU,
-		  (merssene31_t *) accMsgsMat.data(), l*sqrtR,
-                  numClients, l*sqrtR, sqrtU, tile_size,
-                  devices, false);
-    //matrixMulTN(accMsgsSquareMat.data(), l*sqrtR,  shiftedMsgsVectorsSquares.data(), l*sqrtR,shiftedUnitVectors.data(), sqrtU,
-    //    numClients, l*sqrtR, sqrtU);
-
-    GemmTNTiles31( (merssene31_t*)shiftedMsgsVectorsSquares.data(), l*sqrtR, 
-    (merssene31_t*)shiftedUnitVectors.data(), sqrtU, (merssene31_t*) accMsgsSquareMat.data(), l*sqrtR,
-     numClients, l*sqrtR, sqrtU, tile_size, devices, false);
-
-    //matrixMulTN(accCountersMat.data(), sqrtR,  shiftedMsgsVectorsCounters.data(), sqrtR,shiftedUnitVectors.data(), sqrtU,
-    //        numClients, sqrtR, sqrtU);
-
-    GemmTNTiles31 ( (merssene31_t*) shiftedMsgsVectorsCounters.data(), sqrtR, (merssene31_t*)shiftedUnitVectors.data(), sqrtU,
-	(merssene31_t*) accCountersMat.data(), sqrtR, numClients, sqrtR, sqrtU, tile_size, devices, false);
-
-
-}
-#endif
-
 
 template <class FieldType>
-void ProtocolParty<FieldType>::matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B, int ldb, int hA, int wA, int wB)
+void ProtocolParty<FieldType>::matrixMulTN(FieldType *C, int ldc, const FieldType *A, int lda, const FieldType *B,
+        int ldb, int hA, int wA, int wB)
 {
 
     FieldType sum = *field->GetZero();
@@ -2183,11 +2031,12 @@ void ProtocolParty<FieldType>::matrixMulTN(FieldType *C, int ldc, const FieldTyp
 			}
 
 			C[i + j * ldc] = sum;
-			//C[j+ i*wB] = sum;//need the transpose
 		}
 }
+
 template <class FieldType>
-void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int rowa, int cola, FieldType *B, int rowb,  int colb)
+void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int rowa, int cola, FieldType *B,
+        int rowb,  int colb)
 {
 
     FieldType sum = *field->GetZero();
@@ -2206,233 +2055,6 @@ void ProtocolParty<FieldType>::regMatrixMulTN(FieldType *C, FieldType *A, int ro
         }
     }
 }
-//
-//template <class FieldType>
-//void ProtocolParty<FieldType>::multiplyVectors(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
-//                                               vector<FieldType> & output, int numOfRows, int numOfCols){
-//
-//    int toReduce = 0; //Every 4 multiplications there is need to reduce all table
-//    __m256i mask = _mm256_set_epi32(0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
-//    __m256i p = _mm256_set_epi32(0, 2147483647, 0, 2147483647, 0, 2147483647, 0, 2147483647);
-//
-//    int newNumRows = numOfRows;
-//    if (numOfRows % 8 != 0) {
-//        newNumRows = (numOfRows / 8)*8 + 8;
-//        for( int i=0; i<unitVectors.size(); i++) {
-//            unitVectors[i].resize(newNumRows);
-//        }
-//    }
-//
-//    int newNumCols = numOfCols;
-//    if (numOfCols % 64 != 0) {
-//        newNumCols = (numOfCols / 64)*64 + 64;
-//        for( int i=0; i<input.size(); i++){
-//            input[i].resize(newNumCols);
-//        }
-//    }
-//
-//
-//    vector<long> outputDouble(newNumRows*newNumCols);
-//
-//    for(int i=0; i<input.size(); i++){//go over each client
-//
-//        multMatrices(input, unitVectors, outputDouble, newNumRows, newNumCols, i, mask);
-//
-//        toReduce += 2;
-//
-//        if (toReduce == 4 || i == input.size()-1){
-//            //reduce all matrix
-//            reduceMatrix(outputDouble, newNumRows, newNumCols, mask, p);
-//
-//            toReduce = 0;
-//        }
-//
-//    }
-////    cout<<"output double:"<<endl;
-////    for(int rowIndex = 0; rowIndex<newNumRows; rowIndex++) { //go over each row
-////        for (int colIndex = 0; colIndex < newNumCols; colIndex++) {//go over each message
-////            cout<<outputDouble[rowIndex * newNumCols  + colIndex] << " ";
-////        }
-////        cout<<endl;
-////    }
-//
-//    auto t1 = high_resolution_clock::now();
-//    int numBlocks = (numOfCols % 8 == 0) ? numOfCols/8 : numOfCols/8 + 1;
-//    int remain = (numOfCols % 8 == 0) ? 8 : numOfCols%8;
-//
-//    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++){ //go over each row
-//
-//        for(int colIndex=0; colIndex<numBlocks; colIndex++){//go over each message
-//
-//            for (int k=0; (colIndex < numBlocks-1 && k<8) || (colIndex == numBlocks-1 && k<remain); k++) {
-//
-//                if (k % 2 != 0) {
-//                    //get the high int
-//                    output[rowIndex * numOfCols + colIndex * 8 + k] = (int)outputDouble[rowIndex * newNumCols + colIndex * 8 + 4 + k/2];
-//                } else {
-//                    //get the low int
-//                    output[rowIndex * numOfCols + colIndex * 8 + k] = (int)outputDouble[rowIndex * newNumCols  + colIndex * 8 + k/2];
-//                }
-//            }
-//        }
-//    }
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in milliseconds copy output: " << duration << endl;
-//    }
-////    cout<<"output:"<<endl;
-////    for(int rowIndex = 0; rowIndex<numOfRows; rowIndex++) { //go over each row
-////
-////        for (int colIndex = 0; colIndex < numOfCols; colIndex++) {//go over each message
-////            cout<<output[rowIndex * numOfCols  + colIndex] << " ";
-////        }
-////        cout<<endl;
-////    }
-//}
-//
-//template <class FieldType>
-//void ProtocolParty<FieldType>::multMatrices(vector<vector<FieldType>> & input, vector<vector<FieldType>> & unitVectors,
-//        vector<long> & outputDouble, int newNumRows, int newNumCols, int i, __m256i mask){
-//
-//    for(int rowIndex = 0; rowIndex<newNumRows/8; rowIndex++) { //go over each row
-//
-//        __m256i row = _mm256_maskload_epi32((int *) unitVectors[i].data() + rowIndex * 8, mask);
-//        auto int0 = _mm256_extract_epi32(row, 0);
-//        auto int1 = _mm256_extract_epi32(row, 1);
-//        auto int2 = _mm256_extract_epi32(row, 2);
-//        auto int3 = _mm256_extract_epi32(row, 3);
-//        auto int4 = _mm256_extract_epi32(row, 4);
-//        auto int5 = _mm256_extract_epi32(row, 5);
-//        auto int6 = _mm256_extract_epi32(row, 6);
-//        auto int7 = _mm256_extract_epi32(row, 7);
-//
-//        __m256i row0 = _mm256_set1_epi32(int0);
-//        __m256i row1 = _mm256_set1_epi32(int1);
-//        __m256i row2 = _mm256_set1_epi32(int2);
-//        __m256i row3 = _mm256_set1_epi32(int3);
-//        __m256i row4 = _mm256_set1_epi32(int4);
-//        __m256i row5 = _mm256_set1_epi32(int5);
-//        __m256i row6 = _mm256_set1_epi32(int6);
-//        __m256i row7 = _mm256_set1_epi32(int7);
-//
-//        for (int colIndex = 0; colIndex < newNumCols / 64; colIndex++) {//go over each message
-//
-//            //load 8 vectors for 8 small matrices
-//            auto start = (int *) input[i].data() + colIndex * 64;
-//            __m256i col0 = _mm256_maskload_epi32(start, mask);
-//            __m256i col1 = _mm256_maskload_epi32(start + 8, mask);
-//            __m256i col2 = _mm256_maskload_epi32(start + 16, mask);
-//            __m256i col3 = _mm256_maskload_epi32(start + 24, mask);
-//            __m256i col4 = _mm256_maskload_epi32(start + 32, mask);
-//            __m256i col5 = _mm256_maskload_epi32(start + 40, mask);
-//            __m256i col6 = _mm256_maskload_epi32(start + 48, mask);
-//            __m256i col7 = _mm256_maskload_epi32(start + 56, mask);
-//
-//            __m256i colHigh0 = _mm256_srli_epi64(col0, 32);
-//            __m256i colHigh1 = _mm256_srli_epi64(col1, 32);
-//            __m256i colHigh2 = _mm256_srli_epi64(col2, 32);
-//            __m256i colHigh3 = _mm256_srli_epi64(col3, 32);
-//            __m256i colHigh4 = _mm256_srli_epi64(col4, 32);
-//            __m256i colHigh5 = _mm256_srli_epi64(col5, 32);
-//            __m256i colHigh6 = _mm256_srli_epi64(col6, 32);
-//            __m256i colHigh7 = _mm256_srli_epi64(col7, 32);
-//
-//            //fill each row in every small matrix
-//            for (int j = 0; j < 8; j++) {
-//
-//                //load 8 vectors for 8 small matrices
-//
-//                long *startD =
-//                        (long *) outputDouble.data() + rowIndex * 8 * newNumCols + j * newNumCols + colIndex * 64;
-//                __m256i outputLow0 = _mm256_maskload_epi64((long long int *) startD, mask);
-//                __m256i outputHigh0 = _mm256_maskload_epi64((long long int *) startD + 4, mask);
-//                __m256i outputLow1 = _mm256_maskload_epi64((long long int *) startD + 8, mask);
-//                __m256i outputHigh1 = _mm256_maskload_epi64((long long int *) startD + 12, mask);
-//                __m256i outputLow2 = _mm256_maskload_epi64((long long int *) startD + 16, mask);
-//                __m256i outputHigh2 = _mm256_maskload_epi64((long long int *) startD + 20, mask);
-//                __m256i outputLow3 = _mm256_maskload_epi64((long long int *) startD + 24, mask);
-//                __m256i outputHigh3 = _mm256_maskload_epi64((long long int *) startD + 28, mask);
-//                __m256i outputLow4 = _mm256_maskload_epi64((long long int *) startD + 32, mask);
-//                __m256i outputHigh4 = _mm256_maskload_epi64((long long int *) startD + 36, mask);
-//                __m256i outputLow5 = _mm256_maskload_epi64((long long int *) startD + 40, mask);
-//                __m256i outputHigh5 = _mm256_maskload_epi64((long long int *) startD + 44, mask);
-//                __m256i outputLow6 = _mm256_maskload_epi64((long long int *) startD + 48, mask);
-//                __m256i outputHigh6 = _mm256_maskload_epi64((long long int *) startD + 52, mask);
-//                __m256i outputLow7 = _mm256_maskload_epi64((long long int *) startD + 56, mask);
-//                __m256i outputHigh7 = _mm256_maskload_epi64((long long int *) startD + 60, mask);
-//
-//                __m256i rowI;
-//                if (j == 0) rowI = row0;
-//                else if (j == 1) rowI = row1;
-//                else if (j == 2) rowI = row2;
-//                else if (j == 3) rowI = row3;
-//                else if (j == 4) rowI = row4;
-//                else if (j == 5) rowI = row5;
-//                else if (j == 6) rowI = row6;
-//                else if (j == 7) rowI = row7;
-//
-//                //calc 8 first rows
-//                __m256i c0 = _mm256_mul_epi32(rowI, col0);
-//                __m256i c1 = _mm256_mul_epi32(rowI, col1);
-//                __m256i c2 = _mm256_mul_epi32(rowI, col2);
-//                __m256i c3 = _mm256_mul_epi32(rowI, col3);
-//                __m256i c4 = _mm256_mul_epi32(rowI, col4);
-//                __m256i c5 = _mm256_mul_epi32(rowI, col5);
-//                __m256i c6 = _mm256_mul_epi32(rowI, col6);
-//                __m256i c7 = _mm256_mul_epi32(rowI, col7);
-//                outputLow0 = _mm256_add_epi64(outputLow0, c0);
-//                outputLow1 = _mm256_add_epi64(outputLow1, c1);
-//                outputLow2 = _mm256_add_epi64(outputLow2, c2);
-//                outputLow3 = _mm256_add_epi64(outputLow3, c3);
-//                outputLow4 = _mm256_add_epi64(outputLow4, c4);
-//                outputLow5 = _mm256_add_epi64(outputLow5, c5);
-//                outputLow6 = _mm256_add_epi64(outputLow6, c6);
-//                outputLow7 = _mm256_add_epi64(outputLow7, c7);
-//
-//                c0 = _mm256_mul_epi32(rowI, colHigh0);
-//                c1 = _mm256_mul_epi32(rowI, colHigh1);
-//                c2 = _mm256_mul_epi32(rowI, colHigh2);
-//                c3 = _mm256_mul_epi32(rowI, colHigh3);
-//                c4 = _mm256_mul_epi32(rowI, colHigh4);
-//                c5 = _mm256_mul_epi32(rowI, colHigh5);
-//                c6 = _mm256_mul_epi32(rowI, colHigh6);
-//                c7 = _mm256_mul_epi32(rowI, colHigh7);
-//
-//                outputHigh0 = _mm256_add_epi64(outputHigh0, c0);
-//                outputHigh1 = _mm256_add_epi64(outputHigh1, c1);
-//                outputHigh2 = _mm256_add_epi64(outputHigh2, c2);
-//                outputHigh3 = _mm256_add_epi64(outputHigh3, c3);
-//                outputHigh4 = _mm256_add_epi64(outputHigh4, c4);
-//                outputHigh5 = _mm256_add_epi64(outputHigh5, c5);
-//                outputHigh6 = _mm256_add_epi64(outputHigh6, c6);
-//                outputHigh7 = _mm256_add_epi64(outputHigh7, c7);
-//
-//                _mm256_maskstore_epi64((long long int *) startD, mask, outputLow0);
-//                _mm256_maskstore_epi64((long long int *) startD + 4, mask, outputHigh0);
-//                _mm256_maskstore_epi64((long long int *) startD + 8, mask, outputLow1);
-//                _mm256_maskstore_epi64((long long int *) startD + 12, mask, outputHigh1);
-//                _mm256_maskstore_epi64((long long int *) startD + 16, mask, outputLow2);
-//                _mm256_maskstore_epi64((long long int *) startD + 20, mask, outputHigh2);
-//                _mm256_maskstore_epi64((long long int *) startD + 24, mask, outputLow3);
-//                _mm256_maskstore_epi64((long long int *) startD + 28, mask, outputHigh3);
-//                _mm256_maskstore_epi64((long long int *) startD + 32, mask, outputLow4);
-//                _mm256_maskstore_epi64((long long int *) startD + 36, mask, outputHigh4);
-//                _mm256_maskstore_epi64((long long int *) startD + 40, mask, outputLow5);
-//                _mm256_maskstore_epi64((long long int *) startD + 44, mask, outputHigh5);
-//                _mm256_maskstore_epi64((long long int *) startD + 48, mask, outputLow6);
-//                _mm256_maskstore_epi64((long long int *) startD + 52, mask, outputHigh6);
-//                _mm256_maskstore_epi64((long long int *) startD + 56, mask, outputLow7);
-//                _mm256_maskstore_epi64((long long int *) startD + 60, mask, outputHigh7);
-//
-//            }
-//
-//        }
-//    }
-//}
-
 
 template <class FieldType>
 void ProtocolParty<FieldType>::multMatricesFlat(vector<FieldType> & input, int inputSize, vector<FieldType> & unitVectors,
@@ -3712,89 +3334,6 @@ template <class FieldType>
 void ProtocolParty<FieldType>::outputPhase()
 {
 
-    //cpu not optimized version
-    //------------------------------------------------------------//
-//    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
-//    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
-//    vector<int> accIntCountersMat(sqrtR*sqrtR);
-//
-
-//    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
-//
-//    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
-//
-//    if(flag==-1){
-//
-//        cout<<"all hashes are correct"<<endl;
-//    }
-//    else
-//    {
-//        cout<<"basssssssssssssssssa you " <<flag <<endl;
-//
-//    }
-//
-//    extractMessages(accMats, accIntCountersMat, numClients);
-
-//    printOutputMessages(accMats, accIntCountersMat);
-
-//---------------------------------------------------------------------//
-
-
-
-#ifdef __NVCC__
-    //gpu version
-//-----------------------------------------------------//
-//    vector<FieldType> shiftedMsgsVectorsSquares;
-//    vector<FieldType> shiftedMsgsVectorsCounters;
-//    vector<FieldType> shiftedMsgsVec;
-//    vector<FieldType> shiftedMsgsUnits;
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    splitShiftForGPU(msgsVectors, unitVectors,
-//                     shiftedMsgsVec, shiftedMsgsUnits,
-//                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
-//    }
-
-
-
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    generateSharedMatricesForGPU(msgsVectorsShiftedFlat,
-//                                 squaresVectorsShiftedFlat,
-//                                 countersVectorsShiftedFlat,
-//                                 unitVectorsShiftedFlat,
-//                                 accMsgsMat,
-//                                 accMsgsSquareMat,
-//                                 accCountersMat);
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
-//    }
-
-
-
-//----------------------------------------------------------//
-
-
-
-#else
-//cpu optimed version
-//-------------------------------------------------------//
-
     vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
     vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
     vector<FieldType> accCountersMat(sqrtR*sqrtU);
@@ -3815,8 +3354,6 @@ void ProtocolParty<FieldType>::outputPhase()
         cout << "time in miliseconds generateSharedMatricesOptimized: " << duration << endl;
     }
     //-----------------------------------------------------//
-
-#endif
 
 
    // t.join();
