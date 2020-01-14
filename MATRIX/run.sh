@@ -2,7 +2,7 @@
 
 if [ "${9}" = "true" ]; then
 rm -rf ~/files*
-sudo ./MPCAnonymousBloggingClient -server "${1}" -numServers "${2}" -numClients "${3}" \
+sudo ./MPCAnonymousBloggingClient/MPCAnonymousBloggingClient -server "${1}" -numServers "${2}" -numClients "${3}" \
    -fieldType ZpMersenne31 -l "${4}" -T "${8}" -toMount "${10}"
 fi
 
