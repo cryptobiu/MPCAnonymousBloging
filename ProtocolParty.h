@@ -432,7 +432,9 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
 
-    vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
+    vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase",
+                                "VerificationPhase", "outputPhase", "generateSharedMatricesOptimized",
+                                "extractMessagesForTesting"};
     timer = new Measurement(*this, subTaskNames);
 
     if(fieldType.compare("ZpMersenne31") == 0) {
@@ -4268,173 +4270,6 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
 }
 
 
-//
-///**
-// * the function Walk through the circuit and reconstruct output gates.
-// * @param circuit
-// * @param gateShareArr
-// * @param alpha
-// */
-//template <class FieldType>
-//void ProtocolParty<FieldType>::outputPhase()
-//{
-//
-//    //cpu not optimized version
-//    //------------------------------------------------------------//
-////    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
-////    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
-////    vector<int> accIntCountersMat(sqrtR*sqrtR);
-////
-//
-////    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
-////
-////    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
-////
-////    if(flag==-1){
-////
-////        cout<<"all hashes are correct"<<endl;
-////    }
-////    else
-////    {
-////        cout<<"basssssssssssssssssa you " <<flag <<endl;
-////
-////    }
-////
-////    extractMessages(accMats, accIntCountersMat, numClients);
-//
-////    printOutputMessages(accMats, accIntCountersMat);
-//
-////---------------------------------------------------------------------//
-//
-//
-//
-//#ifdef __NVCC__
-////gpu version
-////-----------------------------------------------------//
-//    vector<FieldType> shiftedMsgsVectorsSquares;
-//    vector<FieldType> shiftedMsgsVectorsCounters;
-//    vector<FieldType> shiftedMsgsVec;
-//    vector<FieldType> shiftedMsgsUnits;
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    splitShiftForGPU(msgsVectors, unitVectors,
-//                     shiftedMsgsVec, shiftedMsgsUnits,
-//                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
-//    }
-//
-//
-//
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//
-//    t1 = high_resolution_clock::now();
-//    generateSharedMatricesForGPU(shiftedMsgsVec,
-//                                 shiftedMsgsVectorsSquares,
-//                                 shiftedMsgsVectorsCounters,
-//                                 shiftedMsgsUnits,
-//                                 accMsgsMat,
-//                                 accMsgsSquareMat,
-//                                 accCountersMat);
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
-//    }
-//
-//
-//
-////----------------------------------------------------------//
-//
-//
-//
-//#else
-////cpu optimed version
-////-------------------------------------------------------//
-//    vector<vector<FieldType>> shiftedMsgsVectorsSquares;
-//    vector<vector<FieldType>> shiftedMsgsVectorsCounters;
-//    splitShift(msgsVectors, unitVectors, shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//    generateSharedMatricesOptimized(msgsVectors,
-//                                    shiftedMsgsVectorsSquares,
-//                                    shiftedMsgsVectorsCounters,
-//                                    unitVectors,
-//                                    accMsgsMat,
-//                                    accMsgsSquareMat,
-//                                    accCountersMat);
-//
-//    //-----------------------------------------------------//
-//
-//#endif
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    int flag =  generateClearMatricesForTesting(accMsgsMat,
-//                                                accMsgsSquareMat,
-//                                                accCountersMat,
-//                                                accIntCountersMat);
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateClearMatricesForTesting: " << duration << endl;
-//    }
-//
-//
-//    cout<<"flag for clear is "<<flag<<endl;
-//
-//    if(flag==-1){
-//
-//        cout<<"all hashes are correct"<<endl;
-//    }
-//    else
-//    {
-//        cout<<"basssssssssssssssssa you " <<flag <<endl;
-//
-//    }
-//
-//    t1 = high_resolution_clock::now();
-//    extractMessagesForTesting(accMsgsMat,
-//                              accMsgsSquareMat,
-//                              accIntCountersMat,
-//                              accIntCountersMat.size());
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds extractMessagesForTesting: " << duration << endl;
-//    }
-//
-//
-//    t1 = high_resolution_clock::now();
-//    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
-//
-//    t2 = high_resolution_clock::now();
-//
-//    duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds printOutputMessagesForTesting: " << duration << endl;
-//    }
-//
-//    cout<<"passed with distinction"<<endl;
-//}
-
 
 /**
  * the function Walk through the circuit and reconstruct output gates.
@@ -4445,59 +4280,6 @@ void ProtocolParty<FieldType>::generatePseudoRandomElements(vector<byte> & aesKe
 template <class FieldType>
 void ProtocolParty<FieldType>::outputPhase()
 {
-
-    //cpu not optimized version
-    //------------------------------------------------------------//
-//    vector<FieldType> accMats(sqrtR*sqrtR*l*2);
-//    vector<FieldType> accFieldCountersMat(sqrtR*sqrtR);
-//    vector<int> accIntCountersMat(sqrtR*sqrtR);
-//
-
-//    generateSharedMatrices(msgsVectors, unitVectors,accMats, accFieldCountersMat);
-//
-//    int flag = generateClearMatrices(accMats, accFieldCountersMat, accIntCountersMat);
-//
-//    if(flag==-1){
-//
-//        cout<<"all hashes are correct"<<endl;
-//    }
-//    else
-//    {
-//        cout<<"basssssssssssssssssa you " <<flag <<endl;
-//
-//    }
-//
-//    extractMessages(accMats, accIntCountersMat, numClients);
-
-//    printOutputMessages(accMats, accIntCountersMat);
-
-//---------------------------------------------------------------------//
-
-
-
-//#ifdef __NVCC__
-    //gpu version
-//-----------------------------------------------------//
-//    vector<FieldType> shiftedMsgsVectorsSquares;
-//    vector<FieldType> shiftedMsgsVectorsCounters;
-//    vector<FieldType> shiftedMsgsVec;
-//    vector<FieldType> shiftedMsgsUnits;
-//
-//
-//    auto t1 = high_resolution_clock::now();
-//    splitShiftForGPU(msgsVectors, unitVectors,
-//                     shiftedMsgsVec, shiftedMsgsUnits,
-//                     shiftedMsgsVectorsSquares, shiftedMsgsVectorsCounters);
-//
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds splitShiftForGPU: " << duration << endl;
-//    }
-
-
-
     vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
     vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
     vector<FieldType> accCountersMat(sqrtR*sqrtU);
@@ -4505,6 +4287,7 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     auto t1 = high_resolution_clock::now();
+    timer->startSubTask("generateSharedMatricesOptimized", iteration);
     generateSharedMatricesForGPU((vector<FieldType>&)msgsVectorsFlat,
                                  (vector<FieldType>&)squaresVectorsFlat,
                                  (vector<FieldType>&)countersVectorsFlat,
@@ -4512,6 +4295,7 @@ void ProtocolParty<FieldType>::outputPhase()
                                  accMsgsMat,
                                  accMsgsSquareMat,
                                  accCountersMat);
+    timer->endSubTask("generateSharedMatricesOptimized", iteration);
     auto t2 = high_resolution_clock::now();
 
     auto duration = duration_cast<milliseconds>(t2-t1).count();
@@ -4519,47 +4303,15 @@ void ProtocolParty<FieldType>::outputPhase()
         cout << "time in miliseconds generateSharedMatricesForGPU: " << duration << endl;
     }
 
-
-
-//----------------------------------------------------------//
-
-
-
-//#else
-//cpu optimed version
-//-------------------------------------------------------//
-
-//    vector<FieldType> accMsgsMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accMsgsSquareMat(sqrtR*sqrtU*l);
-//    vector<FieldType> accCountersMat(sqrtR*sqrtU);
-//    vector<int> accIntCountersMat(sqrtR*sqrtU);
-//
-//    auto t1 = high_resolution_clock::now();
-//    generateSharedMatricesOptimizedFlat(msgsVectorsShiftedFlat,
-//                                    squaresVectorsShiftedFlat,
-//                                    countersVectorsShiftedFlat,
-//                                    unitVectorsShiftedFlat,
-//                                    accMsgsMat,
-//                                    accMsgsSquareMat,
-//                                    accCountersMat);
-//    auto t2 = high_resolution_clock::now();
-//
-//    auto duration = duration_cast<milliseconds>(t2-t1).count();
-//    if(flag_print_timings) {
-//        cout << "time in miliseconds generateSharedMatricesOptimized: " << duration << endl;
-//    }
-    //-----------------------------------------------------//
-
-//#endif
-
-
     t.join();
     t1 = high_resolution_clock::now();
 
+    timer->startSubTask("extractMessagesForTesting", iteration);
     int flag =  generateClearMatricesForTesting(accMsgsMat,
                                                 accMsgsSquareMat,
                                                 accCountersMat,
                                                 accIntCountersMat);
+    timer->endSubTask("extractMessagesForTesting", iteration);
     t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
@@ -4570,15 +4322,11 @@ void ProtocolParty<FieldType>::outputPhase()
 
     cout<<"flag for clear is "<<flag<<endl;
 
-    if(flag==-1){
-
+    if(flag==-1)
         cout<<"all hashes are correct"<<endl;
-    }
     else
-    {
         cout<<"basssssssssssssssssa you " <<flag <<endl;
 
-    }
 
     t1 = high_resolution_clock::now();
     extractMessagesForTesting(accMsgsMat,
@@ -4595,8 +4343,6 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
-    //printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
-
     t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
