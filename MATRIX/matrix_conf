@@ -1,105 +1,92 @@
 // #server #clients l partiesFile internalIterationsNumber #threads T(number of corrupted parties) generateClients toMount toUmount
 
 5 100000 9 parties.conf 1 1 1 true true true
-5 100000 9 parties.conf 1 4 1 false true true
-5 100000 9 parties.conf 1 8 1 false true true
-5 100000 9 parties.conf 1 16 1 false true true
+5 100000 9 parties.conf 1 4 1 true true true
+5 100000 9 parties.conf 1 8 1 true true true
+5 100000 9 parties.conf 1 16 1 true true true
 
-5 100000 44 parties.conf 1 1 1 true true true
-5 100000 44 parties.conf 1 4 1 true true true
-5 100000 44 parties.conf 1 8 1 true true true
-5 100000 44 parties.conf 1 16 1 true true true
+5 100000 44 parties.conf 1 1 1 true false false
+5 100000 44 parties.conf 1 4 1 false false false
+5 100000 44 parties.conf 1 8 1 false false false
+5 100000 44 parties.conf 1 16 1 false false false
 
-5 100000 291 parties.conf 1 1 1 true true true
-5 100000 291 parties.conf 1 4 1 true true true
-5 100000 291 parties.conf 1 8 1 true true true
-5 100000 291 parties.conf 1 16 1 true true true
-
-# end of experiment 1 - 12 configurations
+# end of experiment 1 - 8 configurations
 
 # experiment 2 - all configurations should run on CPU and GPU as well
 
-5 1000 9 parties.conf 1 16 1 true true true
-5 5000 9 parties.conf 1 16 1 true true true
-5 10000 9 parties.conf 1 16 1 true true true
-5 100000 9 parties.conf 1 16 1 true true true
-5 1000000 9 parties.conf 1 16 1 true true true
+5 1000 9 parties.conf 1 16 1 true false false
+5 5000 9 parties.conf 1 16 1 true false false
+5 10000 9 parties.conf 1 16 1 true false false
+5 100000 9 parties.conf 1 16 1 true false false
 
-10 1000 9 parties.conf 1 16 1 true true true
-10 5000 9 parties.conf 1 16 1 true true true
-10 10000 9 parties.conf 1 16 1 true true true
-10 100000 9 parties.conf 1 16 1 true true true
-10 1000000 9 parties.conf 1 16 1 true true true
+10 1000 9 parties.conf 1 16 2 true false false
+10 5000 9 parties.conf 1 16 2 true false false
+10 10000 9 parties.conf 1 16 2 true false false
+10 100000 9 parties.conf 1 16 2 true false false
 
-50 1000 9 parties.conf 1 16 1 true true true
-50 5000 9 parties.conf 1 16 1 true true true
-50 10000 9 parties.conf 1 16 1 true true true
-50 100000 9 parties.conf 1 16 1 true true true
-50 1000000 9 parties.conf 1 16 1 true true true
+50 1000 9 parties.conf 1 16 12 true false false
+50 5000 9 parties.conf 1 16 12 true false false
+50 10000 9 parties.conf 1 16 12 true false false
+50 100000 9 parties.conf 1 16 12 true false false
 
-100 1000 9 parties.conf 1 16 1 true true true
-100 5000 9 parties.conf 1 16 1 true true true
-100 10000 9 parties.conf 1 16 1 true true true
-100 100000 9 parties.conf 1 16 1 true true true
-100 1000000 9 parties.conf 1 16 1 true true true
+100 1000 9 parties.conf 1 16 24 true false false
+100 5000 9 parties.conf 1 16 24 true false false
+100 10000 9 parties.conf 1 16 24 true false false
+100 100000 9 parties.conf 1 16 24 true false false
 
-5 1000 160 parties.conf 1 16 1 true true true
-5 5000 160 parties.conf 1 16 1 true true true
-5 10000 160 parties.conf 1 16 1 true true true
-5 100000 160 parties.conf 1 16 1 true true true
-5 1000000 160 parties.conf 1 16 1 true true true
+5 1000 44 parties.conf 1 16 1 true false false
+5 5000 44 parties.conf 1 16 1 true false false
+5 10000 44 parties.conf 1 16 1 true false false
+5 100000 44 parties.conf 1 16 1 true false false
 
-10 1000 160 parties.conf 1 16 1 true true true
-10 5000 160 parties.conf 1 16 1 true true true
-10 10000 160 parties.conf 1 16 1 true true true
-10 100000 160 parties.conf 1 16 1 true true true
-10 1000000 160 parties.conf 1 16 1 true true true
+10 1000 44 parties.conf 1 16 2 true false false
+10 5000 44 parties.conf 1 16 2 true false false
+10 10000 44 parties.conf 1 16 2 true false false
+10 100000 44 parties.conf 1 16 2 true false false
 
-50 1000 160 parties.conf 1 16 1 true true true
-50 5000 160 parties.conf 1 16 1 true true true
-50 10000 160 parties.conf 1 16 1 true true true
-50 100000 160 parties.conf 1 16 1 true true true
-50 1000000 160 parties.conf 1 16 1 true true true
+50 1000 44 parties.conf 1 16 12 true false false
+50 5000 44 parties.conf 1 16 12 true false false
+50 10000 44 parties.conf 1 16 12 true false false
+50 100000 44 parties.conf 1 16 12 true false false
 
-100 1000 160 parties.conf 1 16 1 true true true
-100 5000 160 parties.conf 1 16 1 true true true
-100 10000 160 parties.conf 1 16 1 true true true
-100 100000 160 parties.conf 1 16 1 true true true
-100 1000000 160 parties.conf 1 16 1 true true true
+100 1000 44 parties.conf 1 16 24 true false false
+100 5000 44 parties.conf 1 16 24 true false false
+100 10000 44 parties.conf 1 16 24 true false false
+100 100000 44 parties.conf 1 16 24 true false false
 
 # end of experiment 2 - 40 configurations
 
 experiment 3 - WAN, CPU/GPU
 
-100 1000 160 parties.conf 1 16 1 true true true
-100 5000 160 parties.conf 1 16 1 true true true
-100 10000 160 parties.conf 1 16 1 true true true
-100 100000 160 parties.conf 1 16 1 true true true
-100 1000000 160 parties.conf 1 16 1 true true true
+100 1000 44 parties.conf 1 16 1 true false false
+100 5000 44 parties.conf 1 16 1 true false false
+100 10000 44 parties.conf 1 16 1 true false false
+100 100000 44 parties.conf 1 16 1 true false false
+100 1000000 44 parties.conf 1 16 1 true false false
 
 # end of experiment 3 - 6 configurations
 
 experiment 4 - large messages, CPU/GPU
 
-5 1000 291 parties.conf 1 16 1 true true true
-5 5000 291 parties.conf 1 16 1 true true true
-5 10000 291 parties.conf 1 16 1 true true true
-5 100000 291 parties.conf 1 16 1 true true true
-5 1000000 291 parties.conf 1 16 1 true true true
+5 1000 291 parties.conf 1 16 1 true false false
+5 5000 291 parties.conf 1 16 1 true false false
+5 10000 291 parties.conf 1 16 1 true false false
+5 100000 291 parties.conf 1 16 1 true false false
+5 1000000 291 parties.conf 1 16 1 true false false
 
-5 1000 582 parties.conf 1 16 1 true true true
-5 5000 582 parties.conf 1 16 1 true true true
-5 10000 582 parties.conf 1 16 1 true true true
-5 100000 582 parties.conf 1 16 1 true true true
-5 1000000 582 parties.conf 1 16 1 true true true
+5 1000 582 parties.conf 1 16 1 true false false
+5 5000 582 parties.conf 1 16 1 true false false
+5 10000 582 parties.conf 1 16 1 true false false
+5 100000 582 parties.conf 1 16 1 true false false
+5 1000000 582 parties.conf 1 16 1 true false false
 
-5 1000 2920 parties.conf 1 16 1 true true true
-5 5000 2920 parties.conf 1 16 1 true true true
-5 10000 2920 parties.conf 1 16 1 true true true
-5 100000 2920 parties.conf 1 16 1 true true true
-5 1000000 2920 parties.conf 1 16 1 true true true
+5 1000 2920 parties.conf 1 16 1 true false false
+5 5000 2920 parties.conf 1 16 1 true false false
+5 10000 2920 parties.conf 1 16 1 true false false
+5 100000 2920 parties.conf 1 16 1 true false false
+5 1000000 2920 parties.conf 1 16 1 true false false
 
-# end of experiment 4 - 15 configurations
+# end of experiment 3 - 15 configurations
 
 
 
