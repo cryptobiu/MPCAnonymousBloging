@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ "${9}" = "true" ]; then
-sudo rm -rf ~/files*
+sudo rm -rf ~/files${3}*
 ./MPCAnonymousBloggingClient/MPCAnonymousBloggingClient -server "${1}" -numServers "${2}" -numClients "${3}" \
    -fieldType ZpMersenne31 -l "${4}" -T "${8}" -toMount "${10}"
 fi
