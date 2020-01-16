@@ -4016,7 +4016,7 @@ void ProtocolParty<FieldType>::printOutputMessagesForTesting(vector<FieldType> &
 
     for(int i=0; i<accIntCountersMat.size(); i++){
 
-        if(i%100000==0) {
+        if(i%50000==0) {
             cout << "accIntCountersMat[" << i << "]" << accIntCountersMat[i] << endl;
             if (accIntCountersMat[i] == 1) {
                 for (int l1 = 0; l1 < l; l1++) {
@@ -4343,7 +4343,8 @@ void ProtocolParty<FieldType>::outputPhase()
 
 
     t1 = high_resolution_clock::now();
-    t2 = high_resolution_clock::now();
+    printOutputMessagesForTesting(accMsgsMat, accMsgsSquareMat, accIntCountersMat,numClients);
+	t2 = high_resolution_clock::now();
 
     duration = duration_cast<milliseconds>(t2-t1).count();
     if(flag_print_timings) {
