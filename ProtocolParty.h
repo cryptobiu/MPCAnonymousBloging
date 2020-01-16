@@ -2227,10 +2227,10 @@ int ProtocolParty<FieldType>::fasterUnitVectorsTestFlat(vector<FieldType> &vecs,
 
     int sizeForEachThread;
     if (vecs.size() <= numThreads){
-        numThreads = vecs.size();
+        numThreads = batchSize;
         sizeForEachThread = 1;
     } else{
-        sizeForEachThread = (vecs.size() + numThreads - 1)/ numThreads;
+        sizeForEachThread = (batchSize + numThreads - 1)/ numThreads;
     }
     vector<thread> threads(numThreads);
 
@@ -2281,7 +2281,8 @@ int ProtocolParty<FieldType>::fasterUnitVectorsTestFlat(vector<FieldType> &vecs,
 template <class FieldType>
 void ProtocolParty<FieldType>::prepareVecsForUnitTestThreads(vector<vector<FieldType>> & randomVecs, vector<FieldType> & vecs, vector<FieldType> & messagesShares,
                                                              vector<FieldType>& msgByRandomSum, vector<FieldType>& VecByRandomSum, FieldType* randomElements, int size, int start, int end){
-	cout << "size start end sqrtU sqrtR : "<< size << start << end << sqrtU << sqrtR << endl;
+	cout << "size start end sqrtU sqrtR : "<< size <<" " << start <<" " << end << " " << " " << sqrtU << " " 
+		<< " " << sqrtR << " " << endl;
     for(long i = start; i < end; i++){
 
         messagesShares[i] = *field->GetZero();
