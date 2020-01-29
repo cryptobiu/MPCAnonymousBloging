@@ -117,6 +117,8 @@ private:
 
 
     thread t;
+    bool toUmount;
+    bool toSimulate;
 
 public:
 
@@ -431,6 +433,9 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     string fieldType = this->getParser().getValueByKey(arguments, "fieldType");
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
+
+    toUmount = (this->getParser().getValueByKey(arguments, "toUmount").compare("true") == 0);
+    toSimulate = (this->getParser().getValueByKey(arguments, "toSimulate").compare("true") == 0);
 
     vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase", "VerificationPhase", "outputPhase"};
     timer = new Measurement(*this, subTaskNames);
@@ -1067,18 +1072,30 @@ cout<<"requested size is "<<numClients*sqrtR*l<<endl;
 
     }
 
+    if (toSimulate == false) {
+        auto t1 = high_resolution_clock::now();
+        readclientsinputs(msgsVectorsFlat, squaresVectorsFlat, countersVectorsFlat, unitVectorsFlat);
 
-
-
-    auto t1 = high_resolution_clock::now();
-    readclientsinputs(msgsVectorsFlat, squaresVectorsFlat, countersVectorsFlat, unitVectorsFlat);
-
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time in milliseconds read clients inputs: " << duration << endl;
+        auto t2 = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(t2-t1).count();
+        if(flag_print_timings) {
+            cout << "time in milliseconds read clients inputs: " << duration << endl;
+        }
     }
+    else{
+        //this is a simulation. Do not load data, use 0 valus as the 0 shares and some constant as the message or 1
+        //as the location of the message. We put the value in the first location since the slit shift will random the
+        //location anyway, which will give a proper simulation of a real protocol
+        //we do not take into account the assignment time
+
+        for(int i=0; i<batchSize; i++){
+            msgsVectorsFlat[sqrtR*i*l] = field->GetElement(i);
+            squaresVectorsFlat[sqrtR*i*l] = field->GetElement(i)*field->GetElement(i);
+            countersVectorsFlat[sqrtR*i] = *field->GetOne();
+            unitVectorsFlat[sqrtU*i] = *field->GetOne();
+        }
+    }
+
 
 
 }
@@ -2466,6 +2483,34 @@ void ProtocolParty<FieldType>::splitShiftByThreads(vector<int> & randomShiftingI
         memcpy(originalArr.data() + i*size*l, shiftedArrTemp.data() , size*l*typeSize);
 
     }
+
+
+    if(toSimulate==false) {
+        thread ti([&]() {
+            if (toUmount) {
+                string dir = string(getenv("HOME")) + "/files" + to_string(numClients);
+                string command = "umount " + dir;
+                int check = system(command.c_str());
+                if (!check) {
+                    cout << "umount succeeded" << endl;
+                } else {
+                    printf("Error : Failed to umount %s\n"
+                           "Reason: %s [%d]\n",
+                           dir.c_str(), strerror(errno), errno);
+                }
+                command = "rm -rf " + dir;
+                check = system(command.c_str());
+                if (!check) {
+                    cout << "dir termination succeeded" << endl;
+                } else {
+                    printf("Error : Failed to terminate dir %s\n"
+                           "Reason: %s [%d]\n",
+                           dir.c_str(), strerror(errno), errno);
+                }
+            }
+        });
+        ti.detach();
+    }
 }
 
 //
@@ -3773,8 +3818,8 @@ void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &random
 
     for(int i=0; i<numClients; i++){
 
-        randomShiftingVec[2*i] = abs(randomInts[i]) % sqrtR;
-        randomShiftingVec[2*i+1] = abs(randomInts[i]) % sqrtU;
+        randomShiftingVec[2*i] = abs(randomInts[2*i]) % sqrtR;
+        randomShiftingVec[2*i+1] = abs(randomInts[2*i+1]) % sqrtU;
     }
 
 }
