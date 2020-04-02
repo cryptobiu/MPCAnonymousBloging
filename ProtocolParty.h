@@ -36,7 +36,7 @@ using namespace std;
 using namespace std::chrono;
 
 template <class FieldType>
-class ProtocolParty : public Protocol, public HonestMajority{
+class ProtocolParty : public MPCProtocol{
 
 private:
 
@@ -80,7 +80,7 @@ private:
     Measurement* timer;
     VDM<FieldType> matrix_vand;
     TemplateField<FieldType> *field;
-    vector<shared_ptr<ProtocolPartyData>>  parties;
+//    vector<shared_ptr<ProtocolPartyData>>  parties;
     vector<FieldType> randomTAnd2TShares;
     vector<FieldType> randomSharesArray;
     vector<FieldType> bigR;
@@ -361,7 +361,7 @@ public:
 
 
 template <class FieldType>
-ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCAnonymuosBlogging", argc, argv)
+ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : MPCProtocol("MPCAnonymuosBlogging", argc, argv)
 {
 
     l = stoi(this->getParser().getValueByKey(arguments, "l"));
@@ -398,10 +398,10 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     batchSize = numClients;
     s = to_string(m_partyId);
 
-    MPCCommunication comm;
-    string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
-
-    parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
+//    MPCCommunication comm;
+//    string partiesFile = this->getParser().getValueByKey(arguments, "partiesFile");
+//
+//    parties = comm.setCommunication(io_service, m_partyId, N, partiesFile);
 
     prgs.resize(numThreads);
     int* keyBytes = new int[4];
@@ -432,20 +432,6 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
     for(int i=0; i<securityParamter; i++){
         shiftbyOne[i] = 1 << i;
     }
-
-    string tmp = "init times";
-    //cout<<"before sending any data"<<endl;
-    byte tmpBytes[20];
-    for (int i=0; i<parties.size(); i++){
-        if (parties[i]->getID() < m_partyId){
-            parties[i]->getChannel()->write(tmp);
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-        } else {
-            parties[i]->getChannel()->read(tmpBytes, tmp.size());
-            parties[i]->getChannel()->write(tmp);
-        }
-    }
-
 }
 
 
@@ -803,6 +789,8 @@ void ProtocolParty<FieldType>::calcSendBufElements(vector<vector<FieldType>> & s
 
     int* tempInt;
 
+    cout << "****************" << sendBufsElements.size() << endl;
+
     for(int k=start; k < end; k++)
     {
         // generate random degree-T polynomial
@@ -1132,7 +1120,8 @@ template <class FieldType>
 FieldType ProtocolParty<FieldType>::reconstructShare(vector<FieldType>& x, int d){
 
     if (!checkConsistency(x, d))
-        cout << "cheating reconstruct!!!" << endl;
+        exit(-1);
+//        cout << "cheating reconstruct!!!" << endl;
     else
         return interpolate(x);
 }
@@ -3448,37 +3437,37 @@ template <class FieldType>
 void ProtocolParty<FieldType>::exchangeData(vector<vector<byte>> &sendBufs, vector<vector<byte>> &recBufs,
         int first, int last){
 
-    for (int i=first; i < last; i++) {
-
-        if ((m_partyId) < parties[i]->getID()) {
-
-
-            //send shares to my input bits
-            parties[i]->getChannel()->write(sendBufs[parties[i]->getID()].data(), sendBufs[parties[i]->getID()].size());
-            //cout<<"write the data:: my Id = " << m_partyId - 1<< "other ID = "<< parties[i]->getID() <<endl;
-
-
-            //receive shares from the other party and set them in the shares array
-            parties[i]->getChannel()->read(recBufs[parties[i]->getID()].data(), recBufs[parties[i]->getID()].size());
-            //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
-
-        } else{
-
-
-            //receive shares from the other party and set them in the shares array
-            parties[i]->getChannel()->read(recBufs[parties[i]->getID()].data(), recBufs[parties[i]->getID()].size());
-            //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
-
-
-
-            //send shares to my input bits
-            parties[i]->getChannel()->write(sendBufs[parties[i]->getID()].data(), sendBufs[parties[i]->getID()].size());
-            //cout<<"write the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID() <<endl;
-
-
-        }
-
-    }
+//    for (int i=first; i < last; i++) {
+//
+//        if ((m_partyId) < parties[i]->getID()) {
+//
+//
+//            //send shares to my input bits
+//            parties[i]->getChannel()->write(sendBufs[parties[i]->getID()].data(), sendBufs[parties[i]->getID()].size());
+//            //cout<<"write the data:: my Id = " << m_partyId - 1<< "other ID = "<< parties[i]->getID() <<endl;
+//
+//
+//            //receive shares from the other party and set them in the shares array
+//            parties[i]->getChannel()->read(recBufs[parties[i]->getID()].data(), recBufs[parties[i]->getID()].size());
+//            //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
+//
+//        } else{
+//
+//
+//            //receive shares from the other party and set them in the shares array
+//            parties[i]->getChannel()->read(recBufs[parties[i]->getID()].data(), recBufs[parties[i]->getID()].size());
+//            //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
+//
+//
+//
+//            //send shares to my input bits
+//            parties[i]->getChannel()->write(sendBufs[parties[i]->getID()].data(), sendBufs[parties[i]->getID()].size());
+//            //cout<<"write the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID() <<endl;
+//
+//
+//        }
+//
+//    }
 
 
 }
@@ -3522,45 +3511,47 @@ template <class FieldType>
 void ProtocolParty<FieldType>::exchangeDataElements(vector<vector<FieldType>> &sendBufs,
         vector<vector<FieldType>> &recBufs, int first, int last) {
 
-    for (int i = first; i < last; i++) {
+    this->roundFunctionSameMsg((byte*)recBufs.data(), (byte*)sendBufs.data(), sizeof(recBufs[0]));
 
-        if ((m_partyId) < parties[i]->getID()) {
-
-
-            if (sendBufs[parties[i]->getID()].size() > 0) {
-                //send shares to my input bits
-                parties[i]->getChannel()->write((byte *) sendBufs[parties[i]->getID()].data(),
-                                                sendBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
-                //cout<<"write the data:: my Id = " << m_partyId - 1<< "other ID = "<< parties[i]->getID() <<endl;
-            }
-
-            if (recBufs[parties[i]->getID()].size() > 0) {
-                //receive shares from the other party and set them in the shares array
-                parties[i]->getChannel()->read((byte *) recBufs[parties[i]->getID()].data(),
-                                               recBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
-                //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
-            }
-
-        } else {
-
-            if (recBufs[parties[i]->getID()].size() > 0) {
-                //receive shares from the other party and set them in the shares array
-                parties[i]->getChannel()->read((byte *) recBufs[parties[i]->getID()].data(),
-                                               recBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
-                //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
-            }
-
-            if (sendBufs[parties[i]->getID()].size() > 0) {
-
-                //send shares to my input bits
-                parties[i]->getChannel()->write((byte *) sendBufs[parties[i]->getID()].data(),
-                                                sendBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
-                //cout<<"write the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID() <<endl;
-            }
-
-        }
-
-    }
+//    for (int i = first; i < last; i++) {
+//
+//        if ((m_partyId) < parties[i]->getID()) {
+//
+//
+//            if (sendBufs[parties[i]->getID()].size() > 0) {
+//                //send shares to my input bits
+//                parties[i]->getChannel()->write((byte *) sendBufs[parties[i]->getID()].data(),
+//                                                sendBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+//                //cout<<"write the data:: my Id = " << m_partyId - 1<< "other ID = "<< parties[i]->getID() <<endl;
+//            }
+//
+//            if (recBufs[parties[i]->getID()].size() > 0) {
+//                //receive shares from the other party and set them in the shares array
+//                parties[i]->getChannel()->read((byte *) recBufs[parties[i]->getID()].data(),
+//                                               recBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+//                //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
+//            }
+//
+//        } else {
+//
+//            if (recBufs[parties[i]->getID()].size() > 0) {
+//                //receive shares from the other party and set them in the shares array
+//                parties[i]->getChannel()->read((byte *) recBufs[parties[i]->getID()].data(),
+//                                               recBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+//                //cout<<"read the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID()<<endl;
+//            }
+//
+//            if (sendBufs[parties[i]->getID()].size() > 0) {
+//
+//                //send shares to my input bits
+//                parties[i]->getChannel()->write((byte *) sendBufs[parties[i]->getID()].data(),
+//                                                sendBufs[parties[i]->getID()].size() * field->getElementSizeInBytes());
+//                //cout<<"write the data:: my Id = " << m_partyId-1<< "other ID = "<< parties[i]->getID() <<endl;
+//            }
+//
+//        }
+//
+//    }
 }
 
 
