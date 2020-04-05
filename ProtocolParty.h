@@ -109,6 +109,7 @@ private:
 
     thread t;
     bool toUmount;
+    bool toSimulate;
 
 public:
 
@@ -375,6 +376,7 @@ ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCA
 
     this->times = stoi(this->getParser().getValueByKey(arguments, "internalIterationsNumber"));
     toUmount = (this->getParser().getValueByKey(arguments, "toUmount").compare("true") == 0);
+    toSimulate = (this->getParser().getValueByKey(arguments, "toSimulate").compare("true") == 0);
 
     vector<string> subTaskNames{"Offline", "preparationPhase", "Online", "inputPhase", "ComputePhase",
                                 "VerificationPhase", "outputPhase", "generateSharedMatricesOptimized",
@@ -877,29 +879,28 @@ void ProtocolParty<FieldType>::calcRecBufElements(vector<vector<FieldType>> & re
  * @param alpha
  */
 template <class FieldType>
-void ProtocolParty<FieldType>::initializationPhase()
-{
+void ProtocolParty<FieldType>::initializationPhase() {
     bigR.resize(1);
 
-cout<<"requested size is "<<numClients*sqrtR*l<<endl;
+    cout << "requested size is " << numClients * sqrtR * l << endl;
 //    msgsVectorsFlat.resize(numClients*sqrtR*l);
 //    squaresVectorsFlat.resize(numClients*sqrtR*l);
 //    countersVectorsFlat.resize(numClients*sqrtR);
 //    unitVectorsFlat.resize(numClients*sqrtU);
 
-    int uvSize = batchSize*sqrtU;
+    int uvSize = batchSize * sqrtU;
     if (uvSize % 8 != 0) {
-        uvSize = (uvSize / 8)*8 + 8;
+        uvSize = (uvSize / 8) * 8 + 8;
     }
 
-    int size = batchSize*sqrtR*l;
+    int size = batchSize * sqrtR * l;
     if (size % 64 != 0) {
-        size = (size / 64)*64 + 64;
+        size = (size / 64) * 64 + 64;
     }
 
-    int cSize = batchSize*sqrtR;
+    int cSize = batchSize * sqrtR;
     if (cSize % 64 != 0) {
-        cSize = (cSize / 64)*64 + 64;
+        cSize = (cSize / 64) * 64 + 64;
     }
 
 //    msgsVectorsShiftedFlat.resize(size);
@@ -917,25 +918,25 @@ cout<<"requested size is "<<numClients*sqrtR*l<<endl;
 //    sum0.resize(batchSize*securityParamter);//do in a 1 dimension array for multiplication
 //    sum01.resize(2*batchSize*securityParamter);//do in a 1 dimension array for multiplication
 
-    sumOfElementsVecs.resize(batchSize*2, *field->GetZero());
-    openedSumOfElementsVecs.resize(batchSize*2, *field->GetZero());
+    sumOfElementsVecs.resize(batchSize * 2, *field->GetZero());
+    openedSumOfElementsVecs.resize(batchSize * 2, *field->GetZero());
 
 
     beta.resize(1);
     y_for_interpolate.resize(N);
 
     alpha.resize(N); // N distinct non-zero field elements
-    vector<FieldType> alpha1(N-T);
+    vector<FieldType> alpha1(N - T);
     vector<FieldType> alpha2(T);
 
     beta[0] = field->GetElement(0); // zero of the field
-    matrix_for_interpolate.allocate(1,N, field);
+    matrix_for_interpolate.allocate(1, N, field);
 
 
-    matrix_him.allocate(N,N,field);
-    matrix_vand.allocate(N,N,field);
-    matrix_vand_transpose.allocate(N,N,field);
-    m.allocate(T, N-T,field);
+    matrix_him.allocate(N, N, field);
+    matrix_vand.allocate(N, N, field);
+    matrix_vand_transpose.allocate(N, N, field);
+    m.allocate(T, N - T, field);
 
     // Compute Vandermonde matrix VDM[i,k] = alpha[i]^k
     matrix_vand.InitVDM();
@@ -945,18 +946,15 @@ cout<<"requested size is "<<numClients*sqrtR*l<<endl;
     matrix_him.InitHIM();
 
     // N distinct non-zero field elements
-    for(int i=0; i<N; i++)
-    {
-        alpha[i]=field->GetElement(i+1);
+    for (int i = 0; i < N; i++) {
+        alpha[i] = field->GetElement(i + 1);
     }
 
-    for(int i = 0; i < N-T; i++)
-    {
+    for (int i = 0; i < N - T; i++) {
         alpha1[i] = alpha[i];
     }
-    for(int i = N-T; i < N; i++)
-    {
-        alpha2[i - (N-T)] = alpha[i];
+    for (int i = N - T; i < N; i++) {
+        alpha2[i - (N - T)] = alpha[i];
     }
 
     m.InitHIMByVectors(alpha1, alpha2);
@@ -969,38 +967,51 @@ cout<<"requested size is "<<numClients*sqrtR*l<<endl;
     // Interpolate first d+1 positions of (alpha,x)
     matrix_for_t.allocate(N - 1 - T, T + 1, field); // slices, only positions from 0..d
     //matrix_for_t.InitHIMByVectors(alpha_until_t, alpha_from_t);
-    matrix_for_t.InitHIMVectorAndsizes(alpha, T+1, N-T-1);
+    matrix_for_t.InitHIMVectorAndsizes(alpha, T + 1, N - T - 1);
 
-    vector<FieldType> alpha_until_2t(2*T + 1);
-    vector<FieldType> alpha_from_2t(N - 1 - 2*T);
+    vector<FieldType> alpha_until_2t(2 * T + 1);
+    vector<FieldType> alpha_from_2t(N - 1 - 2 * T);
 
     // Interpolate first d+1 positions of (alpha,x)
-    matrix_for_2t.allocate(N - 1 - 2*T, 2*T + 1, field); // slices, only positions from 0..d
+    matrix_for_2t.allocate(N - 1 - 2 * T, 2 * T + 1, field); // slices, only positions from 0..d
     //matrix_for_2t.InitHIMByVectors(alpha_until_2t, alpha_from_2t);
-    matrix_for_2t.InitHIMVectorAndsizes(alpha, 2*T + 1, N-(2*T +1));
+    matrix_for_2t.InitHIMVectorAndsizes(alpha, 2 * T + 1, N - (2 * T + 1));
 
 
-    if(flag_print){
-        cout<< "matrix_for_t : " <<endl;
+    if (flag_print) {
+        cout << "matrix_for_t : " << endl;
         matrix_for_t.Print();
 
-        cout<< "matrix_for_2t : " <<endl;
+        cout << "matrix_for_2t : " << endl;
         matrix_for_2t.Print();
 
     }
 
 
+    if (toSimulate == false) {
+        auto t1 = high_resolution_clock::now();
+        readclientsinputs(msgsVectorsFlat, squaresVectorsFlat, countersVectorsFlat, unitVectorsFlat);
 
-
-    auto t1 = high_resolution_clock::now();
-    readclientsinputs(msgsVectorsFlat, squaresVectorsFlat, countersVectorsFlat, unitVectorsFlat);
-
-    auto t2 = high_resolution_clock::now();
-
-    auto duration = duration_cast<milliseconds>(t2-t1).count();
-    if(flag_print_timings) {
-        cout << "time in milliseconds read clients inputs: " << duration << endl;
+        auto t2 = high_resolution_clock::now();
+        auto duration = duration_cast<milliseconds>(t2-t1).count();
+        if(flag_print_timings) {
+            cout << "time in milliseconds read clients inputs: " << duration << endl;
+        }
     }
+    else{
+        //this is a simulation. Do not load data, use 0 valus as the 0 shares and some constant as the message or 1
+        //as the location of the message. We put the value in the first location since the slit shift will random the
+        //location anyway, which will give a proper simulation of a real protocol
+        //we do not take into account the assignment time
+
+        for(int i=0; i<batchSize; i++){
+            msgsVectorsFlat[sqrtR*i*l] = field->GetElement(i);
+            squaresVectorsFlat[sqrtR*i*l] = field->GetElement(i)*field->GetElement(i);
+            countersVectorsFlat[sqrtR*i] = *field->GetOne();
+            unitVectorsFlat[sqrtU*i] = *field->GetOne();
+        }
+    }
+
 
 
     cout <<"sqrtR = "<<sqrtR<<endl;
@@ -1885,30 +1896,32 @@ void ProtocolParty<FieldType>::splitShiftFlat(vector<FieldType> &msgsVectors, ve
         threads[t].join();
     }
 
-    thread ti([&]() {
-        if(toUmount) {
-            string dir = string(getenv("HOME")) + "/files" + to_string(numClients);
-            string command = "umount " + dir;
-            int check = system(command.c_str());
-            if (!check) {
-                cout << "umount succeeded" << endl;
-            } else {
-                printf("Error : Failed to umount %s\n"
-                       "Reason: %s [%d]\n",
-                       dir.c_str(), strerror(errno), errno);
+    if(toSimulate==false) {
+        thread ti([&]() {
+            if (toUmount) {
+                string dir = string(getenv("HOME")) + "/files" + to_string(numClients);
+                string command = "umount " + dir;
+                int check = system(command.c_str());
+                if (!check) {
+                    cout << "umount succeeded" << endl;
+                } else {
+                    printf("Error : Failed to umount %s\n"
+                           "Reason: %s [%d]\n",
+                           dir.c_str(), strerror(errno), errno);
+                }
+                command = "rm -rf " + dir;
+                check = system(command.c_str());
+                if (!check) {
+                    cout << "dir termination succeeded" << endl;
+                } else {
+                    printf("Error : Failed to terminate dir %s\n"
+                           "Reason: %s [%d]\n",
+                           dir.c_str(), strerror(errno), errno);
+                }
             }
-            command = "rm -rf " + dir;
-            check = system(command.c_str());
-            if (!check) {
-                cout << "dir termination succeeded" << endl;
-            } else {
-                printf("Error : Failed to terminate dir %s\n"
-                       "Reason: %s [%d]\n",
-                       dir.c_str(), strerror(errno), errno);
-            }
-        }
-    });
-    ti.detach();
+        });
+        ti.detach();
+    }
 
 
 }
@@ -2782,6 +2795,11 @@ void ProtocolParty<FieldType>::multiplyVectorsPerThreadFlat(vector<FieldType> & 
 template <class FieldType>
 void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &randomShiftingVec){
 
+    int counter0 = 0;
+    int counter0U = 0;
+    int counterNon0 = 0;
+    int counterBoth = 0;
+
     randomShiftingVec.resize(2*numClients);
 
     //prepare the random elements for the unit vectors test
@@ -2798,9 +2816,25 @@ void ProtocolParty<FieldType>::generateRandomShiftingindices(vector<int> &random
 
     for(int i=0; i<numClients; i++){
 
-        randomShiftingVec[2*i] = abs(randomInts[i]) % sqrtR;
-        randomShiftingVec[2*i+1] = abs(randomInts[i]) % sqrtU;
+        randomShiftingVec[2*i] = abs(randomInts[2*i]) % sqrtR;
+        randomShiftingVec[2*i+1] = abs(randomInts[2*i+1]) % sqrtU;
+
+        if(randomShiftingVec[2*i]==0)
+            counter0++;
+        else
+            counterNon0++;
+
+        if(randomShiftingVec[2*i+1]==0)
+            counter0U++;
+        else
+            counterNon0++;
+
+        if(randomShiftingVec[2*i]==0 && randomShiftingVec[2*i+1]==0)
+            counterBoth++;
+
     }
+
+    cout<<"counter 0 is "<< counter0<< "counter 0U is "<< counter0U<<"counter both is "<< counterBoth<<" counter non-zero is "<<counterNon0<<endl;
 
 }
 template <class FieldType>
