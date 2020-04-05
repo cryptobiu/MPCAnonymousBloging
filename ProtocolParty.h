@@ -77,7 +77,7 @@ private:
     vector<FieldType> openedSumOfElementsVecs;
     vector<FieldType> bigRVec;
 
-    Measurement* timer;
+//    Measurement* timer;
     VDM<FieldType> matrix_vand;
     TemplateField<FieldType> *field;
     vector<shared_ptr<ProtocolPartyData>>  parties;
@@ -1132,7 +1132,8 @@ template <class FieldType>
 FieldType ProtocolParty<FieldType>::reconstructShare(vector<FieldType>& x, int d){
 
     if (!checkConsistency(x, d))
-        cout << "cheating reconstruct!!!" << endl;
+        exit(-1);
+//        cout << "cheating reconstruct!!!" << endl;
     else
         return interpolate(x);
 }
@@ -1614,39 +1615,22 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         cout << "time in milliseconds unitVectorsTest 1: " << duration << endl;
     }
 
-
-//    memset((byte*)sum01.data(), 0, 2*batchSize*securityParamter*8);
-//    memset((byte*)sum0.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
-//    memset((byte*)sum1.data(), 0, batchSize*securityParamter*field->getElementSizeInBytes());
     
     cout<<"flag after first unit test is "<<flag<<endl;
-//    vector<FieldType> sumOfElementsVecs(batchSize*2, *field->GetZero());
-//    vector<FieldType> openedSumOfElementsVecs(batchSize*2, *field->GetZero());
 
-    //flag = -1;//remove after fix
-    if(flag==-1) {//all vectors passed the test
+    if(flag==-1) //all vectors passed the test
 
-        for(int i = 0; i<batchSize; i++) {
+        for(int i = 0; i<batchSize; i++)
 
-            for (int k = 0; k < sqrtR; k++) {
+            for (int k = 0; k < sqrtR; k++)
 
-                sumOfElementsVecs[i] += counters[i*sqrtR + k] ;
+                sumOfElementsVecs[i] += counters[i*sqrtR + k];
 
-            }
-        }
-
-    }
-    else{
-        // return flag;
-    }
 
     //open the sums and check that they are equal to 1. This is the counter and should have one in the relevant entry.
-
-
     //lastly, check that the unit vectors are indeed unit vector. We can use the same random elements that were already created
 
     t1 = high_resolution_clock::now();
-
 
     flag = fasterUnitVectorsTestFlat(unitVectors, sqrtU, randomElements.data());
 
@@ -1671,10 +1655,6 @@ int ProtocolParty<FieldType>::validMsgsTestFlat(vector<FieldType> &msgsVectors, 
         }
 
     }
-    else{
-        //return flag;
-    }
-
     //open the sums and check that they are equal to 1. This is the counter and should have one in the relevant entry.
 
     openShare(sumOfElementsVecs.size(), sumOfElementsVecs, openedSumOfElementsVecs, T);
@@ -1723,42 +1703,6 @@ void ProtocolParty<FieldType>::prepareForUnitTestFlat(vector<FieldType> &randomE
 
     }
 }
-
-//
-//template <class FieldType>
-//void ProtocolParty<FieldType>::prepareForUnitTest(vector<FieldType> &randomElements, vector<vector<FieldType>> &msgsVectors,
-//                        vector<FieldType> &sumXandSqaure, vector<vector<FieldType>> &msgsVectorsForUnitTest, int start, int end) {
-//    for(int i=start; i < end; i++){
-//
-//        msgsVectorsForUnitTest[i].resize(sqrtR, *field->GetZero());
-//        for(int k=0; k < sqrtR; k++){
-//
-//            for(int l1=0; l1 < l; l1++){
-//
-//                //compute the sum of all the elements of the first part for all clients
-//                sumXandSqaure[i * l + l1] += msgsVectors[i][l * k + l1];
-//
-//                //compute the sum of all the elements of the second part for all clients - the squares
-//                sumXandSqaure[batchSize * l + i * l + l1] += msgsVectors[i][sqrtR * l +
-//                                                                                                 l * k + l1];
-//
-//                //create the messages for the unit test where each entry of a message is the multiplication of the l-related by a random elements
-//                //and summing those with the unit vector with
-//                msgsVectorsForUnitTest[i][k] += msgsVectors[i][l * k + l1] * randomElements[sqrtR + l1] +
-//                                                msgsVectors[i][sqrtR * l + l * k + l1] * randomElements[
-//                                                        sqrtR + l + l1];
-//
-//
-//            }
-//
-//            //add the share of 0/1 where a share of one should be in the same location of x and x^2 of the message
-//            msgsVectorsForUnitTest[i][k] += msgsVectors[i][sqrtR * l * 2 + k] * randomElements[sqrtR + 2 *l];
-//
-//        }
-//
-//    }
-//}
-
 
 
 template <class FieldType>
