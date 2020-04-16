@@ -36,7 +36,7 @@ using namespace std;
 using namespace std::chrono;
 
 template <class FieldType>
-class ProtocolParty : public Protocol, public HonestMajority{
+class ProtocolParty : public MPCProtocol, public HonestMajority{
 
 private:
 
@@ -359,10 +359,8 @@ public:
 };
 
 
-
-
 template <class FieldType>
-ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : Protocol("MPCAnonymuosBlogging", argc, argv)
+ProtocolParty<FieldType>::ProtocolParty(int argc, char* argv[]) : MPCProtocol("MPCAnonymuosBlogging", argc, argv, false)
 {
 
     l = stoi(this->getParser().getValueByKey(arguments, "l"));
@@ -3546,7 +3544,10 @@ template <class FieldType>
 ProtocolParty<FieldType>::~ProtocolParty()
 {
     delete field;
-    delete timer;
+    comm.printNetworkStats(parties, partyID);
+    if(timer != nullptr)
+        delete timer;
+    cout << "timer deleted" << endl;
 }
 
 

@@ -8,3 +8,4 @@ Makefile
 MPCAnonymousBloging*
 callgrind.out.*
 *.cbp
+*.json

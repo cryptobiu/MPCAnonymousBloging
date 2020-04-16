@@ -18,11 +18,13 @@
 5 5000 9 parties.conf 1 16 1 true false false
 5 10000 9 parties.conf 1 16 1 true false false
 5 100000 9 parties.conf 1 16 1 true false false
+5 1000000 9 parties.conf 1 16 1 false false false # only for GPU
 
 10 1000 9 parties.conf 1 16 2 true false false
 10 5000 9 parties.conf 1 16 2 true false false
 10 10000 9 parties.conf 1 16 2 true false false
 10 100000 9 parties.conf 1 16 2 true false false
+10 1000000 9 parties.conf 1 16 2 true false false # only for GPU
 
 50 1000 9 parties.conf 1 16 12 true false false
 50 5000 9 parties.conf 1 16 12 true false false
@@ -38,11 +40,13 @@
 5 5000 44 parties.conf 1 16 1 true false false
 5 10000 44 parties.conf 1 16 1 true false false
 5 100000 44 parties.conf 1 16 1 true false false
+5 1000000 44 parties.conf 1 16 1 true false false # only for GPU
 
 10 1000 44 parties.conf 1 16 2 true false false
 10 5000 44 parties.conf 1 16 2 true false false
 10 10000 44 parties.conf 1 16 2 true false false
 10 100000 44 parties.conf 1 16 2 true false false
+10 1000000 44 parties.conf 1 16 2 true false false # only for GPU
 
 50 1000 44 parties.conf 1 16 12 true false false
 50 5000 44 parties.conf 1 16 12 true false false

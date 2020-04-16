@@ -17,10 +17,6 @@ int main(int argc, char* argv[]) {
 
         vector<ZpMersenneIntElement> msg, unitVector;
         ZpMersenneIntElement e;
-        //client.readServerFile("server0ForClient0inputs.txt", msg, unitVector, &e);
-        //client.checkServerFiles(0);
-
-       // client.checkExtractMsgs();
         auto t2 = high_resolution_clock::now();
 
         auto duration = duration_cast<milliseconds>(t2-t1).count();
@@ -48,8 +44,6 @@ int main(int argc, char* argv[]) {
         cout << "end main" << '\n';
 
     }
-
-
 
     return 0;
 }
