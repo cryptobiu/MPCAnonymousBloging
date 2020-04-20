@@ -4562,7 +4562,9 @@ template <class FieldType>
 ProtocolParty<FieldType>::~ProtocolParty()
 {
     delete field;
-    delete timer;
+    comm.printNetworkStats(parties, partyID);
+    if(timer != nullptr)
+        delete timer;
 }
 
 
