@@ -3544,7 +3544,7 @@ template <class FieldType>
 ProtocolParty<FieldType>::~ProtocolParty()
 {
     delete field;
-    comm.printNetworkStats(parties, partyID);
+    comm.printNetworkStats(parties, partyID, arguments);
     if(timer != nullptr)
         delete timer;
     cout << "timer deleted" << endl;
